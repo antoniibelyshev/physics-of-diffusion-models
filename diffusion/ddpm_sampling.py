@@ -80,7 +80,7 @@ def sample(
     if track_ll:
         assert step_type == "ode", "Log-likelihood tracking is only supported for ODE sampling"
 
-        ll_lst = [init_ll if init_ll is not None else -0.5 * (xt.pow(2).sum(dim=(1, 2, 3)).cpu() - np.log(2 * np.pi) * np.prod(shape_[1:]))]
+        ll_lst = [init_ll if init_ll is not None else -0.5 * (xt.pow(2).sum(dim=(1, 2, 3)).cpu() + np.log(2 * np.pi) * np.prod(shape_[1:]))]
 
     for t in tqdm(iterator, total=timestamp):
         for _ in range(n_substeps):

@@ -13,7 +13,7 @@ def generate_cross_polytope(d: int) -> NDArray[np.float64]:
 
 def sample_on_hypersphere(d: int, n: Optional[int] = None) -> NDArray[np.float64]:
     samples = np.random.randn(n or 10 * d, d)
-    samples /= np.linalg.norm(samples, axis=1, keepdims=True)
+    samples /= np.linalg.norm(samples, axis=1, keepdims=True) / np.sqrt(d)
     return samples
 
 

@@ -7,7 +7,7 @@ def compute_gram_matrix(x: Tensor, y: Tensor) -> Tensor:
 
 
 def norm_sqr(x: Tensor) -> Tensor:
-    return (x.unsqueeze(1) @ x.unsqueeze(2)).squeeze()
+    return (x.unsqueeze(1) @ x.unsqueeze(2)).squeeze(2).squeeze(1)
 
 
 def compute_pw_dist_sqr(x: Tensor, y: Optional[Tensor] = None) -> Tensor:
