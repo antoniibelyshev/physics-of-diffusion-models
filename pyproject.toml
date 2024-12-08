@@ -1,0 +1,39 @@
+[tool.poetry]
+name = "pdm"
+version = "1.0"
+description = ""
+authors = ["None, 0"]
+readme = "README.md"
+packages = [
+    { include = "utils" },
+    { include = "scripts" },
+    { include = "free_energy" },
+]
+
+
+[tool.poetry.dependencies]
+python = "^3.11"
+torch = "^2.5.1"
+torchvision = "^0.20.1"
+mypy = "^1.13.0"
+tqdm = "^4.67.1"
+torch-ema = "^0.3"
+denoising-diffusion-pytorch = "^2.1.1"
+matplotlib = "^3.9.3"
+jupyter = "^1.1.1"
+types-pywin32 = "^308.0.0.20241128"
+
+
+[tool.poetry.extras]
+cuda116 = ["torch@2.5.1+cu116"]
+cuda113 = ["torch@2.5.1+cu113"]
+
+
+[tool.mypy]
+exclude = "venv|.*/venv/.*"
+strict = true
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
