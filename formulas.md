@@ -1,3 +1,18 @@
+# Parameters
+
+$\beta_t$ - parameters. In the current model: $\beta_1$ = `1e-4`, $\beta_N$ = `2e-2`, $\beta_t$ are linearly spaced for $1 \le t \le N$. $N$ is the number of steps in diffusion (currently $N = 1000$).
+$$\alpha_t = 1 - \beta_t,\
+\bar\alpha_t = \alpha_t\bar\alpha_{t - 1},\
+\bar\alpha_0 = 1$$
+$$T = \frac{1 - \bar\alpha_t}{\bar\alpha_t}$$
+
+## Analytical approximation
+
+If we suppose $N \to\infty$
+$$\log\beta_{\alpha N} = \sum\limits_{k = 1}^{\alpha N} \log\left( 1 - \beta_{min} - \frac{k\beta_{max}}{N} \right) = -\alpha N$$
+$$T = \exp(\beta_N t^2 / (2N)) - 1$$
+$$N = 1000, \beta_N = 0.02$$
+
 # Variance preserving scheme
 
 $$z = \sqrt{\bar\alpha_t}y + \sqrt{1 - \bar\alpha}\epsilon$$
@@ -47,3 +62,36 @@ $$F_z(z, t) = -T\log Z_z(z, t)$$
 $$F = - T\log Z$$
 
 $$S = -\frac{dF}{dT},\ C = -T\frac{d^2F}{dT^2} = \frac{d}{d \log T} S$$
+
+# Derivations
+
+$$U(x, t) =
+\mathbb{E}_{y \sim p(y|x, t)} H(y|x, t) =
+\int \phi(y) \frac{\exp(-\beta H(y|x, t))}{Z(x, t)}H(y|x, t)dy$$
+For $\phi(y)$ equal to sum of $N$ delta functions:
+$$U(x, t) =
+\frac{1}{N}\sum\limits_{i = 1}^N \frac{\exp(-\beta H(y_i|x, t))}{Z(x, t)}H(y_i|x, t)d y$$
+Auxiliary computation:
+$$\frac{\partial \log Z(x, t)}{\partial T} =
+-\frac{1}{{Z(x, t)}}\frac{\partial}{\partial T} \int \phi(y)\exp(-\beta H(y|x, t))dy =
+\frac{1}{T^2{Z(x, t)}}\int \phi(y)\exp(-\beta H(y|x, t))H(y|x, t)dy =
+\frac{1}{T^2}U(x, t)$$
+
+Entropy:
+$$-\frac{\partial F(x, t)}{\partial T} = \frac{\partial}{\partial T}(T\log Z(x, t)) =
+\log Z(x, t) + \frac{1}{T}U(x, t) =
+-\mathbb{E}_{y \sim p(y|x, t)} \log\left( \frac{\exp(-\beta H(y|x, t))}{Z(x, t)} \right) = S + \mathbb{E}_{y \sim p(y|x, t)} \phi(y)$$
+
+Heat capacity:
+$$-T\frac{\partial^2 T}{\partial T^2} F(x, t) =
+-T\frac{\partial}{\partial T}\frac{\partial F(x, t)}{\partial T} = -T \left( -\frac{1}{T^2}U(x, t) + \frac{1}{T^2}U(x, t) - \frac{1}{T}\frac{\partial U(x, t)}{\partial T} \right) =
+\frac{\partial U(x, t)}{\partial T}$$
+
+$$C = \frac{\partial U(x, t)}{\partial T} = \frac{\partial}{\partial T}\int\phi(y) \frac{\exp(-\beta H(y|x, t))}{Z(x, t)}H(y|x, t)dy = \frac{1}{T^2}\left(\mathbb{E}H(y,|x, t)^2 - \left(\mathbb{E}H(y|x, t)\right)^2\right) = \frac{1}{T^2}\mathbb{D}H(x, t)$$
+
+
+# Hypersphere model
+
+$$\phi(y) = \delta_{S^{d - 1}}(y) = \frac{1}{S_{d - 1}}\delta(||y|| - 1)$$
+
+$$p(x|T) = \int\limits_{\mathbb{R}^d} \frac{1}{(2\pi T)^{d / 2}}\exp\left(-\frac{||x - y||^2}{2T}\right) \phi(y)dy = $$

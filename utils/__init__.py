@@ -1,6 +1,7 @@
 from .data import (
     MnistDataset as MnistDataset,
     get_data_generator as get_data_generator,
+    get_samples_tensor as get_samples_tensor,
 )
 from .distance import (
     compute_pw_dist_sqr as compute_pw_dist_sqr,
@@ -13,3 +14,4 @@ from .synthetic_datasets import (
     sample_on_hypersphere as sample_on_hypersphere,
     generate_dataset as generate_dataset,
 )
+from .utils import dict_map as dict_map

@@ -1,6 +1,6 @@
 from tqdm.auto import trange
 from tqdm import tqdm
-from torch import Tensor, LongTensor
+from torch import Tensor
 import torch
 from .ddpm import DDPM
 from typing import Any, Generator, Optional, Callable
@@ -19,21 +19,21 @@ def batch_jacobian(func: Callable[[Tensor], Tensor], x: Tensor) -> Tensor:
 
 
 @torch.no_grad()
-def sde_step(xt: Tensor, t: LongTensor, ddpm: DDPM) -> Tensor:
-    # x0 = ddpm.get_val("x0", xt, t)
-    # return ddpm.dynamic.sample_from_posterior_q(xt, x0, t) - xt
-    beta = ddpm.dynamic.get_coef_from_time("beta", t)
-    s = ddpm.get_val("score", xt, t)
-    return 0.5 * beta * (xt + 2 * s) + beta.sqrt() * torch.randn_like(xt)
+def sde_step(xt: Tensor, t: Tensor, ddpm: DDPM) -> Tensor:
+    x0 = ddpm.get_val("x0", xt, t)
+    return ddpm.dynamic.sample_from_posterior_q(xt, x0, t) - xt
+    # beta = ddpm.dynamic.get_coef_from_time("beta", t)
+    # s = ddpm.get_val("score", xt, t)
+    # return 0.5 * beta * (xt + 2 * s) + beta.sqrt() * torch.randn_like(xt)
 
 
-def ode_step(xt: Tensor, t: LongTensor, ddpm: DDPM) -> Tensor:
+def ode_step(xt: Tensor, t: Tensor, ddpm: DDPM) -> Tensor:
     beta = ddpm.dynamic.get_coef_from_time("beta", t)
     s = ddpm.get_val("score", xt, t)
     return 0.5 * beta * (xt + s)
 
 
-def step(xt: Tensor, t: LongTensor, ddpm: DDPM, step_type: str = "sde") -> Tensor:
+def step(xt: Tensor, t: Tensor, ddpm: DDPM, step_type: str = "sde") -> Tensor:
     match step_type:
         case "sde":
             return sde_step(xt, t, ddpm)
@@ -70,8 +70,8 @@ def sample(
     ddpm.to(device)
     ddpm.eval()
 
-    iterator: Generator[torch.LongTensor, None, None] = (
-        torch.LongTensor([t] * shape_[0], device=device)
+    iterator: Generator[Tensor, None, None] = (
+        torch.tensor([t] * shape_[0], device=device).long()
         for t in range(timestamp - 1, -1, -1)
     )
 

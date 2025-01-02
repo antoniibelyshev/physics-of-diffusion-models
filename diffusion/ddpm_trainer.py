@@ -6,6 +6,7 @@ from typing import Generator
 from tqdm import trange
 from .ddpm import DDPM
 from .diffusion_utils import dict_to_device
+import wandb
 
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -25,7 +26,7 @@ class DDPMTrainer:
 
         self.optimizer = torch.optim.AdamW(
             self.ddpm.parameters(),
-            lr=2e-4,
+            lr=1e-4,
             weight_decay=1e-2
         )
 
@@ -61,6 +62,8 @@ class DDPMTrainer:
         project_name: str = 'discrete_time_ddpm',
         experiment_name: str = 'mnist_baseline',
     ) -> None:
+        wandb.init(project=project_name, name=experiment_name)
+
         self.ddpm.train()
         
         with trange(1, 1 + total_iters) as pbar:
@@ -70,9 +73,13 @@ class DDPMTrainer:
 
                 loss = self.calc_loss(x0=batch[self.im_name])
 
+                wandb.log({'iteration': iter_idx, 'loss': loss.item()})
+
                 self.optimizer_logic(loss)
 
                 pbar.set_postfix(loss=loss.item())
 
         self.ddpm.eval()
         self.switch_to_ema()
+
+        wandb.finish()
