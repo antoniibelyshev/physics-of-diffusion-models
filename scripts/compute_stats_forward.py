@@ -1,11 +1,19 @@
-from utils import MnistDataset
 import torch
-from statistics import compute_stats
+from stats import compute_stats
 import numpy as np
+from utils import get_data_tensor
+from base_config import BaseConfig
+from config import with_config
+from math import log10
+
+
+@with_config()
+def main(config: BaseConfig) -> None:
+    y = get_data_tensor(config)
+    temp = torch.logspace(log10(config.forward_stats.min_temp), log10(config.forward_stats.max_temp), config.forward_stats.n_temps)
+    stats = compute_stats(y, temp, config.forward_stats.n_samples, config.forward_stats.n_repeats)
+    np.savez(config.forward_stats_path, temp = temp, **stats) # type: ignore
 
 
 if __name__ == "__main__":
-    data = MnistDataset()
-    y = torch.stack([data[i]["images"] for i in range(len(data))], 0)
-    temp = torch.linspace(-10, 10, 500).exp()
-    np.savez("results/mnist_forward_stats.npz", temp=temp, **compute_stats(y, temp, 100, 10))
+    main()

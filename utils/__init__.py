@@ -1,7 +1,7 @@
 from .data import (
-    MnistDataset as MnistDataset,
     get_data_generator as get_data_generator,
-    get_samples_tensor as get_samples_tensor,
+    get_data_tensor as get_data_tensor,
+    get_obj_size as get_obj_size,
 )
 from .distance import (
     compute_pw_dist_sqr as compute_pw_dist_sqr,

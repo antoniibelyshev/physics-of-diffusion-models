@@ -2,25 +2,7 @@ from torch import Tensor
 import torch
 from utils import compute_pw_dist_sqr, dict_map
 import numpy as np
-from tqdm import tqdm, trange
-
-
-# def mean_exp(log_val: Tensor):
-#     max_log_val = log_val.max(1)[0]
-#     norm_log_val = log_val - max_log_val[:, None]
-#     return norm_log_val.exp().mean(axis=1) * max_log_val.exp()
-
-
-# def log_mean_exp(log_val: Tensor):
-#     max_log_val = log_val.max(1)[0]
-#     norm_log_val = log_val - max_log_val[:, None]
-#     return norm_log_val.exp().mean(1).log() + max_log_val
-
-
-# def expectation(log_p: Tensor, f: Tensor):
-#     max_log_p = log_p.max(1)[0]
-#     norm_log_p = log_p - max_log_p[:, None]
-#     return (norm_log_p.exp() * f).mean(1) * max_log_p.exp()
+from tqdm import trange
 
 
 def compute_stats_batch(x: Tensor, y: Tensor, temp: Tensor) -> dict[str, Tensor]:

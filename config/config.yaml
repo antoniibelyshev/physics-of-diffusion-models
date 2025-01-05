@@ -1,0 +1,16 @@
+ddpm_training:
+  total_iters: 100000
+  learning_rate: 0.01
+  weight_decay: 0.01
+
+ddpm:
+  model_name: unet
+  parametrization: "x0"
+
+data:
+  dataset_name: mnist
+  # obj_size:
+  #   - 3
+  #   - 32
+  #   - 32
+  batch_size: 128

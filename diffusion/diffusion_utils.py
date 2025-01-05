@@ -19,6 +19,8 @@ def get_coeffs_primitives(
     alpha_bar = alpha.cumprod(dim=0)
     alpha_bar_shifted = torch.cat([torch.Tensor([1]), alpha_bar[:-1]])
 
+    temp = (1 - alpha_bar) / alpha_bar
+
     posterior_x0_coef = (alpha_bar_shifted.sqrt() * beta) / (1 - alpha_bar)
     posterior_xt_coef = (alpha.sqrt() * (1 - alpha_bar_shifted)) / (1 - alpha_bar)
     posterior_sigma = (1 - alpha_bar_shifted) / (1 - alpha_bar) * beta
@@ -31,4 +33,5 @@ def get_coeffs_primitives(
         "posterior_x0_coef": posterior_x0_coef,
         "posterior_xt_coef": posterior_xt_coef,
         "posterior_sigma": posterior_sigma,
+        "temp": temp,
     }

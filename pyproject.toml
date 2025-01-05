@@ -7,7 +7,9 @@ readme = "README.md"
 packages = [
     { include = "utils" },
     { include = "scripts" },
-    { include = "free_energy" },
+    { include = "stats" },
+    { include = "config" },
+    { include = "base_config" },
 ]
 
 
@@ -22,6 +24,8 @@ denoising-diffusion-pytorch = "^2.1.1"
 matplotlib = "^3.9.3"
 jupyter = "^1.1.1"
 types-pywin32 = "^308.0.0.20241128"
+wandb = "^0.19.1"
+pydantic = "^2.10.4"
 
 
 [tool.mypy]

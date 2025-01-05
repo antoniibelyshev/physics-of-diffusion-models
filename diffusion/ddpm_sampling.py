@@ -1,9 +1,8 @@
-from tqdm.auto import trange
 from tqdm import tqdm
 from torch import Tensor
 import torch
 from .ddpm import DDPM
-from typing import Any, Generator, Optional, Callable
+from typing import Generator, Optional, Callable
 import numpy as np
 from torch.autograd.functional import jacobian
 
@@ -20,17 +19,14 @@ def batch_jacobian(func: Callable[[Tensor], Tensor], x: Tensor) -> Tensor:
 
 @torch.no_grad()
 def sde_step(xt: Tensor, t: Tensor, ddpm: DDPM) -> Tensor:
-    x0 = ddpm.get_val("x0", xt, t)
+    x0 = ddpm.get_predictions(xt, t)["x0"]
     return ddpm.dynamic.sample_from_posterior_q(xt, x0, t) - xt
-    # beta = ddpm.dynamic.get_coef_from_time("beta", t)
-    # s = ddpm.get_val("score", xt, t)
-    # return 0.5 * beta * (xt + 2 * s) + beta.sqrt() * torch.randn_like(xt)
 
 
 def ode_step(xt: Tensor, t: Tensor, ddpm: DDPM) -> Tensor:
     beta = ddpm.dynamic.get_coef_from_time("beta", t)
-    s = ddpm.get_val("score", xt, t)
-    return 0.5 * beta * (xt + s)
+    score = ddpm.get_predictions(xt, t)["score"]
+    return 0.5 * beta * (xt + score)
 
 
 def step(xt: Tensor, t: Tensor, ddpm: DDPM, step_type: str = "sde") -> Tensor:

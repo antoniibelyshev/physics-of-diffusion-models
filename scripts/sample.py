@@ -1,60 +1,42 @@
-from diffusion import sample, DDPM, DDPMUnet, DDPMTrue
-from utils import generate_dataset
 import numpy as np
 import torch
 from typing import Any
 
-
-def get_cfg() -> dict[str, Any]:
-    return {
-        "ddpm_type": "unet",
-        "ddpm_checkpoint": "checkpoints/pretrained_diffusion_100000.pth",
-        "kwargs": {
-            "shape": (1000, 1, 32, 32),
-            "step_type": "sde",
-            "track_ll": False,
-        },
-        "n_rep": 1,
-    }
+from diffusion import sample, get_ddpm, DDPM
+from base_config import BaseConfig
+from config import with_config
 
 
-def main(cfg: dict[str, Any]):
-    ddpm: DDPM
-    if cfg["ddpm_type"] == "unet":
-        ddpm = DDPMUnet()
-        ddpm.load_state_dict(torch.load(cfg["ddpm_checkpoint"], map_location=torch.device('cpu'))) # type: ignore
-    elif cfg["ddpm_type"] == "true":
-        train_path = cfg.get("train_path") or f"results/{cfg.get('train_data_filename') or 'train_data'}.npy"
-        try:
-            train_data = torch.tensor(np.load(train_path), dtype=torch.float32)
-        except FileNotFoundError:
-            train_data = torch.tensor(generate_dataset("hypersphere", 100), dtype=torch.float32)
-            np.save(train_path, train_data.numpy())
-        ddpm = DDPMTrue(train_data.unsqueeze(1).unsqueeze(2))
-    else:
-        raise ValueError(f"Invalid ddpm_type: {cfg['ddpm_type']}")
-
-    kwargs = cfg["kwargs"]
-    if (timestamp := kwargs.get("timestamp")) is not None: # type: ignore
-        if (samples_path := cfg.get("samples_path")) is not None:
-            samples = np.load(samples_path)
-        else:
-            samples = np.load(f"results/{cfg['kwargs']['step_type']}_samples.npz")["states"][timestamp] # type: ignore
-        kwargs["x_start"] =  torch.tensor(samples, dtype=torch.float32) # type: ignore
-        if kwargs["track_ll"]: # type: ignore
-            kwargs["init_ll"] = torch.tensor(samples["ll"][timestamp], dtype=torch.float32) # type: ignore
-
-    results = sample(ddpm, **cfg["kwargs"]) # type: ignore
-    for _ in range(cfg["n_rep"] - 1):
-        for key, val in sample(ddpm, **cfg["kwargs"]).items(): # type: ignore
+def get_samples(ddpm: DDPM, kwargs: dict[str, Any], n_repeats: int) -> dict[str, torch.Tensor]:
+    results = sample(ddpm, **kwargs)
+    for _ in range(n_repeats - 1):
+        for key, val in sample(ddpm, **kwargs).items():
             results[key] = torch.cat([results[key], val], dim=0)
+    return results
 
-    abar = ddpm.dynamic.alpha_bar.cpu()
-    temp = (1 - abar) / abar
 
-    filename = cfg.get("filename") or f"{cfg['kwargs']['step_type']}_samples_{cfg['ddpm_type']}" # type: ignore
-    np.savez(cfg.get("save_path") or f"results/{filename}.npz", temp = temp, **results)
+def get_and_save_samples(config: BaseConfig) -> None:
+    ddpm = get_ddpm(config, pretrained = True)
+    kwargs = config.sample.kwargs
+    kwargs["shape"] = (config.sample.n_samples, *config.data.obj_size)
+    save_path = config.samples_path
+    if (timestamp := config.sample.timestamp) is not None:
+        kwargs["timestamp"] = timestamp
+        samples = np.load(config.samples_path)
+        kwargs["x_start"] =  torch.tensor(samples["states"][timestamp], dtype=torch.float32)
+        if kwargs["track_ll"]:
+            kwargs["init_ll"] = torch.tensor(samples["ll"][timestamp], dtype=torch.float32)
+        save_path = config.samples_from_timestamp_path
+    
+    samples = get_samples(ddpm, kwargs, config.sample.n_repeats)
+    temp = ddpm.dynamic.temp.cpu().detach()
+    np.savez(save_path, temp = temp, **samples)  # pyright: ignore
+
+
+@with_config()
+def main(config: BaseConfig) -> None:
+    get_and_save_samples(config)
 
 
 if __name__ == "__main__":
-    main(get_cfg())
+    main()

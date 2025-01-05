@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from typing import Generator
 from tqdm import trange
 from .ddpm import DDPM
-from .diffusion_utils import dict_to_device
+from base_config import BaseConfig
 import wandb
 
 
@@ -13,12 +13,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class DDPMTrainer:
-    def __init__(
-        self,
-        ddpm: DDPM,
-        device: torch.device = DEVICE,
-        im_name: str = "images",
-    ):
+    def __init__(self, config: BaseConfig, ddpm: DDPM, device: torch.device = DEVICE) -> None:
         self.ddpm = ddpm
         self.ddpm.to(device)
         self.ema = ExponentialMovingAverage(ddpm.parameters(), decay=0.999)
@@ -26,11 +21,12 @@ class DDPMTrainer:
 
         self.optimizer = torch.optim.AdamW(
             self.ddpm.parameters(),
-            lr=1e-4,
-            weight_decay=1e-2
+            lr = config.ddpm_training.learning_rate,
+            weight_decay = config.ddpm_training.weight_decay,
         )
 
-        self.im_name = im_name
+        self.project_name = config.project_name
+        self.experiment_name = config.experiment_name
 
     def switch_to_ema(self) -> None:
         self.ema.store(self.ddpm.parameters())
@@ -57,21 +53,17 @@ class DDPMTrainer:
 
     def train(
         self,
-        train_generator: Generator[dict[str, Tensor], None, None],
+        train_generator: Generator[Tensor, None, None],
         total_iters: int = 2500,
-        project_name: str = 'discrete_time_ddpm',
-        experiment_name: str = 'mnist_baseline',
     ) -> None:
-        wandb.init(project=project_name, name=experiment_name)
+        wandb.init(project = self.project_name, name = self.experiment_name)
 
         self.ddpm.train()
         
         with trange(1, 1 + total_iters) as pbar:
             for iter_idx in pbar:
-                batch = next(train_generator)
-                batch = dict_to_device(batch, device=self.device)
-
-                loss = self.calc_loss(x0=batch[self.im_name])
+                batch = next(train_generator).to(self.device)
+                loss = self.calc_loss(batch)
 
                 wandb.log({'iteration': iter_idx, 'loss': loss.item()})
 
