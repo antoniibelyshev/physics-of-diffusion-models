@@ -65,7 +65,7 @@ class BaseConfig(BaseModel):
     varied_dataset_stats: BaseVariedDatasetStatsConfig = Field(..., description="Varied dataset statistics configuration")
 
     # paths
-    checkpoint_path: str = Field("", description="Path to the checkpoint")
+    ddpm_checkpoint_path: str = Field("", description="Path to the checkpoint")
     samples_path: str = Field("", description="Path to the samples")
     samples_from_timestamp_path: str = Field("", description="Path to the samples from timestamp")
     forward_stats_path: str = Field("", description="Path to the forward stats")
