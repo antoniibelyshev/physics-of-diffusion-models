@@ -1,5 +1,6 @@
 from pydantic import model_validator
-from typing import Self, Any
+from typing_extensions import Self
+from typing import Any
 
 from base_config import BaseDataConfig, BaseConfig
 from utils import get_obj_size
@@ -17,7 +18,8 @@ class Config(BaseConfig):
     data: DataConfig
 
     @model_validator(mode="before")
-    def check_keys(self, data: dict[str, Any]) -> dict[str, Any]:
+    @classmethod
+    def check_keys(cls, data: dict[str, Any]) -> dict[str, Any]:
         for key in ["ddpm", "ddpm_training", "data", "sample", "forward_stats", "backward_stats", "varied_dataset_stats"]:
             if key not in data:
                 data[key] = {}

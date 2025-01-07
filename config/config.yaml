@@ -9,8 +9,8 @@ ddpm:
 
 data:
   dataset_name: mnist
-  # obj_size:
-  #   - 3
-  #   - 32
-  #   - 32
+  obj_size:
+    - 3
+    - 32
+    - 32
   batch_size: 128
