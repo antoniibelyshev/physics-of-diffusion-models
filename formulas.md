@@ -90,8 +90,14 @@ $$-T\frac{\partial^2 T}{\partial T^2} F(x, t) =
 $$C = \frac{\partial U(x, t)}{\partial T} = \frac{\partial}{\partial T}\int\phi(y) \frac{\exp(-\beta H(y|x, t))}{Z(x, t)}H(y|x, t)dy = \frac{1}{T^2}\left(\mathbb{E}H(y,|x, t)^2 - \left(\mathbb{E}H(y|x, t)\right)^2\right) = \frac{1}{T^2}\mathbb{D}H(x, t)$$
 
 
-# Hypersphere model
+# Included prior distribution
 
-$$\phi(y) = \delta_{S^{d - 1}}(y) = \frac{1}{S_{d - 1}}\delta(||y|| - 1)$$
-
-$$p(x|T) = \int\limits_{\mathbb{R}^d} \frac{1}{(2\pi T)^{d / 2}}\exp\left(-\frac{||x - y||^2}{2T}\right) \phi(y)dy = $$
+$$H(x, y, T) = \frac{||x - y||^2}{2} - T\log\phi(y)$$
+$$S(x, T) = -\int \frac{\exp(-H(x, y, T) / T)}{Z(x, T)}\left( -H(x, y, T) / T - \log Z(x, T) \right)dy = \log Z(x, T) + U(x, T) / T$$
+$$T\frac{\partial S}{\partial T} = T\frac{\partial \log Z(x, T)}{\partial T} - \frac{1}{T}U(x, T) + \frac{\partial U}{\partial T}$$
+$$\frac{\partial \log Z(x, T)}{\partial T} = \frac{1}{T^2}U(x, T) + \frac{1}{T}\mathbb{E} \log\phi(y)$$
+$$T\frac{\partial S}{\partial T} = \frac{1}{T}\mathbb{E} \log\phi(y) + C(x, T)$$
+$$C(x, T) = \frac{\partial}{\partial T}\int \frac{\exp(-H(x, y, T) / T)}{Z(x, T)} H(x, y, T)dy =$$
+$$\frac{1}{T^2}\mathrm{Var} H(x, y, T) - \frac{1}{T}U(x, T)\mathbb{E}\log\phi(y) - \frac{1}{T}\mathbb{E}\log\phi(y) + \frac{1}{T}\mathbb{E}\left(\log\phi(y)H(x, y, T)\right)$$
+$$T\frac{\partial S}{\partial T} = \frac{1}{T^2}\mathrm{Var} H(x, y, T) - \frac{1}{T}U(x, T)\mathbb{E}\log\phi(y) + \frac{1}{T}\mathbb{E}\left(\log\phi(y)H(x, y, T)\right) =$$
+$$\frac{1}{T^2}\mathrm{Var}H(x, y, T) + \frac{1}{T}\mathrm{Cov}\left(\frac{||x - y||}{2}, \log\phi(y)\right) + \mathrm{Var} \log\phi(y)$$
