@@ -1,6 +1,5 @@
 from pydantic import model_validator
-from typing_extensions import Self
-from typing import Any
+from typing import Self, Any
 
 from base_config import BaseDataConfig, BaseConfig
 from utils import get_obj_size
@@ -17,14 +16,21 @@ class DataConfig(BaseDataConfig):
 class Config(BaseConfig):
     data: DataConfig
 
+    @model_validator(mode="before")
+    def check_keys(self, data: dict[str, Any]) -> dict[str, Any]:
+        for key in ["ddpm", "ddpm_training", "data", "sample", "forward_stats", "backward_stats", "varied_dataset_stats"]:
+            if key not in data:
+                data[key] = {}
+        return data
+
     @model_validator(mode="after")
     def compute_paths(self) -> Self:
         experiment_name = self.experiment_name
         if not experiment_name:
             experiment_name = f"{self.data.dataset_name}_{self.ddpm.model_name}_{self.ddpm_training.total_iters}"
             self.experiment_name = experiment_name
-        if not self.checkpoint_path:
-            self.checkpoint_path = f"checkpoints/{experiment_name}.pth"
+        if not self.ddpm_checkpoint_path:
+            self.ddpm_checkpoint_path = f"checkpoints/{experiment_name}.pth"
         if not self.samples_path:
             f"results/{experiment_name}_{self.sample.kwargs['step_type']}_samples.npz"
         if not self.samples_from_timestamp_path and self.sample.timestamp is not None:
