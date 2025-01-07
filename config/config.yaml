@@ -14,3 +14,7 @@ data:
     - 32
     - 32
   batch_size: 128
+
+sample:
+  kwargs:
+    step_type: "sde"
