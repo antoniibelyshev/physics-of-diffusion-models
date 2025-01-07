@@ -14,4 +14,4 @@ if __name__ == "__main__":
     trainer = DDPMTrainer(config, ddpm)
     trainer.train(data_generator, total_iters=config.ddpm_training.total_iters)
 
-    torch.save(ddpm.state_dict(), "checkpoints/pretrained_diffusion.pth")
+    torch.save(ddpm.state_dict(), config.ddpm_checkpoint_path)

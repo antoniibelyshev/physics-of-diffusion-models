@@ -48,7 +48,7 @@ class DDPMUnet(DDPM):
 
 class DDPMTrue(DDPM):
     train_data: Tensor
-    
+
     def __init__(self, config: BaseConfig):
         assert config.ddpm.parametrization == "score"
         super().__init__(config)
@@ -63,7 +63,7 @@ def get_ddpm(config: BaseConfig, pretrained: bool = False) -> DDPM:
     if config.ddpm.model_name == "unet":
         ddpm = DDPMUnet(config)
         if pretrained:
-            ddpm.load_state_dict(load(config.checkpoint_path))
+            ddpm.load_state_dict(load(config.ddpm_checkpoint_path))
         return ddpm
     elif config.ddpm.model_name == "true":
         return DDPMTrue(config)
