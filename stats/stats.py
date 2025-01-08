@@ -46,3 +46,22 @@ def compute_stats(
         stats_lst.append(compute_stats_traj_batch(x, y, temp))
 
     return {key: torch.stack([stats[key] for stats in stats_lst], 1).mean(1) for key in stats_lst[0].keys()}
+
+
+def compute_stats_unbiased(
+    y: Tensor,
+    temp: Tensor,
+    batch_size: int = 100,
+    n_iter: int = 1000,
+) -> dict[str, Tensor]:
+    y = y.cuda()
+
+    stats_lst: list[dict[str, Tensor]] = []
+    for _ in trange(n_iter):
+        dT = (temp - torch.cat([torch.zeros_like(temp[:1]), temp[:-1]])).cuda().view(-1, *[1] * (len(y.shape) - 1))
+        noise = (torch.randn(batch_size, len(temp), *y.shape[1:], device=y.device) * dT.sqrt()).cumsum(1)
+        idx = np.random.choice(range(len(y)))
+        x = y[idx][None, None].repeat(batch_size, *([1] * y.dim())) + noise
+        stats_lst.append(compute_stats_traj_batch(x, torch.cat([y[:idx], y[idx + 1:]], 0), temp))
+
+    return {key: torch.stack([stats[key] for stats in stats_lst], 1).mean(1) for key in stats_lst[0].keys()}

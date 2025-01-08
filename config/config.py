@@ -34,11 +34,13 @@ class Config(BaseConfig):
         if not self.ddpm_checkpoint_path:
             self.ddpm_checkpoint_path = f"checkpoints/{experiment_name}.pth"
         if not self.samples_path:
-            f"results/{experiment_name}_{self.sample.kwargs['step_type']}_samples.npz"
+            self.samples_path = f"results/{experiment_name}_{self.sample.kwargs['step_type']}_samples.npz"
         if not self.samples_from_timestamp_path and self.sample.timestamp is not None:
-            f"results/{experiment_name}_{self.sample.kwargs['step_type']}_samples_from_timestamp_{self.sample.timestamp}.npz"
+            self.samples_from_timestamp_path = f"results/{experiment_name}_{self.sample.kwargs['step_type']}_samples_from_timestamp_{self.sample.timestamp}.npz"
         if not self.forward_stats_path:
             self.forward_stats_path = f"results/{self.data.dataset_name}_forward_stats.npz"
+        if not self.forward_unbiased_stats_path:
+            self.forward_unbiased_stats_path = f"results/{self.data.dataset_name}_forward_unbiased_stats.npz"
         if not self.backward_stats_path:
             self.backward_stats_path = f"results/{experiment_name}_backward_stats.npz"
         return self

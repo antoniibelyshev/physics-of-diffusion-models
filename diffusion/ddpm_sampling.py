@@ -2,7 +2,7 @@ from tqdm import tqdm
 from torch import Tensor
 import torch
 from .ddpm import DDPM
-from typing import Generator, Optional, Callable
+from typing import Generator, Optional, Callable, Any
 import numpy as np
 from torch.autograd.functional import jacobian
 
@@ -97,3 +97,11 @@ def sample(
         res["ll"] = torch.stack(ll_lst[::-1], dim=1)
 
     return res
+
+
+def get_samples(ddpm: DDPM, kwargs: dict[str, Any], n_repeats: int) -> dict[str, Tensor]:
+    results = sample(ddpm, **kwargs)
+    for _ in range(n_repeats - 1):
+        for key, val in sample(ddpm, **kwargs).items():
+            results[key] = torch.cat([results[key], val], dim=0)
+    return results

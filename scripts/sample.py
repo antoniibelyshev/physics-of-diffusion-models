@@ -2,17 +2,9 @@ import numpy as np
 import torch
 from typing import Any
 
-from diffusion import sample, get_ddpm, DDPM
+from diffusion import get_samples, get_ddpm, DDPM
 from base_config import BaseConfig
 from config import with_config
-
-
-def get_samples(ddpm: DDPM, kwargs: dict[str, Any], n_repeats: int) -> dict[str, torch.Tensor]:
-    results = sample(ddpm, **kwargs)
-    for _ in range(n_repeats - 1):
-        for key, val in sample(ddpm, **kwargs).items():
-            results[key] = torch.cat([results[key], val], dim=0)
-    return results
 
 
 def get_and_save_samples(config: BaseConfig) -> None:

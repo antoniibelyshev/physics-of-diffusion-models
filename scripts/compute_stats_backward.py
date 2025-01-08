@@ -6,8 +6,8 @@ from torch import Tensor
 from base_config import BaseConfig
 from config import with_config
 from utils import get_data_tensor
-from .sample import get_samples
-from diffusion import get_ddpm
+# from .sample import get_samples
+from diffusion import get_ddpm, get_samples
 
 
 @with_config()
@@ -18,7 +18,7 @@ def main(config: BaseConfig) -> None:
         "step_type": config.backward_stats.step_type,
     }
     samples = get_samples(ddpm, kwargs, n_repeats = config.backward_stats.n_repeats)
-    temp = torch.tensor(samples["temp"])
+    temp = ddpm.dynamic.temp.cpu()
     x_sample = torch.tensor(samples["states"])
     x_batched = x_sample.reshape(-1, config.backward_stats.batch_size, *x_sample.shape[1:])
     y = get_data_tensor(config)

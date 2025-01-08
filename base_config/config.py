@@ -6,53 +6,48 @@ from typing import Any
 class BaseDataConfig(BaseModel):
     dataset_name: str = Field(..., description="Name of the dataset")
     obj_size: tuple[int, ...] = Field(..., description="Size of the object in the dataset")
-    batch_size: int = Field(128, description="Batch size for training")
+    batch_size: int = Field(..., description="Batch size for training")
 
 
 class BaseDDPMConfig(BaseModel):
     model_name: str = Field(..., description="Name of the model architecture")
     parametrization: str = Field(..., description="Parametrization of the model")
-    beta_min: float = Field(1e-4, description="Minimum value of beta")
-    beta_max: float = Field(2e-2, description="Maximum value of beta")
-    T: int = Field(1000, description="Number of time steps")
+    beta_min: float = Field(..., description="Minimum value of beta")
+    beta_max: float = Field(..., description="Maximum value of beta")
+    T: int = Field(..., description="Number of time steps")
 
 
 class BaseDDPMTrainingConfig(BaseModel):
-    total_iters: int = Field(100000, description="Total number of iterations for training")
-    learning_rate: float = Field(1e-2, description="Learning rate for training")
-    weight_decay: float = Field(1e-2, description="Weight decay for training")
+    total_iters: int = Field(..., description="Total number of iterations for training")
+    learning_rate: float = Field(..., description="Learning rate for training")
+    weight_decay: float = Field(..., description="Weight decay for training")
 
 
 class BaseSampleConfig(BaseModel):
     n_samples: int = Field(1000, description="Number of samples to generate")
     n_repeats: int = Field(1, description="Number of repeats")
     timestamp: int | None = Field(None, description="Starting timestamp")
-    kwargs: dict[str, Any] = Field({}, description="Additional arguments for sampling")
+    kwargs: dict[str, Any] = Field(..., description="Additional arguments for sampling")
 
 
 class BaseForwardStatsConfig(BaseModel):
-    n_samples: int = Field(1000, description="Number of samples to generate")
-    n_repeats: int = Field(1, description="Number of repeats")
-    min_temp: float = Field(1e-2, description="Minimum value of log10(temp)")
-    max_temp: float = Field(1e+2, description="Maximum value of log10(temp)")
-    n_temps: int = Field(500, description="Number of temperatures")
+    n_samples: int = Field(..., description="Number of samples to generate")
+    n_repeats: int = Field(..., description="Number of repeats")
+    min_temp: float = Field(..., description="Minimum value of log10(temp)")
+    max_temp: float = Field(..., description="Maximum value of log10(temp)")
+    n_temps: int = Field(..., description="Number of temperatures")
 
 
 class BaseBackwardStatsConfig(BaseModel):
-    n_samples: int = Field(1000, description="Number of samples to generate")
-    n_repeats: int = Field(1, description="Number of repeats")
-    batch_size: int = Field(20, description="Batch size for stats computation")
-    step_type: str = Field("sde", description="Type of step")
+    n_samples: int = Field(..., description="Number of samples to generate")
+    n_repeats: int = Field(..., description="Number of repeats")
+    batch_size: int = Field(..., description="Batch size for stats computation")
+    step_type: str = Field(..., description="Type of step")
 
 
-class BaseVariedDatasetStatsConfig(BaseModel):
-    n_samples: int = Field(1000, description="Number of samples to generate")
-    n_repeats: int = Field(1, description="Number of repeats")
+class BaseVariedDatasetStatsConfig(BaseForwardStatsConfig):
     dataset_names: list[str]  = Field(["mnist", "cifar10", "cifar100", "fashion_mnist"], description="Names of the datasets")
     sample_fractions: list[float] = Field([1.0, 0.1, 0.01], description="Sample fractions")
-    min_temp: float = Field(1e-2, description="Minimum value of log10(temp)")
-    max_temp: float = Field(1e+2, description="Maximum value of log10(temp)")
-    n_temps: int = Field(500, description="Number of temperatures")
 
 
 class BaseConfig(BaseModel):
@@ -69,6 +64,7 @@ class BaseConfig(BaseModel):
     samples_path: str = Field("", description="Path to the samples")
     samples_from_timestamp_path: str = Field("", description="Path to the samples from timestamp")
     forward_stats_path: str = Field("", description="Path to the forward stats")
+    forward_unbiased_stats_path: str = Field("", description="Path to the forward unbiased stats")
     backward_stats_path: str = Field("", description="Path to the backward stats")
     varied_dataset_stats_path_suffix: str = Field("", description="Path to the varied dataset stats")
 

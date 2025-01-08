@@ -1,20 +1,54 @@
 ddpm_training:
-  total_iters: 100000
-  learning_rate: 0.01
-  weight_decay: 0.01
+  total_iters: 10000
+  learning_rate: 2e-4
+  weight_decay: 1e-2
 
 ddpm:
   model_name: unet
-  parametrization: "x0"
+  parametrization: x0
+  beta_min: 1e-4
+  beta_max: 2e-2
+  T: 1000
 
 data:
   dataset_name: mnist
-  obj_size:
-    - 3
-    - 32
-    - 32
+  # obj_size:
+  #   - 1
+  #   - 32
+  #   - 32
   batch_size: 128
 
 sample:
+  n_samples: 1000
+  n_repeats: 1
   kwargs:
-    step_type: "sde"
+    step_type: sde
+
+forward_stats:
+  n_samples: 100
+  n_repeats: 10
+  min_temp: 1e-3
+  max_temp: 1e+4
+  n_temps: 500
+
+backward_stats:
+  n_samples: 1000
+  n_repeats: 1
+  batch_size: 20
+  step_type: sde
+
+varied_dataset_stats:
+  n_samples: 100
+  n_repeats: 10
+  min_temp: 1e-2
+  max_temp: 1e+3
+  n_temps: 500
+  dataset_names:
+    - mnist
+    - cifar10
+    - cifar100
+    - fashion_mnist
+  sample_fractions:
+    - 1.0
+    - 0.1
+    - 0.01

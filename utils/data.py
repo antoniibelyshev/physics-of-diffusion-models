@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from numpy.typing import NDArray
 from torchvision.datasets import MNIST, CIFAR10, CIFAR100, FashionMNIST # type: ignore
+from torchvision.transforms import ToTensor
 from torch.utils.data import DataLoader, Dataset, TensorDataset
 from typing import Generator
 from torch import Tensor
@@ -37,10 +38,10 @@ class ImageDataset(SizedDataset):
     }
 
     DEFAULR_IMAGE_SIZES = {
-        "mnist": (1, 28, 28),
+        "mnist": (1, 32, 32),
         "cifar10": (3, 32, 32),
         "cifar100": (3, 32, 32),
-        "fashion_mnist": (1, 28, 28),
+        "fashion_mnist": (1, 32, 32),
     }
 
     def __init__(
@@ -63,13 +64,16 @@ class ImageDataset(SizedDataset):
         return len(self.dataset)
     
     def __getitem__(self, index: int) -> dict[str, Tensor]:
-        image, target = self.dataset[index]
-        image = preprocess_image(image, self.image_size[1:])
+        pil_image, target = self.dataset[index]
+        image = self.preprocess_image(pil_image)
         target = torch.tensor(target).long()
         return {
-            "images": Tensor(image).permute(2, 0, 1),
+            "images": image,
             "targets": target,
         }
+
+    def preprocess_image(self, pil_image: Image) -> Tensor:
+        return ToTensor()(pil_image.resize(self.image_size[1:]))
 
 
 def get_data_generator(
@@ -88,7 +92,8 @@ def get_data_generator(
     )
 
     while True:
-        yield from loader
+        for batch in loader:
+            yield batch[0]
 
 
 def get_data_tensor(config: BaseConfig) -> Tensor:
