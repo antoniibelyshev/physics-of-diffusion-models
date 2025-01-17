@@ -6,10 +6,9 @@ authors = ["None, 0"]
 readme = "README.md"
 packages = [
     { include = "utils" },
-    { include = "scripts" },
+    { include = "diffusion" },
     { include = "stats" },
     { include = "config" },
-    { include = "base_config" },
 ]
 
 

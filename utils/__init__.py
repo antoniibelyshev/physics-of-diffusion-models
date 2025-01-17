@@ -1,7 +1,6 @@
 from .data import (
     get_data_generator as get_data_generator,
     get_data_tensor as get_data_tensor,
-    get_obj_size as get_obj_size,
 )
 from .distance import (
     compute_pw_dist_sqr as compute_pw_dist_sqr,

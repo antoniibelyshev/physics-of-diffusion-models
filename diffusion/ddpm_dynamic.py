@@ -3,6 +3,7 @@ import torch
 from torch import Tensor, nn
 from typing import Any
 from utils import norm_sqr
+from config import Config
 
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -18,11 +19,11 @@ class DDPMDynamic(nn.Module):
     posterior_sigma: Tensor
     temp: Tensor
 
-    def __init__(self, obj_size: tuple[int, ...], **coeffs_kwargs: Any) -> None:
+    def __init__(self, config: Config) -> None:
         super().__init__()
 
-        self.obj_size = obj_size
-        coeffs_primitives = get_coeffs_primitives(**coeffs_kwargs)
+        self.obj_size = config.data.obj_size
+        coeffs_primitives = get_coeffs_primitives(config)
 
         for name, tensor in coeffs_primitives.items():
             self.register_buffer(name, tensor)

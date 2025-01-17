@@ -1,14 +1,14 @@
 from torch import nn, Tensor, load
 from denoising_diffusion_pytorch import Unet # type: ignore
 from .ddpm_dynamic import DDPMDynamic
-from base_config import BaseConfig
+from config import Config
 from utils import get_data_tensor
 
 
 class DDPM(nn.Module):
-    def __init__(self, config: BaseConfig):
+    def __init__(self, config: Config):
         super().__init__()
-        self.dynamic = DDPMDynamic(config.data.obj_size, beta_min = config.ddpm.beta_min, beta_max = config.ddpm.beta_max, T = config.ddpm.T)
+        self.dynamic = DDPMDynamic(config)
 
         assert config.ddpm.parametrization in ["x0", "eps", "score"]
         self.parametrization = config.ddpm.parametrization
@@ -32,7 +32,7 @@ class DDPM(nn.Module):
 
 
 class DDPMUnet(DDPM):
-    def __init__(self, config: BaseConfig):
+    def __init__(self, config: Config):
         super().__init__(config)
 
         self.unet = Unet(
@@ -49,7 +49,7 @@ class DDPMUnet(DDPM):
 class DDPMTrue(DDPM):
     train_data: Tensor
 
-    def __init__(self, config: BaseConfig):
+    def __init__(self, config: Config):
         assert config.ddpm.parametrization == "score"
         super().__init__(config)
 
@@ -59,7 +59,7 @@ class DDPMTrue(DDPM):
         return self.dynamic.get_true_score(xt, t, self.train_data)
 
 
-def get_ddpm(config: BaseConfig, pretrained: bool = False) -> DDPM:
+def get_ddpm(config: Config, pretrained: bool = False) -> DDPM:
     if config.ddpm.model_name == "unet":
         ddpm = DDPMUnet(config)
         if pretrained:

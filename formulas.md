@@ -92,7 +92,12 @@ $$C = \frac{\partial U(x, t)}{\partial T} = \frac{\partial}{\partial T}\int\phi(
 
 # Included prior distribution
 
-$$H(x, y, T) = \frac{||x - y||^2}{2} - T\log\phi(y)$$
+### Definitions
+$$p(y|x, T) = \frac{\exp(-H(x, y, T) / T)}{Z(x, T)}$$
+$$H(x, y, T) = \frac{||x - y||^2}{2} - T\log\phi(y),\ Z(x, T) = \int\exp(-H(x, y, T) / T)d y$$
+$$U(x, T) = \mathbb{E}_{y|x, T} H(x, y, T),\ C(x, T) = \frac{\partial U}{\partial T}$$
+
+### Derivations
 $$S(x, T) = -\int \frac{\exp(-H(x, y, T) / T)}{Z(x, T)}\left( -H(x, y, T) / T - \log Z(x, T) \right)dy = \log Z(x, T) + U(x, T) / T$$
 $$T\frac{\partial S}{\partial T} = T\frac{\partial \log Z(x, T)}{\partial T} - \frac{1}{T}U(x, T) + \frac{\partial U}{\partial T}$$
 $$\frac{\partial \log Z(x, T)}{\partial T} = \frac{1}{T^2}U(x, T) + \frac{1}{T}\mathbb{E} \log\phi(y)$$

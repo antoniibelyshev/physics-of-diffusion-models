@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from typing import Generator
 from tqdm import trange
 from .ddpm import DDPM
-from base_config import BaseConfig
+from config import Config
 import wandb
 
 
@@ -13,7 +13,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class DDPMTrainer:
-    def __init__(self, config: BaseConfig, ddpm: DDPM, device: torch.device = DEVICE) -> None:
+    def __init__(self, config: Config, ddpm: DDPM, device: torch.device = DEVICE) -> None:
         self.ddpm = ddpm
         self.ddpm.to(device)
         self.ema = ExponentialMovingAverage(ddpm.parameters(), decay=0.999)

@@ -3,7 +3,7 @@ from stats import compute_stats_traj_batch
 import numpy as np
 from tqdm import tqdm
 from torch import Tensor
-from base_config import BaseConfig
+from config import Config
 from config import with_config
 from utils import get_data_tensor
 # from .sample import get_samples
@@ -11,7 +11,7 @@ from diffusion import get_ddpm, get_samples
 
 
 @with_config()
-def main(config: BaseConfig) -> None:
+def main(config: Config) -> None:
     ddpm = get_ddpm(config, pretrained = True)
     kwargs = {
         "shape": (config.backward_stats.n_samples, *config.data.obj_size),

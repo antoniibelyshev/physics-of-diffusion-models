@@ -1,13 +1,12 @@
 import numpy as np
 import torch
-from typing import Any
 
 from diffusion import get_samples, get_ddpm, DDPM
-from base_config import BaseConfig
+from config import Config
 from config import with_config
 
 
-def get_and_save_samples(config: BaseConfig) -> None:
+def get_and_save_samples(config: Config) -> None:
     ddpm = get_ddpm(config, pretrained = True)
     kwargs = config.sample.kwargs
     kwargs["shape"] = (config.sample.n_samples, *config.data.obj_size)
@@ -26,7 +25,7 @@ def get_and_save_samples(config: BaseConfig) -> None:
 
 
 @with_config()
-def main(config: BaseConfig) -> None:
+def main(config: Config) -> None:
     get_and_save_samples(config)
 
 

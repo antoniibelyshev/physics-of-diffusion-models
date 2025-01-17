@@ -8,14 +8,11 @@ ddpm:
   parametrization: x0
   beta_min: 1e-4
   beta_max: 2e-2
-  T: 1000
+  total_time: 1000
+  schedule_type: linear
 
 data:
   dataset_name: mnist
-  # obj_size:
-  #   - 1
-  #   - 32
-  #   - 32
   batch_size: 128
 
 sample:

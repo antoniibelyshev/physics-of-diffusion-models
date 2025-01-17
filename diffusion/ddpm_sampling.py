@@ -11,8 +11,8 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def batch_jacobian(func: Callable[[Tensor], Tensor], x: Tensor) -> Tensor:
-    def _func_sum(x: Tensor) -> Tensor:
-        return func(x).sum(dim=0)
+    def _func_sum(x_: Tensor) -> Tensor:
+        return func(x_).sum(dim=0)
         
     return jacobian(_func_sum, x).permute(1, 0, 2) # type: ignore
 

@@ -2,16 +2,16 @@ import torch
 import numpy as np
 from numpy.typing import NDArray
 from torchvision.datasets import MNIST, CIFAR10, CIFAR100, FashionMNIST # type: ignore
-from torchvision.transforms import ToTensor
+from torchvision.transforms import ToTensor # type: ignore
 from torch.utils.data import DataLoader, Dataset, TensorDataset
 from typing import Generator
 from torch import Tensor
 from PIL.Image import Image
-from base_config import BaseConfig
+from config import Config
 
 
 def preprocess_image(image: Image, size: tuple[int, int]) -> NDArray[np.float32]:
-    return np.array(image.resize(size), dtype = np.float32) / 127.5 - 1
+    return np.array(image.resize(size), dtype = np.float32) / 127.5 - 1.
 
 
 def postprocess_image(image: Tensor) -> Tensor:
@@ -37,17 +37,10 @@ class ImageDataset(SizedDataset):
         "fashion_mnist": FashionMNIST,
     }
 
-    DEFAULR_IMAGE_SIZES = {
-        "mnist": (1, 32, 32),
-        "cifar10": (3, 32, 32),
-        "cifar100": (3, 32, 32),
-        "fashion_mnist": (1, 32, 32),
-    }
-
     def __init__(
         self,
         dataset_name: str,
-        image_size: tuple[int, int, int] | None = None,
+        image_size: tuple[int, int, int],
         train: bool = True,
     ):
         super().__init__()
@@ -58,7 +51,7 @@ class ImageDataset(SizedDataset):
             download=True
         )
 
-        self.image_size = image_size or self.DEFAULR_IMAGE_SIZES[dataset_name]
+        self.image_size = image_size
 
     def __len__(self) -> int:
         return len(self.dataset)
@@ -73,7 +66,7 @@ class ImageDataset(SizedDataset):
         }
 
     def preprocess_image(self, pil_image: Image) -> Tensor:
-        return ToTensor()(pil_image.resize(self.image_size[1:]))
+        return ToTensor()(pil_image.resize(self.image_size[1:])) # type: ignore
 
 
 def get_data_generator(
@@ -96,17 +89,10 @@ def get_data_generator(
             yield batch[0]
 
 
-def get_data_tensor(config: BaseConfig) -> Tensor:
+def get_data_tensor(config: Config) -> Tensor:
     if config.data.dataset_name in ImageDataset.DATASET_CLASSES:
         assert len(config.data.obj_size) == 3
         dataset = ImageDataset(config.data.dataset_name, config.data.obj_size)
     else:
         raise ValueError(f"Unknown dataset name: {config.data.dataset_name}")
     return torch.stack([dataset[i]["images"] for i in range(len(dataset))], 0)
-
-
-def get_obj_size(dataset_name: str) -> tuple[int, int, int]:
-    if dataset_name in ImageDataset.DATASET_CLASSES:
-        return ImageDataset.DEFAULR_IMAGE_SIZES[dataset_name]
-    else:
-        raise ValueError(f"Unknown dataset name: {dataset_name}")

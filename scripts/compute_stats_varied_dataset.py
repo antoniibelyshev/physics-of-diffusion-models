@@ -2,12 +2,11 @@ from utils import get_data_tensor
 import torch
 from stats import compute_stats
 import numpy as np
-from base_config import BaseConfig
-from config import with_config
+from config import Config, with_config
 
 
 @with_config()
-def main(config: BaseConfig) -> None:
+def main(config: Config) -> None:
     temp = torch.logspace(
         config.varied_dataset_stats.min_temp,
         config.varied_dataset_stats.max_temp,
