@@ -1,11 +1,12 @@
 from pydantic import BaseModel, Field, model_validator
-from typing import Any, Self
+from typing import Any
+from typing_extensions import Self
 
 
 class DataConfig(BaseModel):
     dataset_name: str = Field(..., description="Name of the dataset")
     batch_size: int = Field(..., description="Batch size for training")
-    obj_size: tuple[int, ...] = Field(..., init=False, description="Size of an object")
+    obj_size: tuple[int, ...] = Field((), init=False, description="Size of an object")
 
     @model_validator(mode="after")
     def _set_obj_size(self) -> Self:
@@ -81,8 +82,15 @@ class Config(BaseModel):
     # wandb setup
     @property
     def experiment_name(self) -> str:
-        ddpm = self.ddpm
-        return f"{self.data.dataset_name}_{ddpm.model_name}_{ddpm.parametrization}_{ddpm.schedule_type}_schedule"
+        return "_".join([
+            self.data.dataset_name,
+            self.ddpm.model_name,
+            self.ddpm.parametrization,
+            str(self.ddpm_training.total_iters),
+            "iter",
+            self.ddpm.schedule_type,
+            "schedule",
+        ])
 
     @property
     def project_name(self) -> str:

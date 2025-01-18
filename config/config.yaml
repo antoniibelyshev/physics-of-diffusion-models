@@ -1,5 +1,5 @@
 ddpm_training:
-  total_iters: 10000
+  total_iters: 50000
   learning_rate: 2e-4
   weight_decay: 1e-2
 
@@ -9,7 +9,7 @@ ddpm:
   beta_min: 1e-4
   beta_max: 2e-2
   total_time: 1000
-  schedule_type: linear
+  schedule_type: flattening_temp_unbiased
 
 data:
   dataset_name: mnist

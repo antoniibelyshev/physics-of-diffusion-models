@@ -25,7 +25,7 @@ def get_coeffs_primitives(config: Config) -> dict[str, Tensor]:
         temp = get_flattening_temp(config.flattening_temp_stats_path, total_time)
         alpha_bar = 1 / (temp + 1)
         alpha = alpha_bar / pad(alpha_bar[:-1], (1, 0), value=1.0)
-        beta = 1 - alpha_bar
+        beta = 1 - alpha
 
     alpha_bar_shifted = pad(alpha_bar[:-1], (1, 0), value=1.0)
 
@@ -47,9 +47,10 @@ def get_coeffs_primitives(config: Config) -> dict[str, Tensor]:
 
 def get_flattening_temp(stats_filename: str, total_time: int) -> Tensor:
     stats = np.load(stats_filename)
-    stats_log_temp = np.log(stats["temp"])
-    heat_capacity = stats["C"]
-    cdf_values = cumulative_trapezoid(heat_capacity, stats_log_temp)
+    stats_temp = stats["temp"]
+    stats_log_temp = np.log(stats_temp)
+    heat_capacity = stats["var_H"] / stats_temp ** 2
+    cdf_values = cumulative_trapezoid(heat_capacity, stats_log_temp, initial=0)
     cdf_values /= cdf_values[-1]
     inverse_cdf_interp = interp1d(cdf_values, stats_log_temp, kind='linear', fill_value="extrapolate")
     return from_numpy(np.exp(inverse_cdf_interp(torch.linspace(0, 1, total_time))))
