@@ -6,8 +6,8 @@ ddpm_training:
 ddpm:
   model_name: unet
   parametrization: x0
-  beta_min: 1e-4
-  beta_max: 2e-2
+  beta_min: 1e-1
+  beta_max: 2e1
   total_time: 1000
   schedule_type: flattening_temp_unbiased
 
@@ -16,8 +16,10 @@ data:
   batch_size: 128
 
 sample:
+  n_steps: 1000
   n_samples: 1000
   n_repeats: 1
+  timestamp: 1
   kwargs:
     step_type: sde
 
@@ -25,7 +27,7 @@ forward_stats:
   n_samples: 100
   n_repeats: 10
   min_temp: 1e-3
-  max_temp: 1e+4
+  max_temp: 1e4
   n_temps: 500
 
 backward_stats:
@@ -37,8 +39,8 @@ backward_stats:
 varied_dataset_stats:
   n_samples: 100
   n_repeats: 10
-  min_temp: 1e-2
-  max_temp: 1e+3
+  min_temp: 1e-3
+  max_temp: 1e4
   n_temps: 500
   dataset_names:
     - mnist

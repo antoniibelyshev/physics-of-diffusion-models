@@ -1,34 +1,37 @@
 from torch import nn, Tensor, load
 from denoising_diffusion_pytorch import Unet # type: ignore
-from .ddpm_dynamic import DDPMDynamic
+from .ddpm_dynamic import DDPMDynamic, DynamicParams
 from config import Config
 from utils import get_data_tensor
+
+
+class DDPMPredictions:
+    def __init__(self, pred: Tensor, xt: Tensor, dynamic_params: DynamicParams, parametrization: str) -> None:
+        alpha_bar = dynamic_params.alpha_bar
+        match parametrization:
+            case "x0":
+                self.x0 = pred
+                self.eps = (xt - pred * alpha_bar.sqrt()) / (1 - alpha_bar).sqrt()
+                self.score = -self.eps / (1 - alpha_bar).sqrt()
+            case "eps":
+                self.x0 = (xt - pred * (1 - alpha_bar).sqrt()) / alpha_bar.sqrt()
+                self.eps = pred
+                self.score = -self.eps / (1 - alpha_bar).sqrt()
+            case "score":
+                self.x0 = (xt - pred * (1 - alpha_bar).sqrt()) / alpha_bar.sqrt()
+                self.eps = -pred * (1 - alpha_bar).sqrt()
+                self.score = pred
 
 
 class DDPM(nn.Module):
     def __init__(self, config: Config):
         super().__init__()
         self.dynamic = DDPMDynamic(config)
-
-        assert config.ddpm.parametrization in ["x0", "eps", "score"]
         self.parametrization = config.ddpm.parametrization
+        assert self.parametrization in ["x0", "eps", "score"]
     
-    def get_predictions(self, xt: Tensor, t: Tensor) -> dict[str, Tensor]:
-        res = self(xt, t)
-        predictions = {self.parametrization: res}
-
-        match self.parametrization:
-            case "x0":
-                predictions["eps"] = self.dynamic.get_eps_from_x0(xt, res, t)
-                predictions["score"] = self.dynamic.get_score_from_x0(xt, res, t)
-            case "eps":
-                predictions["x0"] = self.dynamic.get_x0_from_eps(xt, res, t)
-                predictions["score"] = self.dynamic.get_score_from_eps(xt, res, t)
-            case "score":
-                predictions["x0"] = self.dynamic.get_x0_from_score(xt, res, t)
-                predictions["eps"] = self.dynamic.get_eps_from_score(xt, res, t)
-
-        return predictions
+    def get_predictions(self, xt: Tensor, t: Tensor) -> DDPMPredictions:
+        return DDPMPredictions(self(xt, t), xt, self.dynamic.get_dynamic_params(t), self.parametrization)
 
 
 class DDPMUnet(DDPM):
@@ -43,7 +46,7 @@ class DDPMUnet(DDPM):
         )
 
     def forward(self, xt: Tensor, t: Tensor) -> Tensor:
-        return self.unet(xt, t) # type: ignore
+        return self.unet(xt, self.dynamic.get_dynamic_params(t, unsqueeze=False).temp) # type: ignore
 
 
 class DDPMTrue(DDPM):

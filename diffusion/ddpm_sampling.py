@@ -2,9 +2,11 @@ from tqdm import tqdm
 from torch import Tensor
 import torch
 from .ddpm import DDPM
-from typing import Generator, Optional, Callable, Any
+from typing import Optional, Callable, Any
 import numpy as np
 from torch.autograd.functional import jacobian
+
+from utils import get_time_evenly_spaced
 
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -19,14 +21,14 @@ def batch_jacobian(func: Callable[[Tensor], Tensor], x: Tensor) -> Tensor:
 
 @torch.no_grad()
 def sde_step(xt: Tensor, t: Tensor, ddpm: DDPM) -> Tensor:
-    x0 = ddpm.get_predictions(xt, t)["x0"]
-    return ddpm.dynamic.sample_from_posterior_q(xt, x0, t) - xt
+    x0 = ddpm.get_predictions(xt, t).x0
+    return ddpm.dynamic.sample_from_posterior_q(xt, x0, t)
 
 
 def ode_step(xt: Tensor, t: Tensor, ddpm: DDPM) -> Tensor:
-    beta = ddpm.dynamic.get_coef_from_time("beta", t)
-    score = ddpm.get_predictions(xt, t)["score"]
-    return 0.5 * beta * (xt + score)
+    beta = ddpm.dynamic.get_dynamic_params(t).beta
+    score = ddpm.get_predictions(xt, t).score
+    return xt + 0.5 * beta * (xt + score) # type: ignore
 
 
 def step(xt: Tensor, t: Tensor, ddpm: DDPM, step_type: str = "sde") -> Tensor:
@@ -41,24 +43,21 @@ def step(xt: Tensor, t: Tensor, ddpm: DDPM, step_type: str = "sde") -> Tensor:
 
 def sample(
     ddpm: DDPM,
-    shape: Optional[tuple[int, int, int, int]] = None,
+    num_steps: int,
+    n_samples: Optional[int] = None,
     *,
     device: torch.device = DEVICE,
     step_type: str = "sde",
     track_ll: bool = False,
-    n_substeps: int = 1,
     x_start: Optional[Tensor] = None,
     init_ll: Optional[Tensor] = None,
-    timestamp: Optional[int] = None,
+    timestamp: int = 1,
 ) -> dict[str, Tensor]:
-    timestamp = timestamp or ddpm.dynamic.T
-    dt = 1 / n_substeps
-
     if x_start is not None:
-        shape_ = x_start.shape
+        shape = tuple(x_start.shape)
         xt = x_start.to(device)
-    elif shape is not None:
-        shape_ = torch.Size(shape)
+    elif n_samples is not None:
+        shape = (n_samples, *ddpm.dynamic.obj_size)
         xt = torch.randn(shape, device=device)
     else:
         raise ValueError("Either shape or x_start must be provided")
@@ -66,30 +65,25 @@ def sample(
     ddpm.to(device)
     ddpm.eval()
 
-    iterator: Generator[Tensor, None, None] = (
-        torch.tensor([t] * shape_[0], device=device).long()
-        for t in range(timestamp - 1, -1, -1)
-    )
-
     states: list[Tensor] = []
     ll_lst: list[Tensor] | None = None
     if track_ll:
         assert step_type == "ode", "Log-likelihood tracking is only supported for ODE sampling"
+        if init_ll is None:
+            init_ll = -0.5 * (xt.pow(2).sum(dim=tuple(range(1, len(shape) + 1))).cpu() + np.log(2 * np.pi) * np.prod(shape[1:]))
+        ll_lst = [init_ll]
 
-        ll_lst = [init_ll if init_ll is not None else -0.5 * (xt.pow(2).sum(dim=(1, 2, 3)).cpu() + np.log(2 * np.pi) * np.prod(shape_[1:]))]
+    for t in tqdm(get_time_evenly_spaced(num_steps, timestamp)):
+        states.append(xt.cpu())
+        if track_ll:
+            def next_val(x: Tensor) -> Tensor:
+                return step(x.view(shape), t, ddpm, step_type).view(shape[0], -1)
 
-    for t in tqdm(iterator, total=timestamp):
-        for _ in range(n_substeps):
-            states.append(xt.cpu())
-            if track_ll:
-                def next_val(x: Tensor) -> Tensor:
-                    return x + dt * step(x.view(shape_), t, ddpm, step_type).view(shape_[0], -1)
+            assert ll_lst is not None, "ll_lst should not be None"
+            ll_lst.append(ll_lst[-1] - torch.logdet(batch_jacobian(next_val, xt.view(shape[0], -1))).cpu())
 
-                assert ll_lst is not None, "ll_lst should not be None"
-                ll_lst.append(ll_lst[-1] - torch.logdet(batch_jacobian(next_val, xt.view(shape_[0], -1))).cpu())
-
-            with torch.no_grad():
-                xt = xt + dt * step(xt, t, ddpm, step_type)
+        with torch.no_grad():
+            xt = step(xt, t, ddpm, step_type)
 
     res = {"x": xt.cpu(), "states": torch.stack(states[::-1], dim=1)}
     if track_ll:

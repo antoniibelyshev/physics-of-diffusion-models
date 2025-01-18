@@ -1,7 +1,7 @@
 from torch import Tensor
 import torch
 from torch_ema import ExponentialMovingAverage # type: ignore
-import torch.nn.functional as F
+from torch.nn.functional import mse_loss
 from typing import Generator
 from tqdm import trange
 from .ddpm import DDPM
@@ -36,14 +36,11 @@ class DDPMTrainer:
         self.ema.restore(self.ddpm.parameters())
 
     def calc_loss(self, x0: Tensor) -> Tensor:
-        t = self.ddpm.dynamic.sample_time_on_device(batch_size=x0.shape[0], device=self.device)
-        d = self.ddpm.dynamic({"x0": x0, "t": t})
-        xt = d["xt"]
-        eps = d["eps"]
+        t, eps, xt = self.ddpm.dynamic(x0)
 
-        res = self.ddpm(xt, t)
+        pred = self.ddpm(xt, t)
         target = eps if self.ddpm.parametrization == "eps" else x0
-        return F.mse_loss(target, res)
+        return mse_loss(target, pred)
 
     def optimizer_logic(self, loss: Tensor) -> None:
         self.optimizer.zero_grad()

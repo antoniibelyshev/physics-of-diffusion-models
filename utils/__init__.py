@@ -13,4 +13,7 @@ from .synthetic_datasets import (
     sample_on_hypersphere as sample_on_hypersphere,
     generate_dataset as generate_dataset,
 )
-from .utils import dict_map as dict_map
+from .utils import (
+    dict_map as dict_map,
+    get_time_evenly_spaced as get_time_evenly_spaced
+)

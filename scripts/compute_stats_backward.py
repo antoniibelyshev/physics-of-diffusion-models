@@ -5,8 +5,7 @@ from tqdm import tqdm
 from torch import Tensor
 from config import Config
 from config import with_config
-from utils import get_data_tensor
-# from .sample import get_samples
+from utils import get_data_tensor, get_time_evenly_spaced
 from diffusion import get_ddpm, get_samples
 
 
@@ -14,11 +13,12 @@ from diffusion import get_ddpm, get_samples
 def main(config: Config) -> None:
     ddpm = get_ddpm(config, pretrained = True)
     kwargs = {
-        "shape": (config.backward_stats.n_samples, *config.data.obj_size),
+        "num_steps": config.sample.n_steps,
+        "n_samples": config.backward_stats.batch_size,
         "step_type": config.backward_stats.step_type,
     }
     samples = get_samples(ddpm, kwargs, n_repeats = config.backward_stats.n_repeats)
-    temp = ddpm.dynamic.temp.cpu()
+    temp = ddpm.dynamic.get_dynamic_params(get_time_evenly_spaced(config.sample.n_steps)).temp
     x_sample = torch.tensor(samples["states"])
     x_batched = x_sample.reshape(-1, config.backward_stats.batch_size, *x_sample.shape[1:])
     y = get_data_tensor(config)

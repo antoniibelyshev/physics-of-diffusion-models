@@ -9,7 +9,9 @@ $$T = \frac{1 - \bar\alpha_t}{\bar\alpha_t}$$
 ## Analytical approximation
 
 If we suppose $N \to\infty$
-$$\log\beta_{\alpha N} = \sum\limits_{k = 1}^{\alpha N} \log\left( 1 - \beta_{min} - \frac{k\beta_{max}}{N} \right) = -\alpha N$$
+$$\log\beta_{\alpha N} =
+\sum\limits_{k = 1}^{\alpha N} \log\left( 1 - \beta_{min} - \frac{k\beta_{max}}{N} \right) =
+-\alpha N \beta_\min - \alpha^2N\beta_\max$$
 $$T = \exp(\beta_N t^2 / (2N)) - 1$$
 $$N = 1000, \beta_N = 0.02$$
 

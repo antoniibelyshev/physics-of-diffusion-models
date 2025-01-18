@@ -27,9 +27,8 @@ class DataConfig(BaseModel):
 class DDPMConfig(BaseModel):
     model_name: str = Field(..., description="Name of the model architecture")
     parametrization: str = Field(..., description="Parametrization of the model")
-    beta_min: float = Field(..., description="Minimum value of beta")
-    beta_max: float = Field(..., description="Maximum value of beta")
-    total_time: int = Field(..., description="Number of time steps")
+    beta0: float = Field(..., description="Minimum value of beta")
+    beta1: float = Field(..., description="Maximum value of beta")
     schedule_type: str = Field(..., description="Type of the temperature schedule")
 
 
@@ -40,9 +39,10 @@ class DDPMTrainingConfig(BaseModel):
 
 
 class SampleConfig(BaseModel):
-    n_samples: int = Field(1000, description="Number of samples to generate")
-    n_repeats: int = Field(1, description="Number of repeats")
-    timestamp: int | None = Field(None, description="Starting timestamp")
+    n_steps: int = Field(..., description="Number of steps for sampling")
+    n_samples: int = Field(..., description="Number of samples to generate")
+    n_repeats: int = Field(..., description="Number of repeats")
+    timestamp: int = Field(..., description="Starting timestamp")
     kwargs: dict[str, Any] = Field(..., description="Additional arguments for sampling")
 
 
