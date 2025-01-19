@@ -1,5 +1,6 @@
 from typing import Callable
 from torch import Tensor, from_numpy
+from torch.nn.functional import pad
 from scipy.interpolate import interp1d # type: ignore
 from scipy.integrate import cumulative_trapezoid # type: ignore
 import numpy as np
@@ -29,7 +30,7 @@ def get_flattening_temp_schedule(stats_path: str) -> Callable[[Tensor], Tensor]:
 
 def get_linear_beta_temp_schedule(beta0: float, beta1: float) -> Callable[[Tensor], Tensor]:
     def linear_beta_temp_schedule(t: Tensor) -> Tensor:
-        return (beta0 * t + beta1 * t ** 2 / 2).exp() - 1 # type: ignore
+        return (t * beta0 + t.pow(2) * beta1 * 0.5).exp() - 1
     return linear_beta_temp_schedule
 
 
@@ -40,3 +41,19 @@ def get_temp_schedule(config: Config) -> Callable[[Tensor], Tensor]:
         return get_flattening_temp_schedule(config.flattening_temp_stats_path)
     else:
         raise ValueError(f"Unknown schedule type: {config.ddpm.schedule_type}")
+
+
+def get_alpha_bar(temp: Tensor) -> Tensor:
+    return (temp + 1).inverse()
+
+
+class DynamicCoeffs:
+    def __init__(self, temp: Tensor) -> None:
+        self.temp = temp
+        self.alpha_bar = get_alpha_bar(temp)
+        alpha_bar_shifted = pad(self.alpha_bar[:-1], (*(0,) * (len(temp.shape) * 2 - 2), 1, 0), value=1.0)
+        alpha = self.alpha_bar / alpha_bar_shifted
+        self.beta = 1 - alpha
+        self.posterior_x0_coef = (alpha_bar_shifted.sqrt() * self.beta) / (1 - self.alpha_bar)
+        self.posterior_xt_coef = (alpha.sqrt() * (1 - alpha_bar_shifted)) / (1 - self.alpha_bar)
+        self.posterior_sigma = (1 - alpha_bar_shifted) / (1 - self.alpha_bar) * self.beta

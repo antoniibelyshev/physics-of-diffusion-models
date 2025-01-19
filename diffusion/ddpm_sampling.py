@@ -2,7 +2,7 @@ from tqdm import trange
 from torch import Tensor
 import torch
 from .ddpm import DDPM
-from.ddpm_dynamic import DynamicParams
+from .diffusion_utils import DynamicCoeffs
 from typing import Optional, Callable, Any
 import numpy as np
 from torch.autograd.functional import jacobian
@@ -21,27 +21,27 @@ def batch_jacobian(func: Callable[[Tensor], Tensor], x: Tensor) -> Tensor:
 
 
 @torch.no_grad()
-def sde_step(xt: Tensor, t: int, ddpm: DDPM, dynamic_params: DynamicParams) -> Tensor:
+def sde_step(xt: Tensor, t: Tensor, ddpm: DDPM, dynamic_coeffs: DynamicCoeffs) -> Tensor:
     x0 = ddpm.get_predictions(xt, t).x0
-    posterior_x0_coef = dynamic_params.posterior_x0_coef[t]
-    posterior_xt_coef = dynamic_params.posterior_xt_coef[t]
-    posterior_sigma = dynamic_params.posterior_sigma[t]
+    posterior_x0_coef = dynamic_coeffs.posterior_x0_coef[t]
+    posterior_xt_coef = dynamic_coeffs.posterior_xt_coef[t]
+    posterior_sigma = dynamic_coeffs.posterior_sigma[t]
     eps = torch.randn(x0.shape).to(x0.device)
     return posterior_x0_coef * x0 + posterior_xt_coef * xt + eps * posterior_sigma.sqrt() # type: ignore
 
 
-def ode_step(xt: Tensor, t: int, ddpm: DDPM, dynamic_params: DynamicParams) -> Tensor:
-    beta = dynamic_params.beta[t]
+def ode_step(xt: Tensor, t: Tensor, ddpm: DDPM, dynamic_coeffs: DynamicCoeffs) -> Tensor:
+    beta = dynamic_coeffs.beta[t]
     score = ddpm.get_predictions(xt, t).score
     return xt + 0.5 * beta * (xt + score) # type: ignore
 
 
-def step(xt: Tensor, t: int, ddpm: DDPM, dynamic_params: DynamicParams, step_type: str = "sde") -> Tensor:
+def step(xt: Tensor, t: Tensor, ddpm: DDPM, dynamic_coeffs: DynamicCoeffs, step_type: str = "sde") -> Tensor:
     match step_type:
         case "sde":
-            return sde_step(xt, t, ddpm, dynamic_params)
+            return sde_step(xt, t, ddpm, dynamic_coeffs)
         case "ode":
-            return ode_step(xt, t, ddpm, dynamic_params)
+            return ode_step(xt, t, ddpm, dynamic_coeffs)
         case _:
             raise ValueError("Invalid type")
 
@@ -79,19 +79,20 @@ def sample(
         ll_lst = [init_ll]
 
     t_grid = get_time_evenly_spaced(n_steps, timestamp)
-    dynamic_params = ddpm.dynamic.get_dynamic_params(t_grid)
+    dynamic_coeffs = DynamicCoeffs(ddpm.dynamic.get_temp(t_grid))
 
-    for t in trange(len(t_grid) - 1, - 1, -1):
+    for idx in trange(len(t_grid) - 1, - 1, -1):
+        t = torch.tensor([t_grid[idx]], device=device)
         states.append(xt.cpu())
         if track_ll:
             def next_val(x: Tensor) -> Tensor:
-                return step(x.view(shape), t, ddpm, dynamic_params, step_type).view(shape[0], -1)
+                return step(x.view(shape), t, ddpm, dynamic_coeffs, step_type).view(shape[0], -1)
 
             assert ll_lst is not None, "ll_lst should not be None"
             ll_lst.append(ll_lst[-1] - torch.logdet(batch_jacobian(next_val, xt.view(shape[0], -1))).cpu())
 
         with torch.no_grad():
-            xt = step(xt, t, ddpm, dynamic_params, step_type)
+            xt = step(xt, t, ddpm, dynamic_coeffs, step_type)
 
     res = {"x": xt.cpu(), "states": torch.stack(states[::-1], dim=1)}
     if track_ll:

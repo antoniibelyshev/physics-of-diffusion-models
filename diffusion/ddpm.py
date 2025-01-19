@@ -1,13 +1,12 @@
 from torch import nn, Tensor, load
 from denoising_diffusion_pytorch import Unet # type: ignore
-from .ddpm_dynamic import DDPMDynamic, DynamicParams
+from .ddpm_dynamic import DDPMDynamic
 from config import Config
 from utils import get_data_tensor
 
 
 class DDPMPredictions:
-    def __init__(self, pred: Tensor, xt: Tensor, dynamic_params: DynamicParams, parametrization: str) -> None:
-        alpha_bar = dynamic_params.alpha_bar
+    def __init__(self, pred: Tensor, xt: Tensor, alpha_bar: Tensor, parametrization: str) -> None:
         match parametrization:
             case "x0":
                 self.x0 = pred
@@ -30,8 +29,8 @@ class DDPM(nn.Module):
         self.parametrization = config.ddpm.parametrization
         assert self.parametrization in ["x0", "eps", "score"]
     
-    def get_predictions(self, xt: Tensor, t: Tensor | int) -> DDPMPredictions:
-        return DDPMPredictions(self(xt, t), xt, self.dynamic.get_dynamic_params(t), self.parametrization)
+    def get_predictions(self, xt: Tensor, t: Tensor) -> DDPMPredictions:
+        return DDPMPredictions(self(xt, t), xt, self.dynamic.get_alpha_bar(t), self.parametrization)
 
 
 class DDPMUnet(DDPM):
@@ -46,7 +45,7 @@ class DDPMUnet(DDPM):
         )
 
     def forward(self, xt: Tensor, t: Tensor | int) -> Tensor:
-        return self.unet(xt, self.dynamic.get_dynamic_params(t, unsqueeze=False).temp) # type: ignore
+        return self.unet(xt, t) # type: ignore
 
 
 class DDPMTrue(DDPM):
@@ -58,7 +57,7 @@ class DDPMTrue(DDPM):
 
         self.register_buffer("train_data", get_data_tensor(config))
 
-    def forward(self, xt: Tensor, t: Tensor | int) -> Tensor:
+    def forward(self, xt: Tensor, t: Tensor) -> Tensor:
         return self.dynamic.get_true_score(xt, t, self.train_data)
 
 

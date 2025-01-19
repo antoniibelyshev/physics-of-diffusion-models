@@ -1,24 +1,11 @@
-from .diffusion_utils import get_temp_schedule
+from .diffusion_utils import get_temp_schedule, get_alpha_bar
 import torch
 from torch import Tensor, nn
-from torch.nn.functional import pad
 from utils import norm_sqr
 from config import Config
 
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-class DynamicParams:
-    def __init__(self, temp: Tensor) -> None:
-        self.temp = temp
-        self.alpha_bar = 1 / (temp + 1)
-        alpha_bar_shifted = pad(self.alpha_bar[:-1], (*(0,) * (len(temp.shape) * 2 - 2), 1, 0), value=1.0)
-        alpha = self.alpha_bar / alpha_bar_shifted
-        self.beta = 1 - alpha
-        self.posterior_x0_coef = (alpha_bar_shifted.sqrt() * self.beta) / (1 - self.alpha_bar)
-        self.posterior_xt_coef = (alpha.sqrt() * (1 - alpha_bar_shifted)) / (1 - self.alpha_bar)
-        self.posterior_sigma = (1 - alpha_bar_shifted) / (1 - self.alpha_bar) * self.beta
 
 
 class DDPMDynamic(nn.Module):
@@ -28,15 +15,16 @@ class DDPMDynamic(nn.Module):
         self.obj_size = config.data.obj_size
         self.temp_schedule = get_temp_schedule(config)
 
-    def get_dynamic_params(self, t: Tensor, unsqueeze: bool = True) -> DynamicParams:
-        if unsqueeze:
-            t = t.view(-1, *(1,) * len(self.obj_size))
-        return DynamicParams(self.temp_schedule(t))
+    def get_temp(self, t: Tensor) -> Tensor:
+        return self.temp_schedule(t).view(-1, *[1] * len(self.obj_size))
+
+    def get_alpha_bar(self, t: Tensor) -> Tensor:
+        return get_alpha_bar(self.get_temp(t))
 
     def forward(self, x0: Tensor) -> tuple[Tensor, Tensor, Tensor]:
         t = torch.rand((len(x0),), device=x0.device)
 
-        alpha_bar = self.get_dynamic_params(t).alpha_bar
+        alpha_bar = self.get_alpha_bar(t)
         eps = torch.randn_like(x0)
         xt = alpha_bar.sqrt() * x0 + eps * (1 - alpha_bar).sqrt()
 
