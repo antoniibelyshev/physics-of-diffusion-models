@@ -33,15 +33,6 @@ class DDPMDynamic(nn.Module):
             t = t.view(-1, *(1,) * len(self.obj_size))
         return DynamicParams(self.temp_schedule(t))
 
-    def sample_from_posterior_q(self, xt: Tensor, x0: Tensor, t: Tensor) -> Tensor:
-        posterior_x0_coef = self.get_coef_from_time("posterior_x0_coef", t)
-        posterior_xt_coef = self.get_coef_from_time("posterior_xt_coef", t)
-        posterior_sigma = self.get_coef_from_time("posterior_sigma", t)
-
-        sample = posterior_x0_coef * x0 + posterior_xt_coef * xt
-        eps = torch.randn(x0.shape).to(x0.device)
-        return sample + eps * posterior_sigma.sqrt() # type: ignore
-
     def forward(self, x0: Tensor) -> tuple[Tensor, Tensor, Tensor]:
         t = torch.rand((len(x0),), device=x0.device)
 

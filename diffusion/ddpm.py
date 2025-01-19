@@ -30,7 +30,7 @@ class DDPM(nn.Module):
         self.parametrization = config.ddpm.parametrization
         assert self.parametrization in ["x0", "eps", "score"]
     
-    def get_predictions(self, xt: Tensor, t: Tensor) -> DDPMPredictions:
+    def get_predictions(self, xt: Tensor, t: Tensor | int) -> DDPMPredictions:
         return DDPMPredictions(self(xt, t), xt, self.dynamic.get_dynamic_params(t), self.parametrization)
 
 
@@ -45,7 +45,7 @@ class DDPMUnet(DDPM):
             flash_attn = True,
         )
 
-    def forward(self, xt: Tensor, t: Tensor) -> Tensor:
+    def forward(self, xt: Tensor, t: Tensor | int) -> Tensor:
         return self.unet(xt, self.dynamic.get_dynamic_params(t, unsqueeze=False).temp) # type: ignore
 
 
@@ -58,7 +58,7 @@ class DDPMTrue(DDPM):
 
         self.register_buffer("train_data", get_data_tensor(config))
 
-    def forward(self, xt: Tensor, t: Tensor) -> Tensor:
+    def forward(self, xt: Tensor, t: Tensor | int) -> Tensor:
         return self.dynamic.get_true_score(xt, t, self.train_data)
 
 
