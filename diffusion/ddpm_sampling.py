@@ -43,7 +43,7 @@ def step(xt: Tensor, t: Tensor, ddpm: DDPM, step_type: str = "sde") -> Tensor:
 
 def sample(
     ddpm: DDPM,
-    num_steps: int,
+    n_steps: int,
     n_samples: Optional[int] = None,
     *,
     device: torch.device = DEVICE,
@@ -73,7 +73,7 @@ def sample(
             init_ll = -0.5 * (xt.pow(2).sum(dim=tuple(range(1, len(shape) + 1))).cpu() + np.log(2 * np.pi) * np.prod(shape[1:]))
         ll_lst = [init_ll]
 
-    for t in tqdm(get_time_evenly_spaced(num_steps, timestamp)):
+    for t in tqdm(get_time_evenly_spaced(n_steps, timestamp)):
         states.append(xt.cpu())
         if track_ll:
             def next_val(x: Tensor) -> Tensor:

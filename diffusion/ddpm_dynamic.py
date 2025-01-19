@@ -13,7 +13,7 @@ class DynamicParams:
     def __init__(self, temp: Tensor) -> None:
         self.temp = temp
         self.alpha_bar = 1 / (temp + 1)
-        alpha_bar_shifted = pad(self.alpha_bar[:-1], (1, 0), value=1.0)
+        alpha_bar_shifted = pad(self.alpha_bar[:-1], (*(0,) * (len(temp.shape) * 2 - 2), 1, 0), value=1.0)
         alpha = self.alpha_bar / alpha_bar_shifted
         self.beta = 1 - alpha
         self.posterior_x0_coef = (alpha_bar_shifted.sqrt() * self.beta) / (1 - self.alpha_bar)

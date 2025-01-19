@@ -9,6 +9,7 @@ from config import with_config
 def get_and_save_samples(config: Config) -> None:
     ddpm = get_ddpm(config, pretrained = True)
     kwargs = config.sample.kwargs
+    kwargs["n_steps"] = config.sample.n_steps
     kwargs["n_samples"] = config.sample.n_samples
     save_path = config.samples_path
     if (timestamp := config.sample.timestamp) is not None:

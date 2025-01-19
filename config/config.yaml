@@ -6,9 +6,8 @@ ddpm_training:
 ddpm:
   model_name: unet
   parametrization: x0
-  beta_min: 1e-1
-  beta_max: 2e1
-  total_time: 1000
+  beta0: 1e-1
+  beta1: 2e1
   schedule_type: flattening_temp_unbiased
 
 data:
@@ -22,6 +21,7 @@ sample:
   timestamp: 1
   kwargs:
     step_type: sde
+    track_ll: False
 
 forward_stats:
   n_samples: 100

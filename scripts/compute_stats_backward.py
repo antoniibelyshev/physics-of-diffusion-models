@@ -13,7 +13,7 @@ from diffusion import get_ddpm, get_samples
 def main(config: Config) -> None:
     ddpm = get_ddpm(config, pretrained = True)
     kwargs = {
-        "num_steps": config.sample.n_steps,
+        "n_steps": config.sample.n_steps,
         "n_samples": config.backward_stats.batch_size,
         "step_type": config.backward_stats.step_type,
     }
