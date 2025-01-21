@@ -108,3 +108,10 @@ $$C(x, T) = \frac{\partial}{\partial T}\int \frac{\exp(-H(x, y, T) / T)}{Z(x, T)
 $$\frac{1}{T^2}\mathrm{Var} H(x, y, T) - \frac{1}{T}U(x, T)\mathbb{E}\log\phi(y) - \frac{1}{T}\mathbb{E}\log\phi(y) + \frac{1}{T}\mathbb{E}\left(\log\phi(y)H(x, y, T)\right)$$
 $$T\frac{\partial S}{\partial T} = \frac{1}{T^2}\mathrm{Var} H(x, y, T) - \frac{1}{T}U(x, T)\mathbb{E}\log\phi(y) + \frac{1}{T}\mathbb{E}\left(\log\phi(y)H(x, y, T)\right) =$$
 $$\frac{1}{T^2}\mathrm{Var}H(x, y, T) + \frac{1}{T}\mathrm{Cov}\left(\frac{||x - y||}{2}, \log\phi(y)\right) + \mathrm{Var} \log\phi(y)$$
+
+# $T \to \infty$
+
+$$p(y|x, T) \approx \phi(y), p(x, T) \approx N(x|0, T)$$
+$$U(x, T) = \int p(y|x, T) \frac{||x - y||^2}{2}dy \approx \frac{x^2}{2}$$
+$$\mathbb{E}_{x \sim p(x, T)} U(x, T) = \mathbb{E}_{x \sim p(x, T)} \frac{x^2}{2} \approx \frac{T}{2}$$
+$$\frac{d}{dT} \mathbb{E}_{x \sim p(x, T)} U(x, T) \approx \frac{1}{2}$$

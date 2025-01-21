@@ -31,6 +31,16 @@ class DDPMConfig(BaseModel):
     beta1: float = Field(..., description="Maximum value of beta")
     schedule_type: str = Field(..., description="Type of the temperature schedule")
 
+    @property
+    def min_t(self) -> float:
+        match self.schedule_type:
+            case "linear_beta":
+                return 1e-4
+            case "cosine":
+                return 1e-3
+            case _:
+                return 1e-3
+
 
 class DDPMTrainingConfig(BaseModel):
     total_iters: int = Field(..., description="Total number of iterations for training")
@@ -42,7 +52,7 @@ class SampleConfig(BaseModel):
     n_steps: int = Field(..., description="Number of steps for sampling")
     n_samples: int = Field(..., description="Number of samples to generate")
     n_repeats: int = Field(..., description="Number of repeats")
-    timestamp: int = Field(..., description="Starting timestamp")
+    idx_start: int | None = Field(None, description="Starting index")
     kwargs: dict[str, Any] = Field(..., description="Additional arguments for sampling")
 
 
@@ -84,8 +94,8 @@ class Config(BaseModel):
     def experiment_name(self) -> str:
         return "_".join([
             self.data.dataset_name,
-            self.ddpm.model_name,
-            self.ddpm.parametrization,
+            # self.ddpm.model_name,
+            # self.ddpm.parametrization,
             str(self.ddpm_training.total_iters),
             "iter",
             self.ddpm.schedule_type,
@@ -102,7 +112,8 @@ class Config(BaseModel):
 
     @property
     def samples_prefix(self) -> str:
-        return f"results/{self.experiment_name}_{self.sample.kwargs['step_type']}"
+        # return f"results/{self.experiment_name}_{self.sample.kwargs['step_type']}"
+        return f"results/{self.experiment_name}_{self.sample.n_steps}_steps"
 
     @property
     def samples_path(self) -> str:
@@ -110,7 +121,7 @@ class Config(BaseModel):
 
     @property
     def samples_from_timestamp_path(self) -> str:
-        return f"{self.samples_prefix}_samples_from_timestamp_{self.sample.timestamp}.npz"
+        return f"{self.samples_prefix}_samples_from_timestamp_{self.sample.idx_start}.npz"
 
     @property
     def forward_stats_path(self) -> str:

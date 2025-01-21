@@ -1,4 +1,5 @@
 from typing import Callable
+import torch
 from torch import Tensor, from_numpy
 from torch.nn.functional import pad
 from scipy.interpolate import interp1d # type: ignore
@@ -34,9 +35,17 @@ def get_linear_beta_temp_schedule(beta0: float, beta1: float) -> Callable[[Tenso
     return linear_beta_temp_schedule
 
 
+def get_cosine_temp_schedule() -> Callable[[Tensor], Tensor]:
+    def cosine_temp_schedule(t: Tensor) -> Tensor:
+        return torch.tan(t * 0.5 * np.pi).pow(2)
+    return cosine_temp_schedule
+
+
 def get_temp_schedule(config: Config) -> Callable[[Tensor], Tensor]:
     if config.ddpm.schedule_type == "linear_beta":
         return get_linear_beta_temp_schedule(config.ddpm.beta0, config.ddpm.beta1)
+    elif config.ddpm.schedule_type == "cosine":
+        return get_cosine_temp_schedule()
     elif config.ddpm.schedule_type.startswith("flattening"):
         return get_flattening_temp_schedule(config.flattening_temp_stats_path)
     else:
@@ -44,7 +53,7 @@ def get_temp_schedule(config: Config) -> Callable[[Tensor], Tensor]:
 
 
 def get_alpha_bar(temp: Tensor) -> Tensor:
-    return (temp + 1).inverse()
+    return (temp + 1).pow(-1)
 
 
 class DynamicCoeffs:

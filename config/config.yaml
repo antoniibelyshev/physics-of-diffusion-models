@@ -17,18 +17,17 @@ data:
 sample:
   n_steps: 1000
   n_samples: 1000
-  n_repeats: 1
-  timestamp: 1
+  n_repeats: 10
   kwargs:
     step_type: sde
     track_ll: False
 
 forward_stats:
-  n_samples: 100
-  n_repeats: 10
-  min_temp: 1e-3
+  n_samples: 40
+  n_repeats: 250
+  min_temp: 1e-4
   max_temp: 1e4
-  n_temps: 500
+  n_temps: 1000
 
 backward_stats:
   n_samples: 1000
