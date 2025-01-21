@@ -1,8 +1,9 @@
 from tqdm import trange
-from torch import Tensor
+from torch import Tensor, from_numpy
 import torch
-from .ddpm import DDPM
+from .ddpm import DDPM, get_ddpm
 from .diffusion_utils import DynamicCoeffs
+from config import Config
 from typing import Optional, Callable, Any
 import numpy as np
 from torch.autograd.functional import jacobian
@@ -21,27 +22,27 @@ def batch_jacobian(func: Callable[[Tensor], Tensor], x: Tensor) -> Tensor:
 
 
 @torch.no_grad()
-def sde_step(xt: Tensor, t: Tensor, ddpm: DDPM, dynamic_coeffs: DynamicCoeffs) -> Tensor:
+def sde_step(xt: Tensor, idx: int, t: Tensor, ddpm: DDPM, dynamic_coeffs: DynamicCoeffs) -> Tensor:
     x0 = ddpm.get_predictions(xt, t).x0
-    posterior_x0_coef = dynamic_coeffs.posterior_x0_coef[t]
-    posterior_xt_coef = dynamic_coeffs.posterior_xt_coef[t]
-    posterior_sigma = dynamic_coeffs.posterior_sigma[t]
+    posterior_x0_coef = dynamic_coeffs.posterior_x0_coef[idx]
+    posterior_xt_coef = dynamic_coeffs.posterior_xt_coef[idx]
+    posterior_sigma = dynamic_coeffs.posterior_sigma[idx]
     eps = torch.randn(x0.shape).to(x0.device)
     return posterior_x0_coef * x0 + posterior_xt_coef * xt + eps * posterior_sigma.sqrt() # type: ignore
 
 
-def ode_step(xt: Tensor, t: Tensor, ddpm: DDPM, dynamic_coeffs: DynamicCoeffs) -> Tensor:
-    beta = dynamic_coeffs.beta[t]
+def ode_step(xt: Tensor, idx: int, t: Tensor, ddpm: DDPM, dynamic_coeffs: DynamicCoeffs) -> Tensor:
+    beta = dynamic_coeffs.beta[idx]
     score = ddpm.get_predictions(xt, t).score
     return xt + 0.5 * beta * (xt + score) # type: ignore
 
 
-def step(xt: Tensor, t: Tensor, ddpm: DDPM, dynamic_coeffs: DynamicCoeffs, step_type: str = "sde") -> Tensor:
+def step(xt: Tensor, idx: int, t: Tensor, ddpm: DDPM, dynamic_coeffs: DynamicCoeffs, step_type: str = "sde") -> Tensor:
     match step_type:
         case "sde":
-            return sde_step(xt, t, ddpm, dynamic_coeffs)
+            return sde_step(xt, idx, t, ddpm, dynamic_coeffs)
         case "ode":
-            return ode_step(xt, t, ddpm, dynamic_coeffs)
+            return ode_step(xt, idx, t, ddpm, dynamic_coeffs)
         case _:
             raise ValueError("Invalid type")
 
@@ -56,7 +57,8 @@ def sample(
     track_ll: bool = False,
     x_start: Optional[Tensor] = None,
     init_ll: Optional[Tensor] = None,
-    timestamp: int = 1,
+    idx_start: int | None = None,
+    min_t: float = 1e-10,
 ) -> dict[str, Tensor]:
     if x_start is not None:
         shape = tuple(x_start.shape)
@@ -78,23 +80,23 @@ def sample(
             init_ll = -0.5 * (xt.pow(2).sum(dim=tuple(range(1, len(shape) + 1))).cpu() + np.log(2 * np.pi) * np.prod(shape[1:]))
         ll_lst = [init_ll]
 
-    t_grid = get_time_evenly_spaced(n_steps, timestamp)
+    t_grid = get_time_evenly_spaced(n_steps, min_t = min_t).to(device)
     dynamic_coeffs = DynamicCoeffs(ddpm.dynamic.get_temp(t_grid))
 
-    for idx in trange(len(t_grid) - 1, - 1, -1):
-        t = torch.tensor([t_grid[idx]], device=device)
+    for idx in trange(idx_start or len(t_grid) - 1, -1, -1):
+        t = t_grid[idx][None]
         states.append(xt.cpu())
         if track_ll:
             def next_val(x: Tensor) -> Tensor:
-                return step(x.view(shape), t, ddpm, dynamic_coeffs, step_type).view(shape[0], -1)
+                return step(x.view(shape), idx, t, ddpm, dynamic_coeffs, step_type).view(shape[0], -1)
 
             assert ll_lst is not None, "ll_lst should not be None"
             ll_lst.append(ll_lst[-1] - torch.logdet(batch_jacobian(next_val, xt.view(shape[0], -1))).cpu())
 
         with torch.no_grad():
-            xt = step(xt, t, ddpm, dynamic_coeffs, step_type)
+            xt = step(xt, idx, t, ddpm, dynamic_coeffs, step_type)
 
-    res = {"x": xt.cpu(), "states": torch.stack(states[::-1], dim=1)}
+    res = {"x": xt.cpu(), "states": torch.stack(states[::-1], dim=1), "temp": dynamic_coeffs.temp.cpu()}
     if track_ll:
         assert ll_lst is not None, "ll_lst should not be None"
         res["ll"] = torch.stack(ll_lst[::-1], dim=1)
@@ -108,3 +110,24 @@ def get_samples(ddpm: DDPM, kwargs: dict[str, Any], n_repeats: int) -> dict[str,
         for key, val in sample(ddpm, **kwargs).items():
             results[key] = torch.cat([results[key], val], dim=0)
     return results
+
+
+def get_and_save_samples(config: Config, *, save: bool = True) -> dict[str, Tensor]:
+    ddpm = get_ddpm(config, pretrained = True)
+    kwargs = config.sample.kwargs
+    kwargs["n_steps"] = config.sample.n_steps
+    kwargs["n_samples"] = config.sample.n_samples
+    kwargs["min_t"] = config.ddpm.min_t
+    save_path = config.samples_path
+    if (idx_start := config.sample.idx_start) is not None:
+        kwargs["idx_start"] = idx_start
+        samples = np.load(config.samples_path)
+        kwargs["x_start"] =  from_numpy(samples["states"][idx_start])
+        if kwargs["track_ll"]:
+            kwargs["init_ll"] = from_numpy(samples["ll"][idx_start])
+        save_path = config.samples_from_timestamp_path
+    
+    samples = get_samples(ddpm, kwargs, config.sample.n_repeats)
+    if save:
+        np.savez(save_path, **samples)  # pyright: ignore
+    return samples

@@ -112,14 +112,6 @@ $$\frac{1}{T^2}\mathrm{Var}H(x, y, T) + \frac{1}{T}\mathrm{Cov}\left(\frac{||x -
 # $T \to \infty$
 
 $$p(y|x, T) \approx \phi(y), p(x, T) \approx N(x|0, T)$$
-$$U(x, T) = \int p(y|x, T) \frac{||x - y||^2}{2}dy \approx \frac{||x||^2}{2}$$
-$$\mathbb{E}_{x \sim p(x, T)} U(x, T) = \mathbb{E}_{x \sim p(x, T)} \frac{||x||^2}{2} \approx \frac{Td}{2}$$
+$$U(x, T) = \int p(y|x, T) \frac{||x - y||^2}{2}dy \approx \frac{x^2}{2}$$
+$$\mathbb{E}_{x \sim p(x, T)} U(x, T) = \mathbb{E}_{x \sim p(x, T)} \frac{x^2}{2} \approx \frac{T}{2}$$
 $$\frac{d}{dT} \mathbb{E}_{x \sim p(x, T)} U(x, T) \approx \frac{1}{2}$$
-
-# FIDs
-
-|            | N steps: 10 | N steps: 100 | N steps: 1000 | 
-|------------|------------|--------------|------------|
-| Linear beta| 67         | 142          | 112        |
-| Cosine     | 59         | 95           | 68         |
-| Flattening | 54         | 125          | 138        |

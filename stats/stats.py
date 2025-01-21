@@ -68,5 +68,5 @@ def compute_stats_unbiased(
 
 
 def get_noise(temp: Tensor, batch_size: int, obj_shape: tuple[int, ...], device: torch.device) -> Tensor:
-    d_temp = (temp - torch.cat([torch.zeros_like(temp[:1]), temp[:-1]])).cuda().view(-1, *[1] * (len(obj_shape) - 1))
+    d_temp = (temp - torch.cat([torch.zeros_like(temp[:1]), temp[:-1]])).cuda().view(-1, *[1] * (len(obj_shape)))
     return (torch.randn(batch_size, len(temp), *obj_shape, device=device) * d_temp.sqrt()).cumsum(1)

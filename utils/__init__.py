@@ -1,6 +1,7 @@
 from .data import (
     get_data_generator as get_data_generator,
     get_data_tensor as get_data_tensor,
+    get_labels_tensor as get_labels_tensor,
 )
 from .distance import (
     compute_pw_dist_sqr as compute_pw_dist_sqr,
@@ -16,4 +17,13 @@ from .synthetic_datasets import (
 from .utils import (
     dict_map as dict_map,
     get_time_evenly_spaced as get_time_evenly_spaced
+)
+from .fid import (
+    save_tensors_as_images as save_tensors_as_images,
+    extract_features_statistics as extract_features_statistics,
+    compute_fid as compute_fid,
+)
+from .lenet import (
+    LeNet as LeNet,
+    train_lenet as train_lenet,
 )

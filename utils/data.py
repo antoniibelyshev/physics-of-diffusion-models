@@ -46,7 +46,7 @@ class ImageDataset(SizedDataset):
         super().__init__()
 
         self.dataset = self.DATASET_CLASSES[dataset_name](
-            'data',
+            "data",
             train=train,
             download=True
         )
@@ -89,10 +89,19 @@ def get_data_generator(
             yield batch[0]
 
 
-def get_data_tensor(config: Config) -> Tensor:
+def get_data_tensor(config: Config, train: bool = True) -> Tensor:
     if config.data.dataset_name in ImageDataset.DATASET_CLASSES:
         assert len(config.data.obj_size) == 3
-        dataset = ImageDataset(config.data.dataset_name, config.data.obj_size)
+        dataset = ImageDataset(config.data.dataset_name, config.data.obj_size, train = train)
     else:
         raise ValueError(f"Unknown dataset name: {config.data.dataset_name}")
     return torch.stack([dataset[i]["images"] for i in range(len(dataset))], 0)
+
+
+def get_labels_tensor(config: Config, train: bool = True) -> Tensor:
+    if config.data.dataset_name in ImageDataset.DATASET_CLASSES:
+        assert len(config.data.obj_size) == 3
+        dataset = ImageDataset(config.data.dataset_name, config.data.obj_size, train = train)
+    else:
+        raise ValueError(f"Unknown dataset name: {config.data.dataset_name}")
+    return torch.stack([dataset[i]["targets"] for i in range(len(dataset))], 0)

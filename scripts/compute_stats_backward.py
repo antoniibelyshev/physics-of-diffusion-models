@@ -16,6 +16,7 @@ def main(config: Config) -> None:
         "n_steps": config.sample.n_steps,
         "n_samples": config.backward_stats.batch_size,
         "step_type": config.backward_stats.step_type,
+        "min_t": config.ddpm.min_t,
     }
     samples = get_samples(ddpm, kwargs, n_repeats = config.backward_stats.n_repeats)
     temp = ddpm.dynamic.get_dynamic_params(get_time_evenly_spaced(config.sample.n_steps)).temp
