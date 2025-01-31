@@ -4,8 +4,8 @@ from itertools import product
 import numpy as np
 import torch
 from torch import from_numpy
-from pytorch_fid import fid_score
-from scipy.linalg import sqrtm
+from pytorch_fid import fid_score # type: ignore
+from scipy.linalg import sqrtm # type: ignore
 import pandas as pd
 from diffusion import get_and_save_samples
 

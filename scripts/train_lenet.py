@@ -5,7 +5,7 @@ from config import with_config, Config
 
 
 @with_config()
-def main(config: Config):
+def main(config: Config) -> None:
     train_dataset = TensorDataset(get_data_tensor(config), get_labels_tensor(config))
     eval_dataset = TensorDataset(get_data_tensor(config, train=False), get_labels_tensor(config, train=False))
     lenet = LeNet(train_dataset[0][0].numel(), 10)

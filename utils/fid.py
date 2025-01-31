@@ -1,9 +1,9 @@
-from torchvision.transforms import ToPILImage
+from torchvision.transforms import ToPILImage # type: ignore
 from torch import Tensor, nn
 from torch.utils.data import DataLoader
 import torch
 import os
-from scipy.linalg import sqrtm
+from scipy.linalg import sqrtm # type: ignore
 import numpy as np
 from numpy.typing import NDArray
 
@@ -22,8 +22,13 @@ def save_tensors_as_images(tensor_dataset: Tensor, output_dir: str) -> None:
         img.save(os.path.join(output_dir, f"image_{i:05d}.png"))
 
 
-def extract_features_statistics(dataset: Tensor, model: nn.Module, batch_size: int = 50, device: str = 'cuda'):
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
+def extract_features_statistics(
+        dataset: Tensor,
+        model: nn.Module,
+        batch_size: int = 50,
+        device: str = 'cuda'
+) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False) # type: ignore
     all_features = []
     with torch.no_grad():
         for data in dataloader:

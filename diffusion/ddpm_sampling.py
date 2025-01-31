@@ -48,17 +48,17 @@ def step(xt: Tensor, idx: int, t: Tensor, ddpm: DDPM, dynamic_coeffs: DynamicCoe
 
 
 def sample(
-    ddpm: DDPM,
-    n_steps: int,
-    n_samples: Optional[int] = None,
-    *,
-    device: torch.device = DEVICE,
-    step_type: str = "sde",
-    track_ll: bool = False,
-    x_start: Optional[Tensor] = None,
-    init_ll: Optional[Tensor] = None,
-    idx_start: int | None = None,
-    min_t: float = 1e-10,
+        ddpm: DDPM,
+        n_steps: int,
+        n_samples: Optional[int] = None,
+        *,
+        device: torch.device = DEVICE,
+        step_type: str = "sde",
+        track_ll: bool = False,
+        x_start: Optional[Tensor] = None,
+        init_ll: Optional[Tensor] = None,
+        idx_start: int | None = None,
+        min_t: float = 1e-10,
 ) -> dict[str, Tensor]:
     if x_start is not None:
         shape = tuple(x_start.shape)
@@ -130,4 +130,4 @@ def get_and_save_samples(config: Config, *, save: bool = True) -> dict[str, Tens
     samples = get_samples(ddpm, kwargs, config.sample.n_repeats)
     if save:
         np.savez(save_path, **samples)  # pyright: ignore
-    return samples
+    return samples # type: ignore
