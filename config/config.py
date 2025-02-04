@@ -112,8 +112,8 @@ class Config(BaseModel):
 
     @property
     def samples_prefix(self) -> str:
-        # return f"results/{self.experiment_name}_{self.sample.kwargs['step_type']}"
-        return f"results/{self.experiment_name}_{self.sample.n_steps}_steps"
+        step_type = "_ode" if self.sample.kwargs["step_type"] == "ode" else ""
+        return f"results/{self.experiment_name}_{self.sample.n_steps}{step_type}_steps"
 
     @property
     def samples_path(self) -> str:

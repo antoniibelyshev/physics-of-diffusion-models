@@ -39,10 +39,11 @@ def main(config: Config) -> None:
     for n_steps, schedule_type in product(n_steps_lst, schedule_types):
         config.ddpm.schedule_type = schedule_type
         config.sample.n_steps = n_steps
-        if schedule_type == "flattening_temp_unbiased":
-            fake_data = get_and_save_samples(config, save=True)["x"]
-        else:
-            fake_data = from_numpy(np.load(config.samples_path)["x"])
+        # if schedule_type == "flattening_temp_unbiased":
+        #     fake_data = get_and_save_samples(config, save=True)["x"]
+        # else:
+        #     fake_data = from_numpy(np.load(config.samples_path)["x"])
+        fake_data = from_numpy(np.load(config.samples_path)["x"])
         mu_fake, sigma_fake = extract_features_statistics(fake_data, lenet)
         mean_diff_term, cov_diff_term, fid = compute_fid(mu_real, sigma_real, mu_fake, sigma_fake)
 

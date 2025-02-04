@@ -8,16 +8,16 @@ ddpm:
   parametrization: x0
   beta0: 1e-1
   beta1: 2e1
-  schedule_type: flattening_temp_unbiased
+  schedule_type: linear_beta
 
 data:
   dataset_name: mnist
   batch_size: 128
 
 sample:
-  n_steps: 1000
+  n_steps: 20
   n_samples: 1000
-  n_repeats: 10
+  n_repeats: 60
   kwargs:
     step_type: sde
     track_ll: False

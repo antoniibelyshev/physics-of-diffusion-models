@@ -77,7 +77,7 @@ def sample(
     if track_ll:
         assert step_type == "ode", "Log-likelihood tracking is only supported for ODE sampling"
         if init_ll is None:
-            init_ll = -0.5 * (xt.pow(2).sum(dim=tuple(range(1, len(shape) + 1))).cpu() + np.log(2 * np.pi) * np.prod(shape[1:]))
+            init_ll = -0.5 * (xt.pow(2).sum(dim=tuple(range(1, len(shape)))).cpu() + np.log(2 * np.pi) * np.prod(shape[1:]))
         ll_lst = [init_ll]
 
     t_grid = get_time_evenly_spaced(n_steps, min_t = min_t).to(device)
