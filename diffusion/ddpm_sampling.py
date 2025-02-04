@@ -114,10 +114,14 @@ def get_samples(ddpm: DDPM, kwargs: dict[str, Any], n_repeats: int) -> dict[str,
 
 def get_and_save_samples(config: Config, *, save: bool = True) -> dict[str, Tensor]:
     ddpm = get_ddpm(config, pretrained = True)
-    kwargs = config.sample.kwargs
-    kwargs["n_steps"] = config.sample.n_steps
-    kwargs["n_samples"] = config.sample.n_samples
-    kwargs["min_t"] = config.ddpm.min_t
+    kwargs: dict[str, Any] = {
+        "n_steps": config.sample.n_steps,
+        "n_samples": config.sample.n_samples,
+        "device": DEVICE,
+        "step_type": config.sample.step_type,
+        "track_ll": config.sample.track_ll,
+        "min_t": config.ddpm.min_t,
+    }
     save_path = config.samples_path
     if (idx_start := config.sample.idx_start) is not None:
         kwargs["idx_start"] = idx_start

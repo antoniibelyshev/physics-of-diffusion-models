@@ -18,9 +18,8 @@ sample:
   n_steps: 20
   n_samples: 1000
   n_repeats: 60
-  kwargs:
-    step_type: sde
-    track_ll: False
+  step_type: sde
+  track_ll: False
 
 forward_stats:
   n_samples: 40

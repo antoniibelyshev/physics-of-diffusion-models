@@ -49,12 +49,12 @@ class DDPMTrainingConfig(BaseModel):
 
 
 class SampleConfig(BaseModel):
-    n_steps: int = Field(..., description="Number of steps for sampling")
+    n_steps: int | list[int] = Field(..., description="Number of steps for sampling")
     n_samples: int = Field(..., description="Number of samples to generate")
     n_repeats: int = Field(..., description="Number of repeats")
     idx_start: int | None = Field(None, description="Starting index")
-    kwargs: dict[str, Any] = Field(..., description="Additional arguments for sampling")
-
+    step_type: str = Field("sde", description="Type of step")
+    track_ll: bool = Field(False, description="Whether to track log likelihood")
 
 class ForwardStatsConfig(BaseModel):
     n_samples: int = Field(..., description="Number of samples to generate")
@@ -112,7 +112,7 @@ class Config(BaseModel):
 
     @property
     def samples_prefix(self) -> str:
-        step_type = "_ode" if self.sample.kwargs["step_type"] == "ode" else ""
+        step_type = "_ode" if self.sample.step_type == "ode" else ""
         return f"results/{self.experiment_name}_{self.sample.n_steps}{step_type}_steps"
 
     @property
