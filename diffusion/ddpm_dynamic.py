@@ -14,6 +14,8 @@ class DDPMDynamic(nn.Module):
 
         self.obj_size = config.data.obj_size
         self.temp_schedule = get_temp_schedule(config)
+        self.continuous_time = config.ddpm_training.continuous_time
+        self.timestamps = torch.linspace(config.ddpm.min_t, 1, config.sample.n_steps, device=DEVICE).long()
 
     def get_temp(self, t: Tensor) -> Tensor:
         return self.temp_schedule(t).view(-1, *[1] * len(self.obj_size))
@@ -22,7 +24,10 @@ class DDPMDynamic(nn.Module):
         return get_alpha_bar(self.get_temp(t))
 
     def forward(self, x0: Tensor) -> tuple[Tensor, Tensor, Tensor]:
-        t = torch.rand((len(x0),), device=x0.device)
+        if self.continuous_time:
+            t = torch.rand((len(x0),), device=x0.device)
+        else:
+            t = self.timestamps[torch.randint(0, len(self.timestamps), (len(x0),), device=x0.device)]
 
         alpha_bar = self.get_alpha_bar(t)
         eps = torch.randn_like(x0)

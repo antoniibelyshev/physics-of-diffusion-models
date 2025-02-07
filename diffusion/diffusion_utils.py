@@ -35,9 +35,9 @@ def get_linear_beta_temp_schedule(beta0: float, beta1: float) -> Callable[[Tenso
     return linear_beta_temp_schedule
 
 
-def get_cosine_temp_schedule() -> Callable[[Tensor], Tensor]:
+def get_cosine_temp_schedule(eps: float = 1e-3) -> Callable[[Tensor], Tensor]:
     def cosine_temp_schedule(t: Tensor) -> Tensor:
-        return torch.tan(t * 0.5 * np.pi).pow(2)
+        return torch.tan((eps + t * (1 - 2 * eps)) * 0.5 * np.pi).pow(2)
     return cosine_temp_schedule
 
 

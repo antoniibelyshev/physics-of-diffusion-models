@@ -2,6 +2,7 @@ ddpm_training:
   total_iters: 50000
   learning_rate: 2e-4
   weight_decay: 1e-2
+  continuous_time: False
 
 ddpm:
   model_name: unet

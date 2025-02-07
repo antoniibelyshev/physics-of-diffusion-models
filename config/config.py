@@ -35,17 +35,18 @@ class DDPMConfig(BaseModel):
     def min_t(self) -> float:
         match self.schedule_type:
             case "linear_beta":
-                return 1e-4
+                return 1e-3
             case "cosine":
-                return 1e-3
+                return 0
             case _:
-                return 1e-3
+                return 1e-2
 
 
 class DDPMTrainingConfig(BaseModel):
     total_iters: int = Field(..., description="Total number of iterations for training")
     learning_rate: float = Field(..., description="Learning rate for training")
     weight_decay: float = Field(..., description="Weight decay for training")
+    continuous_time: bool = Field(..., description="Whether to use continuous time sampling during training")
 
 
 class SampleConfig(BaseModel):
@@ -55,6 +56,7 @@ class SampleConfig(BaseModel):
     idx_start: int | None = Field(None, description="Starting index")
     step_type: str = Field("sde", description="Type of step")
     track_ll: bool = Field(False, description="Whether to track log likelihood")
+
 
 class ForwardStatsConfig(BaseModel):
     n_samples: int = Field(..., description="Number of samples to generate")
