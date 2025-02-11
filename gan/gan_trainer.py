@@ -35,7 +35,7 @@ class GANTrainer:
             discriminator.parameters(), lr=cfg.lr_d, betas=(0.5, 0.999), weight_decay=cfg.weight_decay_d
         )
 
-        self.n_iter_g = cfg.gan_iter_g
+        self.n_iter_g = cfg.n_iter_g
         self.n_iter_d = cfg.n_iter_d
         self.real_p = cfg.real_p
         self.fake_p = cfg.fake_p
@@ -82,7 +82,7 @@ class GANTrainer:
 
         # Generator update
         loss_g = self.generator_loss(self.discriminator(fake_imgs, noisy_imgs))
-        for _ in range(self.n_iter_g):
+        for _ in range(self.n_iter_g - 1):
             loss_g = self.generator_update(noisy_imgs, fake_imgs)
 
         return loss_g, loss_d
@@ -113,10 +113,12 @@ class GANTrainer:
                 pbar.update(1)
                 pbar.set_postfix(g_loss=loss_g, d_loss=loss_d, **eval_metrics)
 
+        wandb.finish()
+
     def eval(self, eval_data_loaders: Optional[dict[str, DataLoader[tuple[Tensor, ...]]]]) -> dict[str, float]:
         if eval_data_loaders is not None and self.compute_fid is not None:
             fids = {
-                f"{name} FID": self.compute_fid(torch.cat([self.generator(batch) for batch, in eval_data_loader]))
+                f"{name} FID": self.compute_fid(torch.cat([self.generator(batch.to(self.device)) for batch, in eval_data_loader]))
                 for name, eval_data_loader in eval_data_loaders.items()
             }
             wandb.log(fids)

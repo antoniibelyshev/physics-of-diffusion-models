@@ -36,19 +36,19 @@ gan:
     - 4
   base_channels_d: 64
 
-gan_trainer:
-  lr_g: 2e-4,
-  weight_decay_g: 1e-2,
-  n_iter_g: 1,
-  lr_d: 1e-4,
-  weight_decay_d: 1e-3,
-  n_iter_d: 1,
-  real_p: 0.8,
-  fake_p: 0.2,
-  temp: 0.01,
-  real_temp: 1e-4,
-  eval_steps: 2000,
-  project_name: One-step gan denoiser,
+gan_training:
+  lr_g: 2e-4
+  weight_decay_g: 1e-2
+  n_iter_g: 2
+  lr_d: 1e-4
+  weight_decay_d: 1e-3
+  n_iter_d: 1
+  real_p: 0.8
+  fake_p: 0.2
+  temp: 0.01
+  real_temp: 1e-4
+  eval_steps: 2000
+  project_name: One-step gan denoiser
   total_iters: 50000
 
 sample:

@@ -11,7 +11,7 @@ from config import with_config
 def main(config: Config) -> None:
     generator = GANGenerator(config)
     discriminator = GANDiscriminator(config)
-    trainer = GANTrainer(generator, discriminator, config)
+    trainer = GANTrainer(generator, discriminator, config, compute_fid=get_compute_fid(config))
 
     train_data = get_data_tensor(config)
     train_data_generator = get_data_generator(train_data, config.data.batch_size)
@@ -20,8 +20,8 @@ def main(config: Config) -> None:
     diffusion_data = torch.from_numpy(np.load(config.samples_path)["states"][:, 0])
 
     eval_data_loaders = {
-        "Test": DataLoader(TensorDataset(test_data), batch_size=config.data.batch_size),
-        "Diffusion": DataLoader(TensorDataset(diffusion_data), batch_size=config.data.batch_size)
+        "Test": DataLoader(TensorDataset(test_data), batch_size=500),
+        "Diffusion": DataLoader(TensorDataset(diffusion_data), batch_size=500)
     }
 
     trainer.train(
