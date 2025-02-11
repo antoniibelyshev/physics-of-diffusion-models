@@ -16,7 +16,8 @@ from .synthetic_datasets import (
 )
 from .utils import (
     dict_map as dict_map,
-    get_time_evenly_spaced as get_time_evenly_spaced
+    get_time_evenly_spaced as get_time_evenly_spaced,
+    replace_activations as replace_activations,
 )
 from .fid import (
     save_tensors_as_images as save_tensors_as_images,

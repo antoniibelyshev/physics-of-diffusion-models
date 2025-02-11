@@ -15,7 +15,7 @@ class DDPMDynamic(nn.Module):
         self.obj_size = config.data.obj_size
         self.temp_schedule = get_temp_schedule(config)
         self.continuous_time = config.ddpm_training.continuous_time
-        self.timestamps = torch.linspace(config.ddpm.min_t, 1, config.sample.n_steps, device=DEVICE).long()
+        self.timestamps = torch.linspace(config.ddpm.min_t, 1, config.sample.n_steps, device=DEVICE)
 
     def get_temp(self, t: Tensor) -> Tensor:
         return self.temp_schedule(t).view(-1, *[1] * len(self.obj_size))

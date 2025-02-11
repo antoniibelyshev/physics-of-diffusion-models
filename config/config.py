@@ -30,6 +30,9 @@ class DDPMConfig(BaseModel):
     beta0: float = Field(..., description="Minimum value of beta")
     beta1: float = Field(..., description="Maximum value of beta")
     schedule_type: str = Field(..., description="Type of the temperature schedule")
+    dim: int = Field(..., description="Base number of channels in the Unet")
+    dim_mults: list[int] = Field(..., description="Base channel multipliers in the Unet")
+    use_lrelu: bool = Field(..., description="Whether to use LeakyReLU instead of ReLU")
 
     @property
     def min_t(self) -> float:
@@ -39,7 +42,7 @@ class DDPMConfig(BaseModel):
             case "cosine":
                 return 0
             case _:
-                return 1e-2
+                return 1e-3
 
 
 class DDPMTrainingConfig(BaseModel):
@@ -98,8 +101,8 @@ class Config(BaseModel):
             self.data.dataset_name,
             # self.ddpm.model_name,
             # self.ddpm.parametrization,
-            str(self.ddpm_training.total_iters),
-            "iter",
+            # str(self.ddpm_training.total_iters),
+            # "iter",
             self.ddpm.schedule_type,
             "schedule",
         ])
@@ -140,9 +143,9 @@ class Config(BaseModel):
     @property
     def flattening_temp_stats_path(self) -> str:
         match self.ddpm.schedule_type:
-            case "flattening_temp":
+            case "entropy":
                 return self.forward_stats_path
-            case "flattening_temp_unbiased":
+            case "entropy_u":
                 return self.forward_unbiased_stats_path
             case _:
                 raise ValueError

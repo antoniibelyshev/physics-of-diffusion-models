@@ -7,6 +7,7 @@ __pycache__/
 
 # Ignore logs
 *.log
+wandb/*
 
 # Ignore temporary files created by IDEs or editors
 .vscode/
@@ -16,6 +17,9 @@ __pycache__/
 checkpoints/
 results/
 data/
+
+# Ignore temporary files
+tmp*
 
 # Ignore environment files
 .env

@@ -1,24 +1,31 @@
-ddpm_training:
-  total_iters: 50000
-  learning_rate: 2e-4
-  weight_decay: 1e-2
-  continuous_time: False
+data:
+  dataset_name: mnist
+  batch_size: 128
 
 ddpm:
   model_name: unet
   parametrization: x0
   beta0: 1e-1
   beta1: 2e1
-  schedule_type: linear_beta
+  schedule_type: entropy_u
+  dim: 64
+  dim_mults:
+    - 1
+    - 2
+    - 4
+    - 4
+  use_lrelu: True
 
-data:
-  dataset_name: mnist
-  batch_size: 128
+ddpm_training:
+  total_iters: 50000
+  learning_rate: 2e-4
+  weight_decay: 1e-2
+  continuous_time: True
 
 sample:
   n_steps: 20
-  n_samples: 1000
-  n_repeats: 60
+  n_samples: 6000
+  n_repeats: 10
   step_type: sde
   track_ll: False
 

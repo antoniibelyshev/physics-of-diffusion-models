@@ -13,7 +13,7 @@ from config import Config
 #     return {k: v.to(device) for k, v in dct.items()}
 
 
-def get_flattening_temp_schedule(stats_path: str) -> Callable[[Tensor], Tensor]:
+def get_entropy_temp_schedule(stats_path: str) -> Callable[[Tensor], Tensor]:
     stats = np.load(stats_path)
     stats_temp = stats["temp"]
     stats_log_temp = np.log(stats_temp)
@@ -46,8 +46,8 @@ def get_temp_schedule(config: Config) -> Callable[[Tensor], Tensor]:
         return get_linear_beta_temp_schedule(config.ddpm.beta0, config.ddpm.beta1)
     elif config.ddpm.schedule_type == "cosine":
         return get_cosine_temp_schedule()
-    elif config.ddpm.schedule_type.startswith("flattening"):
-        return get_flattening_temp_schedule(config.flattening_temp_stats_path)
+    elif config.ddpm.schedule_type.startswith("entropy"):
+        return get_entropy_temp_schedule(config.flattening_temp_stats_path)
     else:
         raise ValueError(f"Unknown schedule type: {config.ddpm.schedule_type}")
 

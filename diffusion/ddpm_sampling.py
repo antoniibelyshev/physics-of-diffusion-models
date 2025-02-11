@@ -108,7 +108,7 @@ def get_samples(ddpm: DDPM, kwargs: dict[str, Any], n_repeats: int) -> dict[str,
     results = sample(ddpm, **kwargs)
     for _ in range(n_repeats - 1):
         for key, val in sample(ddpm, **kwargs).items():
-            results[key] = torch.cat([results[key], val], dim=0)
+            results[key] = torch.cat([results[key], val], dim=0) if key != "temp" else val
     return results
 
 
