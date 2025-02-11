@@ -39,7 +39,7 @@ gan:
 gan_training:
   lr_g: 2e-4
   weight_decay_g: 1e-2
-  n_iter_g: 2
+  n_iter_g: 1
   lr_d: 1e-4
   weight_decay_d: 1e-3
   n_iter_d: 1

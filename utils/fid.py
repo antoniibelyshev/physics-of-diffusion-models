@@ -50,7 +50,7 @@ def compute_fid(
     sigma2: NDArray[np.float32],
 ) -> tuple[float, float, float]:
     mean_diff_term = ((mu1 - mu2) ** 2).sum()
-    cov_sqrt = sqrtm(sigma1 @ sigma2)
+    cov_sqrt = sqrtm(sigma1 @ sigma2 + 1e-7)
     if np.iscomplexobj(cov_sqrt):
         cov_sqrt = cov_sqrt.real
     cov_diff_term = np.trace(sigma1 + sigma2 - 2 * cov_sqrt).mean()

@@ -54,7 +54,7 @@ class GANTrainer:
     def discriminator_loss(self, real_logits: Tensor, fake_logits) -> Tensor:
         return 0.5 * (cross_entropy_loss(real_logits, self.real_p) + cross_entropy_loss(fake_logits, self.fake_p))
 
-    def generator_update(self, noisy_imgs: Tensor, fake_imgs: Tensor) -> float:
+    def generator_update(self, fake_imgs: Tensor, noisy_imgs: Tensor) -> float:
         self.optimizer_g.zero_grad()
         loss_g = self.generator_loss(self.discriminator(fake_imgs, noisy_imgs))
         loss_g.backward()
@@ -81,9 +81,9 @@ class GANTrainer:
             loss_d = self.discriminator_update(real_imgs, noisy_imgs, fake_imgs)
 
         # Generator update
-        loss_g = self.generator_loss(self.discriminator(fake_imgs, noisy_imgs))
+        loss_g = self.generator_update(fake_imgs, noisy_imgs)
         for _ in range(self.n_iter_g - 1):
-            loss_g = self.generator_update(noisy_imgs, fake_imgs)
+            loss_g = self.generator_update(fake_imgs. noisy_imgs)
 
         return loss_g, loss_d
 
@@ -115,12 +115,15 @@ class GANTrainer:
 
         wandb.finish()
 
+    @torch.no_grad()
     def eval(self, eval_data_loaders: Optional[dict[str, DataLoader[tuple[Tensor, ...]]]]) -> dict[str, float]:
         if eval_data_loaders is not None and self.compute_fid is not None:
+            self.generator.eval()
             fids = {
-                f"{name} FID": self.compute_fid(torch.cat([self.generator(batch.to(self.device)) for batch, in eval_data_loader]))
+                f"{name} FID": self.compute_fid(torch.cat([self.generator(batch.to(self.device)).cpu() for batch, in eval_data_loader]))
                 for name, eval_data_loader in eval_data_loaders.items()
             }
             wandb.log(fids)
+            self.generator.train()
             return fids
         return {}
