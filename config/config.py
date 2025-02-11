@@ -52,6 +52,29 @@ class DDPMTrainingConfig(BaseModel):
     continuous_time: bool = Field(..., description="Whether to use continuous time sampling during training")
 
 
+class GANConfig(BaseModel):
+    dim_mults_g: list[int] = Field(..., description="Base channel multipliers in the generator")
+    base_channels_g: int = Field(..., description="Base number of channels in the generator")
+    dim_mults_d: list[int] = Field(..., description="Base channel multipliers in the discriminator")
+    base_channels_d: int = Field(..., description="Base number of channels in the discriminator")
+
+
+class GANTrainingConfig(BaseModel):
+    lr_g: float = Field(..., description="Learning rate for generator")
+    weight_decay_g: float = Field(..., description="Weight decay for generator")
+    n_iter_g: int = Field(..., description="Number of iterations for generator")
+    lr_d: float = Field(..., description="Learning rate for discriminator")
+    weight_decay_d: float = Field(..., description="Weight decay for discriminator")
+    n_iter_d: int = Field(..., description="Number of iterations for discriminator")
+    real_p: float = Field(..., description="Smoothing parameter for real samples")
+    fake_p: float = Field(..., description="Smoothing parameter for fake samples")
+    temp: float = Field(..., description="Temperature for noise")
+    real_temp: float = Field(..., description="Temperature for noise in real samples")
+    eval_steps: int = Field(..., description="Number of steps between evaluation")
+    project_name: str = Field(..., description="Name of the project")
+    total_iters: int = Field(..., description="Total number of iterations for training")
+
+
 class SampleConfig(BaseModel):
     n_steps: int | list[int] = Field(..., description="Number of steps for sampling")
     n_samples: int = Field(..., description="Number of samples to generate")
@@ -86,6 +109,8 @@ class VariedDatasetStatsConfig(ForwardStatsConfig):
 class Config(BaseModel):
     ddpm: DDPMConfig = Field(..., description="Diffusion model configuration")
     ddpm_training: DDPMTrainingConfig = Field(..., description="DDPM training configuration")
+    gan: GANConfig = Field(..., description="GAN configuration")
+    gan_training: GANTrainingConfig = Field(..., description="GAN training configuration")
     data: DataConfig = Field(..., description="Data configuration")
     sample: SampleConfig = Field(..., description="Sample configuration")
     forward_stats: ForwardStatsConfig = Field(..., description="Forward statistics configuration")

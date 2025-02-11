@@ -2,7 +2,7 @@ from torch import nn, Tensor, load
 from denoising_diffusion_pytorch import Unet # type: ignore
 from .ddpm_dynamic import DDPMDynamic
 from config import Config
-from utils import get_data_tensor, replace_activations
+from utils import get_data_tensor, get_unet
 
 
 class DDPMPredictions:
@@ -37,15 +37,7 @@ class DDPMUnet(DDPM):
     def __init__(self, config: Config):
         super().__init__(config)
 
-        self.unet = Unet(
-            dim = config.ddpm.dim,
-            dim_mults = config.ddpm.dim_mults,
-            channels = config.data.obj_size[0],
-            flash_attn = True,
-        )
-
-        if config.ddpm.use_lrelu:
-            replace_activations(self.unet)
+        self.unet = get_unet(config.ddpm.dim, config.ddpm.dim_mults, config.data.obj_size[0], config.ddpm.use_lrelu)
 
     def forward(self, xt: Tensor, t: Tensor | int) -> Tensor:
         return self.unet(xt, t) # type: ignore

@@ -1,6 +1,7 @@
 from typing import Callable, TypeVar
 import torch
 from torch import Tensor, nn
+from denoising_diffusion_pytorch import Unet
 
 
 T = TypeVar("T")
@@ -25,3 +26,17 @@ def replace_activations(
     for name, child in module.named_children():
         setattr(module, name, replace_activations(child, new_activation, activations_to_replace))
     return module
+
+
+def get_unet(base_channels: int, dim_mults: list[int], channels: int, use_lrelu: bool = True) -> Unet:
+    unet = Unet(
+        dim=base_channels,
+        dim_mults=dim_mults,
+        channels=channels,
+        flash_attn=True,
+    )
+
+    if use_lrelu:
+        replace_activations(unet)
+
+    return unet

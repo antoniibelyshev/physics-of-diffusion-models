@@ -18,11 +18,13 @@ from .utils import (
     dict_map as dict_map,
     get_time_evenly_spaced as get_time_evenly_spaced,
     replace_activations as replace_activations,
+    get_unet as get_unet,
 )
 from .fid import (
     save_tensors_as_images as save_tensors_as_images,
     extract_features_statistics as extract_features_statistics,
     compute_fid as compute_fid,
+    get_compute_fid as get_compute_fid,
 )
 from .models import (
     LeNet as LeNet,
