@@ -31,10 +31,10 @@ def compute_stats_traj_batch(x: Tensor, y: Tensor, temp: Tensor) -> dict[str, Te
 
 
 def compute_stats(
-    y: Tensor,
-    temp: Tensor,
-    batch_size: int = 100,
-    n_iter: int = 1000,
+        y: Tensor,
+        temp: Tensor,
+        batch_size: int = 100,
+        n_iter: int = 1000,
 ) -> dict[str, Tensor]:
     y = y.cuda()
 
@@ -49,10 +49,10 @@ def compute_stats(
 
 
 def compute_stats_unbiased(
-    y: Tensor,
-    temp: Tensor,
-    batch_size: int = 100,
-    n_iter: int = 1000,
+        y: Tensor,
+        temp: Tensor,
+        batch_size: int = 100,
+        n_iter: int = 1000,
 ) -> dict[str, Tensor]:
     y = y.cuda()
 

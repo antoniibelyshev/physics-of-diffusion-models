@@ -4,6 +4,7 @@ from torch.utils.data import DataLoader
 import wandb
 from typing import Generator, Optional, Callable
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 from config import Config
 from .generator import GANGenerator
@@ -83,7 +84,7 @@ class GANTrainer:
         # Generator update
         loss_g = self.generator_update(fake_imgs, noisy_imgs)
         for _ in range(self.n_iter_g - 1):
-            loss_g = self.generator_update(fake_imgs. noisy_imgs)
+            loss_g = self.generator_update(fake_imgs, noisy_imgs)
 
         return loss_g, loss_d
 
@@ -92,13 +93,14 @@ class GANTrainer:
             self,
             real_data_generator: Generator[Tensor, None, None],
             total_iters: int = 50000,
+            test_data: Optional[Tensor] = None,
             eval_data_loaders: Optional[dict[str, DataLoader[tuple[Tensor, ...]]]] = None,
     ):
         wandb.init(project = self.project_name)
 
         eval_metrics: dict[str, float] = {}
         with tqdm(total=total_iters) as pbar:
-            for iter_idx in range(1, total_iters + 1):
+            for iter_idx in range(total_iters + 1):
                 real_imgs = next(real_data_generator).to(self.device)
                 loss_g, loss_d = self.train_step(real_imgs)
                 wandb.log({
@@ -108,7 +110,7 @@ class GANTrainer:
                 })
 
                 if iter_idx % self.eval_steps == 0:
-                    eval_metrics = self.eval(eval_data_loaders)
+                    eval_metrics = self.eval(test_data, eval_data_loaders)
 
                 pbar.update(1)
                 pbar.set_postfix(g_loss=loss_g, d_loss=loss_d, **eval_metrics)
@@ -116,7 +118,30 @@ class GANTrainer:
         wandb.finish()
 
     @torch.no_grad()
-    def eval(self, eval_data_loaders: Optional[dict[str, DataLoader[tuple[Tensor, ...]]]]) -> dict[str, float]:
+    def eval(self, test_data: Optional[Tensor], eval_data_loaders: Optional[dict[str, DataLoader[tuple[Tensor, ...]]]]) -> dict[str, float]:
+        if test_data is not None:
+            real_imgs = test_data[:10]
+            noisy_imgs = add_noise(real_imgs, self.temp)
+            fake_imgs = self.generator(noisy_imgs.to(self.device)).detach().cpu()
+
+            fig = plt.figure(figsize=(20, 5))
+
+            for i in range(10):
+                plt.subplot(3, 10, i + 1)
+                plt.imshow(real_imgs[i, 0])
+                plt.axis("off")
+
+                plt.subplot(3, 10, i + 11)
+                plt.imshow(noisy_imgs[i, 0])
+                plt.axis("off")
+
+                plt.subplot(3, 10, i + 21)
+                plt.imshow(fake_imgs[i, 0])
+                plt.axis("off")
+
+            wandb.log({"Generated samples": wandb.Image(fig)})
+            plt.close(fig)
+
         if eval_data_loaders is not None and self.compute_fid is not None:
             self.generator.eval()
             fids = {

@@ -16,18 +16,19 @@ def main(config: Config) -> None:
     train_data = get_data_tensor(config)
     train_data_generator = get_data_generator(train_data, config.data.batch_size)
 
-    test_data = add_noise(get_data_tensor(config, train=False), config.gan_training.temp)
-    diffusion_data = torch.from_numpy(np.load(config.samples_path)["states"][:, 0])
+    test_data = get_data_tensor(config, train=False)
+    diffusion_data = torch.from_numpy(np.load(config.samples_path)["states"][:, 1])
 
     eval_data_loaders = {
-        "Test": DataLoader(TensorDataset(test_data), batch_size=500),
+        "Test": DataLoader(TensorDataset(add_noise(test_data, config.gan_training.temp)), batch_size=500),
         "Diffusion": DataLoader(TensorDataset(diffusion_data), batch_size=500)
     }
 
     trainer.train(
         train_data_generator,
-        total_iters=config.gan_training.total_iters,
-        eval_data_loaders=eval_data_loaders
+        total_iters = config.gan_training.total_iters,
+        test_data = test_data,
+        eval_data_loaders = eval_data_loaders
     )
 
     torch.save(generator.state_dict(), "checkpoints/generator.pth")
