@@ -11,8 +11,6 @@ from diffusion import get_ddpm, get_samples
 
 @with_config()
 def main(config: Config) -> None:
-    if isinstance(config.sample.n_steps, list):
-        config.sample.n_steps = config.sample.n_steps[0]
     ddpm = get_ddpm(config, pretrained = True)
     kwargs = {
         "n_steps": config.sample.n_steps,

@@ -12,9 +12,6 @@ from .discriminator import GANDiscriminator
 from .helper_functions import cross_entropy_loss, add_noise
 
 
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-
-
 class GANTrainer:
     def __init__(
             self,
@@ -22,8 +19,8 @@ class GANTrainer:
             discriminator: GANDiscriminator,
             config: Config,
             compute_fid: Optional[Callable[[Tensor], float]] = None,
-            device = DEVICE,
-    ):
+            device: str = "cuda" if torch.cuda.is_available() else "cpu",
+    ) -> None:
         self.generator = generator.to(device)
         self.discriminator = discriminator.to(device)
 
@@ -49,16 +46,16 @@ class GANTrainer:
         self.device = device
 
     @staticmethod
-    def generator_loss(logits: Tensor) -> Tensor:
-        return cross_entropy_loss(logits, 1)
+    def generator_loss(fake_logits: Tensor) -> Tensor:
+        return cross_entropy_loss(fake_logits, 1)
 
-    def discriminator_loss(self, real_logits: Tensor, fake_logits) -> Tensor:
+    def discriminator_loss(self, real_logits: Tensor, fake_logits: Tensor) -> Tensor:
         return 0.5 * (cross_entropy_loss(real_logits, self.real_p) + cross_entropy_loss(fake_logits, self.fake_p))
 
-    def generator_update(self, fake_imgs: Tensor, noisy_imgs: Tensor) -> float:
+    def generator_update(self, noisy_imgs: Tensor, fake_imgs: Tensor) -> float:
         self.optimizer_g.zero_grad()
         loss_g = self.generator_loss(self.discriminator(fake_imgs, noisy_imgs))
-        loss_g.backward()
+        loss_g.backward() # type: ignore
         self.optimizer_g.step()
         return loss_g.item()
 
@@ -68,7 +65,7 @@ class GANTrainer:
             self.discriminator(add_noise(real_imgs, self.real_temp), noisy_imgs),
             self.discriminator(fake_imgs.detach(), noisy_imgs)
         )
-        loss_d.backward()
+        loss_d.backward() # type: ignore
         self.optimizer_d.step()
         return loss_d.item()
 
@@ -82,9 +79,9 @@ class GANTrainer:
             loss_d = self.discriminator_update(real_imgs, noisy_imgs, fake_imgs)
 
         # Generator update
-        loss_g = self.generator_update(fake_imgs, noisy_imgs)
+        loss_g = self.generator_update(noisy_imgs, fake_imgs)
         for _ in range(self.n_iter_g - 1):
-            loss_g = self.generator_update(fake_imgs, noisy_imgs)
+            loss_g = self.generator_update(self.generator(noisy_imgs), fake_imgs)
 
         return loss_g, loss_d
 
@@ -95,7 +92,7 @@ class GANTrainer:
             total_iters: int = 50000,
             test_data: Optional[Tensor] = None,
             eval_data_loaders: Optional[dict[str, DataLoader[tuple[Tensor, ...]]]] = None,
-    ):
+    ) -> None:
         wandb.init(project = self.project_name)
 
         eval_metrics: dict[str, float] = {}
@@ -113,12 +110,17 @@ class GANTrainer:
                     eval_metrics = self.eval(test_data, eval_data_loaders)
 
                 pbar.update(1)
-                pbar.set_postfix(g_loss=loss_g, d_loss=loss_d, **eval_metrics)
+                pbar.set_postfix(g_loss=loss_g, d_loss=loss_d, **eval_metrics) # type: ignore
 
         wandb.finish()
 
     @torch.no_grad()
-    def eval(self, test_data: Optional[Tensor], eval_data_loaders: Optional[dict[str, DataLoader[tuple[Tensor, ...]]]]) -> dict[str, float]:
+    def eval(
+            self,
+            test_data: Optional[Tensor],
+            eval_data_loaders: Optional[dict[str, DataLoader[tuple[Tensor, ...]]]]
+    ) -> dict[str, float]:
+        self.generator.eval()
         if test_data is not None:
             real_imgs = test_data[:10]
             noisy_imgs = add_noise(real_imgs, self.temp)
@@ -142,13 +144,12 @@ class GANTrainer:
             wandb.log({"Generated samples": wandb.Image(fig)})
             plt.close(fig)
 
+        fids: dict[str, float] = {}
         if eval_data_loaders is not None and self.compute_fid is not None:
-            self.generator.eval()
-            fids = {
-                f"{name} FID": self.compute_fid(torch.cat([self.generator(batch.to(self.device)).cpu() for batch, in eval_data_loader]))
-                for name, eval_data_loader in eval_data_loaders.items()
-            }
+            for name, eval_data_loader in eval_data_loaders.items():
+                fake_imgs = torch.cat([self.generator(batch.to(self.device)).cpu() for batch, in eval_data_loader])
+                fids[f"{name} FID"] = self.compute_fid(fake_imgs)
             wandb.log(fids)
-            self.generator.train()
-            return fids
-        return {}
+
+        self.generator.train()
+        return fids

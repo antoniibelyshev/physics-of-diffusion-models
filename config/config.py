@@ -6,22 +6,20 @@ from typing_extensions import Self
 class DataConfig(BaseModel):
     dataset_name: str = Field(..., description="Name of the dataset")
     batch_size: int = Field(..., description="Batch size for training")
-    obj_size: tuple[int, ...] = Field((), init=False, description="Size of an object")
 
-    @model_validator(mode="after")
-    def _set_obj_size(self) -> Self:
+    @property
+    def obj_size(self) -> tuple[int, ...]:
         match self.dataset_name:
             case "mnist":
-                self.obj_size = (1, 32, 32)
+                return 1, 32, 32
             case "cifar10":
-                self.obj_size = (3, 32, 32)
+                return 3, 32, 32
             case "cifar100":
-                self.obj_size = (3, 32, 32)
+                return 3, 32, 32
             case "fashion_mnist":
-                self.obj_size = (1, 32, 32)
+                return 1, 32, 32
             case _:
                 raise ValueError
-        return self
 
 
 class DDPMConfig(BaseModel):
@@ -76,7 +74,7 @@ class GANTrainingConfig(BaseModel):
 
 
 class SampleConfig(BaseModel):
-    n_steps: int | list[int] = Field(..., description="Number of steps for sampling")
+    n_steps: int = Field(..., description="Number of steps for sampling")
     n_samples: int = Field(..., description="Number of samples to generate")
     n_repeats: int = Field(..., description="Number of repeats")
     idx_start: int | None = Field(None, description="Starting index")

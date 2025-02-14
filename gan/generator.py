@@ -12,4 +12,4 @@ class GANGenerator(nn.Module):
         self.t = t
 
     def forward(self, x: Tensor) -> Tensor:
-        return self.unet(x, torch.full((len(x),), self.t, device=x.device))
+        return self.unet(x, torch.full((len(x),), self.t, device=x.device)) # type: ignore

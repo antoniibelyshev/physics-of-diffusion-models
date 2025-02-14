@@ -23,4 +23,4 @@ class GANDiscriminator(nn.Module):
         self.last_linear = nn.Linear(channels[-1], 1)
 
     def forward(self, imgs: Tensor, noisy_imgs: Tensor) -> Tensor:
-        return self.last_linear(self.conv_blocks(cat([imgs, noisy_imgs], dim=1)).flatten(1))
+        return self.last_linear(self.conv_blocks(cat([imgs, noisy_imgs], dim=1)).flatten(1)) # type: ignore
