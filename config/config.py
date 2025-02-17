@@ -66,8 +66,11 @@ class GANTrainingConfig(BaseModel):
     n_iter_d: int = Field(..., description="Number of iterations for discriminator")
     real_p: float = Field(..., description="Smoothing parameter for real samples")
     fake_p: float = Field(..., description="Smoothing parameter for fake samples")
+    batch_size: int = Field(..., description="Batch size for gan training")
     temp: float = Field(..., description="Temperature for noise")
     real_temp: float = Field(..., description="Temperature for noise in real samples")
+    n_images: int = Field(..., description="Number of images to log")
+    show_images_steps: int = Field(..., decsription="Number of steps between logging resulting images")
     eval_steps: int = Field(..., description="Number of steps between evaluation")
     project_name: str = Field(..., description="Name of the project")
     total_iters: int = Field(..., description="Total number of iterations for training")
@@ -145,6 +148,8 @@ class Config(BaseModel):
 
     @property
     def samples_path(self) -> str:
+        # return "results/mnist_true_diffusion_samples.npz"
+        # return f"{self.samples_prefix}_samples_short_08.npz"
         return f"{self.samples_prefix}_samples.npz"
 
     @property

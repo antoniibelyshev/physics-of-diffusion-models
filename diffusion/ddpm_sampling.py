@@ -59,6 +59,7 @@ def sample(
         init_ll: Optional[Tensor] = None,
         idx_start: int | None = None,
         min_t: float = 1e-10,
+        verbose: bool = True,
 ) -> dict[str, Tensor]:
     if x_start is not None:
         shape = tuple(x_start.shape)
@@ -80,10 +81,10 @@ def sample(
             init_ll = -0.5 * (xt.pow(2).sum(dim=tuple(range(1, len(shape)))).cpu() + np.log(2 * np.pi) * np.prod(shape[1:]))
         ll_lst = [init_ll]
 
-    t_grid = get_time_evenly_spaced(n_steps, min_t = min_t).to(device)
+    t_grid = get_time_evenly_spaced(n_steps, min_t = min_t, max_t = 0.8).to(device)
     dynamic_coeffs = DynamicCoeffs(ddpm.dynamic.get_temp(t_grid))
 
-    for idx in trange(idx_start or len(t_grid) - 1, -1, -1):
+    for idx in (trange if verbose else range)(idx_start or len(t_grid) - 1, -1, -1):
         t = t_grid[idx][None]
         states.append(xt.cpu())
         if track_ll:
@@ -105,8 +106,10 @@ def sample(
 
 
 def get_samples(ddpm: DDPM, kwargs: dict[str, Any], n_repeats: int) -> dict[str, Tensor]:
+    verbose = n_repeats >= kwargs["n_steps"]
+    kwargs["verbose"] = not verbose
     results = sample(ddpm, **kwargs)
-    for _ in range(n_repeats - 1):
+    for _ in (trange if verbose else range)(n_repeats - 1):
         for key, val in sample(ddpm, **kwargs).items():
             results[key] = torch.cat([results[key], val], dim=0) if key != "temp" else val
     return results

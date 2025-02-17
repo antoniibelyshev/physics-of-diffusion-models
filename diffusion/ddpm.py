@@ -17,7 +17,7 @@ class DDPMPredictions:
                 self.eps = pred
                 self.score = -self.eps / (1 - alpha_bar).sqrt()
             case "score":
-                self.x0 = (xt - pred * (1 - alpha_bar).sqrt()) / alpha_bar.sqrt()
+                self.x0 = (xt + pred * (1 - alpha_bar)) / alpha_bar.sqrt()
                 self.eps = -pred * (1 - alpha_bar).sqrt()
                 self.score = pred
 

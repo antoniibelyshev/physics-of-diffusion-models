@@ -14,7 +14,7 @@ wandb/*
 .idea/
 
 # Ignore large files
-checkpoints/
+*checkpoints/
 results/
 data/
 

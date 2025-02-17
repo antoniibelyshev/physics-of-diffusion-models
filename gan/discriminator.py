@@ -13,6 +13,7 @@ class GANDiscriminator(nn.Module):
             *[
                 nn.Sequential(
                     nn.Conv2d(in_channels, out_channels, kernel_size=4, stride=2, padding=1),
+                    nn.BatchNorm2d(out_channels),
                     nn.LeakyReLU(0.2, inplace=True),
                 )
                 for in_channels, out_channels in zip(channels, channels[1:])

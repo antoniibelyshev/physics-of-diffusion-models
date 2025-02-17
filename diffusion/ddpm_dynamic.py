@@ -36,12 +36,12 @@ class DDPMDynamic(nn.Module):
         return t, eps, xt
 
     def get_true_score(self, xt: Tensor, t: Tensor, train_data: Tensor) -> Tensor:
-        alpha_bar = self.get_coef_from_time("alpha_bar", t)
+        alpha_bar = self.get_alpha_bar(t)
         diffs = train_data.unsqueeze(1) * alpha_bar.sqrt() - xt
-        ts, bs, *obj_shape = diffs.shape
-        pows = -norm_sqr(diffs.view(bs * ts, -1)).view(ts, bs, *[1] * len(obj_shape))
+        n, bs, *obj_size = diffs.shape
+        pows = -norm_sqr(diffs.view(n * bs, -1)).view(n, bs, *[1] * len(obj_size))
         pows /= 2 * (1 - alpha_bar)
         pows -= pows.max(0).values
         exps = pows.exp()
-        weighted_diffs = diffs * exps / (1 - alpha_bar)
-        return weighted_diffs.sum(0) / exps.sum(0) # type: ignore
+        diffs *= exps
+        return diffs.sum(0) / (exps.sum(0) * (1 - alpha_bar)) # type: ignore

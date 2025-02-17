@@ -39,22 +39,25 @@ gan:
 gan_training:
   lr_g: 2e-4
   weight_decay_g: 1e-2
-  n_iter_g: 2
-  lr_d: 2e-4
-  weight_decay_d: 1e-4
-  n_iter_d: 2
-  real_p: 0.8
-  fake_p: 0.2
-  temp: 0.867
+  n_iter_g: 1
+  lr_d: 1e-4
+  weight_decay_d: 1e-3
+  n_iter_d: 1
+  real_p: 0.9
+  fake_p: 0.1
+  batch_size: 64
+  temp: 0.876
   real_temp: 0
+  n_images: 20
+  show_images_steps: 400
   eval_steps: 2000
   project_name: One-step gan denoiser
   total_iters: 50000
 
 sample:
   n_steps: 10
-  n_samples: 6000
-  n_repeats: 10
+  n_samples: 1000
+  n_repeats: 60
   step_type: sde
   track_ll: False
 

@@ -39,6 +39,8 @@ class GANTrainer:
         self.fake_p = cfg.fake_p
         self.temp = cfg.temp
         self.real_temp = cfg.real_temp
+        self.n_images = cfg.n_images
+        self.show_images_steps = cfg.show_images_steps
         self.eval_steps = cfg.eval_steps
 
         self.project_name = cfg.project_name
@@ -65,6 +67,18 @@ class GANTrainer:
             self.discriminator(add_noise(real_imgs, self.real_temp), noisy_imgs),
             self.discriminator(fake_imgs.detach(), noisy_imgs)
         )
+        # loss_d1 = cross_entropy_loss(
+        #     self.discriminator(add_noise(real_imgs, self.real_temp), noisy_imgs), self.real_p
+        # )
+        # loss_d1.backward() # type: ignore
+        # self.optimizer_d.step()
+        # self.optimizer_d.zero_grad()
+        # loss_d2 = cross_entropy_loss(
+        #     self.discriminator(fake_imgs.detach(), noisy_imgs), self.fake_p
+        # )
+        # loss_d2.backward() # type: ignore
+        # self.optimizer_d.step()
+        # return 0.5 * (loss_d1.item() + loss_d2.item())
         loss_d.backward() # type: ignore
         self.optimizer_d.step()
         return loss_d.item()
@@ -81,7 +95,7 @@ class GANTrainer:
         # Generator update
         loss_g = self.generator_update(noisy_imgs, fake_imgs)
         for _ in range(self.n_iter_g - 1):
-            loss_g = self.generator_update(self.generator(noisy_imgs), fake_imgs)
+            loss_g = self.generator_update(noisy_imgs, self.generator(noisy_imgs))
 
         return loss_g, loss_d
 
@@ -91,7 +105,7 @@ class GANTrainer:
             real_data_generator: Generator[Tensor, None, None],
             total_iters: int = 50000,
             test_data: Optional[Tensor] = None,
-            eval_data_loaders: Optional[dict[str, DataLoader[tuple[Tensor, ...]]]] = None,
+            eval_data_loaders: Optional[dict[str, DataLoader[Tensor]]] = None,
     ) -> None:
         wandb.init(project = self.project_name)
 
@@ -106,8 +120,11 @@ class GANTrainer:
                     "D_loss": loss_d,
                 })
 
+                if iter_idx % self.show_images_steps == 0:
+                    self.show_images(test_data)
+
                 if iter_idx % self.eval_steps == 0:
-                    eval_metrics = self.eval(test_data, eval_data_loaders)
+                    eval_metrics = self.eval(eval_data_loaders)
 
                 pbar.update(1)
                 pbar.set_postfix(g_loss=loss_g, d_loss=loss_d, **eval_metrics) # type: ignore
@@ -115,41 +132,40 @@ class GANTrainer:
         wandb.finish()
 
     @torch.no_grad()
-    def eval(
-            self,
-            test_data: Optional[Tensor],
-            eval_data_loaders: Optional[dict[str, DataLoader[tuple[Tensor, ...]]]]
-    ) -> dict[str, float]:
-        self.generator.eval()
-        if test_data is not None:
-            real_imgs = test_data[:10]
-            noisy_imgs = add_noise(real_imgs, self.temp)
-            fake_imgs = self.generator(noisy_imgs.to(self.device)).detach().cpu()
-
-            fig = plt.figure(figsize=(20, 5))
-
-            for i in range(10):
-                plt.subplot(3, 10, i + 1)
-                plt.imshow(real_imgs[i, 0])
-                plt.axis("off")
-
-                plt.subplot(3, 10, i + 11)
-                plt.imshow(noisy_imgs[i, 0])
-                plt.axis("off")
-
-                plt.subplot(3, 10, i + 21)
-                plt.imshow(fake_imgs[i, 0])
-                plt.axis("off")
-
-            wandb.log({"Generated samples": wandb.Image(fig)})
-            plt.close(fig)
-
+    def eval(self, eval_data_loaders: Optional[dict[str, DataLoader[Tensor]]]) -> dict[str, float]:
         fids: dict[str, float] = {}
         if eval_data_loaders is not None and self.compute_fid is not None:
             for name, eval_data_loader in eval_data_loaders.items():
-                fake_imgs = torch.cat([self.generator(batch.to(self.device)).cpu() for batch, in eval_data_loader])
+                fake_imgs = torch.cat([self.generator(batch.to(self.device)).cpu() for batch in eval_data_loader])
                 fids[f"{name} FID"] = self.compute_fid(fake_imgs)
             wandb.log(fids)
 
         self.generator.train()
         return fids
+
+    @torch.no_grad()
+    def show_images(self, test_data: Optional[Tensor]) -> None:
+        self.generator.eval()
+        if test_data is not None:
+            real_imgs = test_data[:self.n_images]
+            noisy_imgs = add_noise(real_imgs, self.temp)
+            fake_imgs = self.generator(noisy_imgs.to(self.device)).detach().cpu()
+
+            fig = plt.figure(figsize=(2 * self.n_images, 5))
+
+            for i in range(self.n_images):
+                plt.subplot(3, self.n_images, i + 1)
+                plt.imshow(real_imgs[i, 0])
+                plt.axis("off")
+
+                plt.subplot(3, self.n_images, i + self.n_images + 1)
+                plt.imshow(noisy_imgs[i, 0])
+                plt.axis("off")
+
+                plt.subplot(3, self.n_images, i + 2 * self.n_images + 1)
+                plt.imshow(fake_imgs[i, 0])
+                plt.axis("off")
+
+            wandb.log({"Generated samples": wandb.Image(fig)})
+            plt.close(fig)
+        self.generator.train()

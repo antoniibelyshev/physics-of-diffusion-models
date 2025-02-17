@@ -12,8 +12,8 @@ def dict_map(func: Callable[[T], V], d: dict[str, T]) -> dict[str, V]:
     return {key: func(val) for key, val in d.items()}
 
 
-def get_time_evenly_spaced(n_intervals: int, *, min_t: float = 0.) -> Tensor:
-    return torch.linspace(min_t, 1.0, n_intervals)
+def get_time_evenly_spaced(n_intervals: int, *, min_t: float = 0., max_t: float = 1.) -> Tensor:
+    return torch.linspace(min_t, max_t, n_intervals)
 
 
 def replace_activations(
