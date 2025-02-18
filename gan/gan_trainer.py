@@ -102,7 +102,7 @@ class GANTrainer:
 
     def train(
             self,
-            real_data_generator: Generator[Tensor, None, None],
+            real_data_generator: Generator[tuple[Tensor, ...], None, None],
             total_iters: int = 50000,
             test_data: Optional[Tensor] = None,
             eval_data_loaders: Optional[dict[str, DataLoader[Tensor]]] = None,
@@ -112,7 +112,7 @@ class GANTrainer:
         eval_metrics: dict[str, float] = {}
         with tqdm(total=total_iters) as pbar:
             for iter_idx in range(total_iters + 1):
-                real_imgs = next(real_data_generator).to(self.device)
+                real_imgs = next(real_data_generator)[0].to(self.device)
                 loss_g, loss_d = self.train_step(real_imgs)
                 wandb.log({
                     "Step": iter_idx,

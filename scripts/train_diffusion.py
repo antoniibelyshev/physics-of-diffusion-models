@@ -1,4 +1,4 @@
-from utils import get_data_tensor, get_data_generator
+from utils import get_dataset, get_data_generator
 import torch
 from diffusion import get_ddpm, DDPMTrainer
 from config import Config
@@ -7,8 +7,8 @@ from config import with_config
 
 @with_config()
 def main(config: Config) -> None:
-    data = get_data_tensor(config)
-    data_generator = get_data_generator(data, config.ddpm_training.batch_size)
+    dataset = get_dataset(config)
+    data_generator = get_data_generator(dataset, config.ddpm_training.batch_size)
     ddpm = get_ddpm(config)
 
     trainer = DDPMTrainer(config, ddpm)

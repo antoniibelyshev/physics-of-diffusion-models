@@ -1,4 +1,4 @@
-from utils import get_data_tensor, get_data_generator, get_compute_fid
+from utils import get_dataset, get_data_tensor, get_data_generator, get_compute_fid
 import torch
 from torch.utils.data import DataLoader, Dataset
 import numpy as np
@@ -26,8 +26,8 @@ def main(config: Config) -> None:
     discriminator = GANDiscriminator(config)
     trainer = GANTrainer(generator, discriminator, config, compute_fid=get_compute_fid(config))
 
-    train_data = get_data_tensor(config)
-    train_data_generator = get_data_generator(train_data, config.gan_training.batch_size)
+    train_dataset = get_dataset(config)
+    train_data_generator = get_data_generator(train_dataset, config.gan_training.batch_size)
 
     test_data = get_data_tensor(config, train=False)
     diffusion_data = torch.from_numpy(np.load(config.samples_path)["states"][:, 1])

@@ -51,7 +51,7 @@ class DDPMTrainer:
 
     def train(
         self,
-        train_generator: Generator[Tensor, None, None],
+        train_generator: Generator[tuple[Tensor, ...], None, None],
         total_iters: int = 2500,
     ) -> None:
         wandb.init(project = self.project_name, name = self.experiment_name)
@@ -60,7 +60,7 @@ class DDPMTrainer:
         
         with trange(1, 1 + total_iters) as pbar:
             for iter_idx in pbar:
-                batch = next(train_generator).to(self.device)
+                batch = next(train_generator)[0].to(self.device)
                 loss = self.calc_loss(batch)
 
                 wandb.log({'iteration': iter_idx, 'loss': loss.item()})
