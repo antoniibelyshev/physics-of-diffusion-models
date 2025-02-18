@@ -31,8 +31,8 @@ def get_linear_beta_temp_schedule(min_temp: float, max_temp: float) -> Callable[
 
 
 def get_cosine_temp_schedule(min_temp: float, max_temp: float) -> Callable[[Tensor], Tensor]:
-    tau_min = 2 * np.atan(min_temp ** 0.5) / np.pi
-    tau_max = 2 * np.atan(max_temp ** 0.5) / np.pi
+    tau_min = 2 * np.arctan(min_temp ** 0.5) / np.pi
+    tau_max = 2 * np.arctan(max_temp ** 0.5) / np.pi
     scale = 0.5 * np.pi * (tau_max - tau_min)
     shift = 0.5 * np.pi * tau_min
     def cosine_temp_schedule(tau: Tensor) -> Tensor:

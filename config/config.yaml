@@ -63,11 +63,9 @@ sample:
   idx_start: -1
 
 forward_stats:
-  n_samples: 40
-  n_repeats: 250
-  min_temp: 1e-4
-  max_temp: 1e4
-  n_temps: 1000
+  n_samples: 20
+  n_repeats: 500
+  n_temps: 100
 
 backward_stats:
   n_samples: 1000
