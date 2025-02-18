@@ -18,7 +18,7 @@ def get_entropy_temp_schedule(stats_path: str) -> Callable[[Tensor], Tensor]:
     heat_capacity = stats["var_H"] / temp ** 2
     inv_cdf = get_inv_cdf(log_temp, heat_capacity)
     def entropy_temp_schedule(tau: Tensor) -> Tensor:
-        return from_numpy(inv_cdf(tau.cpu().numpy())).exp().to(tau.device)
+        return from_numpy(inv_cdf(tau.cpu().numpy())).float().exp().to(tau.device)
     return entropy_temp_schedule
 
 
