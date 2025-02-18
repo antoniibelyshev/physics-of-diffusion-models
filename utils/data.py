@@ -17,18 +17,18 @@ class ImageDataset(TensorDataset):
     }
 
     def __init__(self, dataset_name: str, image_size: tuple[int, int, int], *, train: bool = True):
-        super().__init__()
-
         transform = Compose([
             Resize(image_size[1:]),
             ToTensor(),
         ])
-        self.dataset = self.DATASET_CLASSES[dataset_name](
+        dataset = self.DATASET_CLASSES[dataset_name](
             "data",
             train=train,
             download=True,
             transform=transform
         )
+        images, labels = zip(*dataset)
+        super().__init__(torch.stack(images), torch.tensor(labels))
 
 
 def get_dataset(config: Config, *, train: bool = True) -> TensorDataset:
