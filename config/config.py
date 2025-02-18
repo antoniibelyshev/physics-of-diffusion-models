@@ -101,6 +101,12 @@ class VariedDatasetStatsConfig(ForwardStatsConfig):
     sample_fractions: tuple[float, ...] = Field((1.0, 0.1, 0.01), description="Sample fractions")
 
 
+class FIDConfig(BaseModel):
+    n_steps: tuple[int] = Field(..., description="Number of steps for sampling")
+    noise_schedules: tuple[str] = Field(..., description="Noise schedules")
+    results_path: str = Field(..., description="Path to save results")
+
+
 class Config(BaseModel):
     diffusion: DiffusionConfig = Field(..., description="Diffusion configuration")
     data: DataConfig = Field(..., description="Data configuration")
@@ -114,6 +120,7 @@ class Config(BaseModel):
     varied_dataset_stats: VariedDatasetStatsConfig = Field(
         ..., description="Varied dataset statistics configuration"
     )
+    fid: FIDConfig = Field(..., description="FID configuration")
 
     @property
     def experiment_name(self) -> str:

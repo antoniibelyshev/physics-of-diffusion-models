@@ -61,11 +61,15 @@ class DynamicCoeffs:
         self.temp = temp
         self.alpha_bar = get_alpha_bar(temp)
         alpha_bar_prev = pad(self.alpha_bar[:-1], (*(0,) * (len(temp.shape) * 2 - 2), 1, 0), value=1.0)
-        alpha = self.alpha_bar / alpha_bar_prev
-        self.beta = 1 - alpha
+        self.alpha = self.alpha_bar / alpha_bar_prev
+        self.beta = 1 - self.alpha
+
         self.posterior_x0_coef = (alpha_bar_prev.sqrt() * self.beta) / (1 - self.alpha_bar)
-        self.posterior_xt_coef = (alpha.sqrt() * (1 - alpha_bar_prev)) / (1 - self.alpha_bar)
+        self.posterior_xt_coef = (self.alpha.sqrt() * (1 - alpha_bar_prev)) / (1 - self.alpha_bar)
         self.posterior_sigma = (1 - alpha_bar_prev) / (1 - self.alpha_bar) * self.beta
+
+        self.dpm_xt_coef = self.alpha.pow(-0.5)
+        self.dpm_eps_coef = -(1 - self.alpha_bar).sqrt() / self.alpha.sqrt() - (1 - alpha_bar_prev).sqrt()
 
 
 class DDPMDynamic(nn.Module):

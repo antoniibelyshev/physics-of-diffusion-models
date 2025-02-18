@@ -33,16 +33,25 @@ def sde_step(xt: Tensor, idx: int, tau: Tensor, ddpm: DDPM, dynamic_coeffs: Dyna
 
 def ode_step(xt: Tensor, idx: int, tau: Tensor, ddpm: DDPM, dynamic_coeffs: DynamicCoeffs) -> Tensor:
     beta = dynamic_coeffs.beta[idx]
+    alpha = dynamic_coeffs.alpha[idx]
     score = ddpm.get_predictions(xt, tau).score
-    return xt + 0.5 * beta * (xt + score) # type: ignore
+    return xt / alpha.sqrt() + 0.5 * beta * score # type: ignore
 
 
-def step(xt: Tensor, idx: int, tau: Tensor, ddpm: DDPM, dynamic_coeffs: DynamicCoeffs, step_type: str = "sde") -> Tensor:
+def dpm_step(xt: Tensor, idx: int, tau: Tensor, ddpm: DDPM, dynamic_coeffs: DynamicCoeffs) -> Tensor:
+    xt_coef = dynamic_coeffs.dpm_xt_coef[idx]
+    eps_coef = dynamic_coeffs.dpm_eps_coef[idx]
+    return xt * xt_coef + ddpm.get_predictions(xt, tau).eps * eps_coef # type: ignore
+
+
+def step(xt: Tensor, idx: int, tau: Tensor, ddpm: DDPM, dynamic_coeffs: DynamicCoeffs, step_type: str) -> Tensor:
     match step_type:
         case "sde":
             return sde_step(xt, idx, tau, ddpm, dynamic_coeffs)
         case "ode":
             return ode_step(xt, idx, tau, ddpm, dynamic_coeffs)
+        case "dpm":
+            return dpm_step(xt, idx, tau, ddpm, dynamic_coeffs)
         case _:
             raise ValueError(f"Invalid step type: {step_type}")
 
@@ -107,7 +116,7 @@ def sample(
     return res
 
 
-def get_samples(config: Config, *, save: bool = True) -> dict[str, Tensor]:
+def get_samples(config: Config) -> dict[str, Tensor]:
     ddpm = get_ddpm(config, pretrained = True)
     kwargs: dict[str, Any] = {
         "n_steps": config.sample.n_steps,
@@ -117,14 +126,12 @@ def get_samples(config: Config, *, save: bool = True) -> dict[str, Tensor]:
         "track_states": config.sample.track_states,
         "track_ll": config.sample.track_ll,
     }
-    save_path = config.samples_path
     if (idx_start := config.sample.idx_start) != -1:
         kwargs["idx_start"] = idx_start
         samples = np.load(config.samples_path)
         kwargs["x_start"] =  from_numpy(samples["states"][idx_start])
         if kwargs["track_ll"]:
             kwargs["init_ll"] = from_numpy(samples["ll"][idx_start])
-        save_path = config.samples_from_timestamp_path
 
     verbose = config.sample.n_repeats > 10
     kwargs["verbose"] = not verbose
@@ -132,7 +139,4 @@ def get_samples(config: Config, *, save: bool = True) -> dict[str, Tensor]:
     for _ in (trange if verbose else range)(config.sample.n_repeats - 1):
         for key, val in sample(ddpm, **kwargs).items():
             samples[key] = torch.cat([samples[key], val], dim=0) if key != "temp" else val
-
-    if save:
-        np.savez(save_path, **samples)  # pyright: ignore
     return samples # type: ignore

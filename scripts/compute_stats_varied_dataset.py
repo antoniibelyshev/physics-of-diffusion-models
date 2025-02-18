@@ -8,8 +8,7 @@ from config import Config, with_config
 @with_config()
 def main(config: Config) -> None:
     temp = torch.logspace(
-        config.varied_dataset_stats.min_temp,
-        config.varied_dataset_stats.max_temp,
+        *config.diffusion.temp_range,
         config.varied_dataset_stats.n_temps,
     )
     for dataset_name in config.varied_dataset_stats.dataset_names:

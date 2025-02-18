@@ -12,7 +12,7 @@ from diffusion import get_samples
 def main(config: Config) -> None:
     config.sample.n_samples = config.backward_stats.n_samples
     config.sample.n_repeats = config.backward_stats.n_repeats
-    samples = get_samples(config, save=False)
+    samples = get_samples(config)
     temp = samples["temp"]
     states = samples["states"]
     x_batched = states.reshape(-1, config.backward_stats.batch_size, *states.shape[1:])

@@ -87,3 +87,16 @@ varied_dataset_stats:
     - 1.0
     - 0.1
     - 0.01
+
+fid:
+  n_steps:
+    - 10
+    - 20
+    - 30
+    - 40
+    - 50
+  noise_schedules:
+    - linear_beta
+    - cosine
+    - entropy_u
+  save_path: results/fid.csv
