@@ -1,10 +1,9 @@
 import numpy as np
 from numpy.typing import NDArray
-from typing import TypeVar
 
 
-T = TypeVar("T", bound=np.generic)
+ArrayT = NDArray[np.float32]
 
 
-def finite_diff_derivative(x: NDArray[T], fx: NDArray[T]) -> NDArray[T]:
-    return (fx[1:] - fx[:-1]) / (x[1:] - x[:-1]) # type: ignore
+def finite_diff_derivative(x: ArrayT, fx: ArrayT) -> ArrayT:
+    return (fx[1:] - fx[:-1]) / (x[1:] - x[:-1])

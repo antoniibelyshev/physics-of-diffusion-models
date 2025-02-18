@@ -2,21 +2,13 @@ import torch
 from torch import nn, Tensor, from_numpy
 from torch.nn.functional import pad
 import numpy as np
-from numpy.typing import NDArray
 from typing import Callable
-from scipy.interpolate import interp1d # type: ignore
-from scipy.integrate import cumulative_trapezoid # type: ignore
 
 from config import Config
-from utils import norm_sqr
+from utils import norm_sqr, get_inv_cdf
 
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-def compute_cdf(x: NDArray[np.float32], p: NDArray[np.float32]) -> NDArray[np.float32]:
-    cdf = np.cumsum(np.append(0, 0.5 * (p[1:] + p[:-1]) / (x[1:] - x[:-1])))
-    return cdf / cdf[-1] # type: ignore
 
 
 def get_entropy_temp_schedule(stats_path: str) -> Callable[[Tensor], Tensor]:
@@ -24,13 +16,7 @@ def get_entropy_temp_schedule(stats_path: str) -> Callable[[Tensor], Tensor]:
     temp = stats["temp"]
     log_temp = np.log(temp)
     heat_capacity = stats["var_H"] / temp ** 2
-    cdf = compute_cdf(log_temp, heat_capacity)
-    inv_cdf = interp1d(
-        cdf,
-        log_temp,
-        kind='linear',
-        fill_value="extrapolate"
-    )
+    inv_cdf = get_inv_cdf(log_temp, heat_capacity)
     def entropy_temp_schedule(tau: Tensor) -> Tensor:
         return from_numpy(inv_cdf(tau.cpu().numpy())).exp().to(tau.device)
     return entropy_temp_schedule

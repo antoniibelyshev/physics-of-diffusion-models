@@ -18,6 +18,7 @@ from .utils import (
     dict_map as dict_map,
     replace_activations as replace_activations,
     get_unet as get_unet,
+    get_inv_cdf as get_inv_cdf,
 )
 from .fid import (
     save_tensors_as_images as save_tensors_as_images,

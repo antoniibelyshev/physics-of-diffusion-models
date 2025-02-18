@@ -1,11 +1,14 @@
 from typing import Callable, TypeVar
-import torch
-from torch import Tensor, nn
+from torch import nn
 from denoising_diffusion_pytorch import Unet # type: ignore
+import numpy as np
+from numpy.typing import NDArray
+from scipy.interpolate import interp1d # type: ignore
 
 
 T = TypeVar("T")
 V = TypeVar("V")
+ArrayT = NDArray[np.float32]
 
 
 def dict_map(func: Callable[[T], V], d: dict[str, T]) -> dict[str, V]:
@@ -36,3 +39,18 @@ def get_unet(base_channels: int, dim_mults: list[int], channels: int, use_lrelu:
         replace_activations(unet)
 
     return unet
+
+
+def compute_cdf(x: ArrayT, p: ArrayT) -> ArrayT:
+    cdf = np.cumsum(np.append(0, 0.5 * (p[1:] + p[:-1]) / (x[1:] - x[:-1])))
+    return cdf / cdf[-1] # type: ignore
+
+
+def get_cdf(x: ArrayT, p: ArrayT) -> Callable[[ArrayT], ArrayT]:
+    cdf = compute_cdf(x, p)
+    return interp1d(x, cdf, kind='linear', fill_value="extrapolate") # type: ignore
+
+
+def get_inv_cdf(x: ArrayT, p: ArrayT) -> Callable[[ArrayT], ArrayT]:
+    cdf = compute_cdf(x, p)
+    return interp1d(cdf, x, kind='linear', fill_value="extrapolate") # type: ignore
