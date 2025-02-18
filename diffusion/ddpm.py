@@ -1,6 +1,7 @@
-from torch import nn, Tensor, load
-from denoising_diffusion_pytorch import Unet # type: ignore
-from .ddpm_dynamic import DDPMDynamic
+from torch import nn, Tensor, load, searchsorted, clip, where, abs
+from pytorch_diffusion import Diffusion # type: ignore
+
+from .diffusion_dynamic import DDPMDynamic
 from config import Config
 from utils import get_data_tensor, get_unet
 
@@ -29,8 +30,8 @@ class DDPM(nn.Module):
         self.parametrization = config.ddpm.parametrization
         assert self.parametrization in ["x0", "eps", "score"]
     
-    def get_predictions(self, xt: Tensor, t: Tensor) -> DDPMPredictions:
-        return DDPMPredictions(self(xt, t), xt, self.dynamic.get_alpha_bar(t), self.parametrization)
+    def get_predictions(self, xt: Tensor, tau: Tensor) -> DDPMPredictions:
+        return DDPMPredictions(self(xt, tau), xt, self.dynamic.get_alpha_bar(tau), self.parametrization)
 
 
 class DDPMUnet(DDPM):
@@ -39,8 +40,8 @@ class DDPMUnet(DDPM):
 
         self.unet = get_unet(config.ddpm.dim, config.ddpm.dim_mults, config.data.obj_size[0], config.ddpm.use_lrelu)
 
-    def forward(self, xt: Tensor, t: Tensor | int) -> Tensor:
-        return self.unet(xt, t) # type: ignore
+    def forward(self, xt: Tensor, tau: Tensor | int) -> Tensor:
+        return self.unet(xt, tau) # type: ignore
 
 
 class DDPMTrue(DDPM):
@@ -52,17 +53,40 @@ class DDPMTrue(DDPM):
 
         self.register_buffer("train_data", get_data_tensor(config))
 
-    def forward(self, xt: Tensor, t: Tensor) -> Tensor:
-        return self.dynamic.get_true_score(xt, t, self.train_data)
+    def forward(self, xt: Tensor, tau: Tensor) -> Tensor:
+        return self.dynamic.get_true_score(xt, tau, self.train_data)
+
+
+class DDPMPytorchDiffusion(DDPM):
+    def __init__(self, config: Config) -> None:
+        config.ddpm.parametrization = "eps"
+        super().__init__(config)
+        self.model = Diffusion.from_pretrained(config.data.dataset_name)
+
+    def get_timestamps(self, tau: Tensor) -> Tensor:
+        alpha_bar_pd = self.model.alphas_cumprod
+        alpha_bar = self.dynamic.get_alpha_bar(tau).squeeze()
+
+        idx = clip(searchsorted(alpha_bar_pd, alpha_bar), 1, len(alpha_bar_pd) - 1)
+        left = alpha_bar_pd[idx - 1]
+        right = alpha_bar_pd[idx]
+        closest_idx = where(abs(alpha_bar - left) <= abs(alpha_bar - right), idx - 1, idx)
+        return closest_idx
+
+    def forward(self, xt: Tensor, tau: Tensor) -> Tensor:
+        return self.model(xt, self.get_timestamps(tau)) # type: ignore
 
 
 def get_ddpm(config: Config, pretrained: bool = False) -> DDPM:
-    if config.ddpm.model_name == "unet":
-        ddpm = DDPMUnet(config)
-        if pretrained:
-            ddpm.load_state_dict(load(config.ddpm_checkpoint_path))
-        return ddpm
-    elif config.ddpm.model_name == "true":
-        return DDPMTrue(config)
-    else:
-        raise ValueError(f"Unknown model name: {config.ddpm.model_name}")
+    match config.ddpm.model_name:
+        case "unet":
+            ddpm = DDPMUnet(config)
+            if pretrained:
+                ddpm.load_state_dict(load(config.ddpm_checkpoint_path))
+            return ddpm
+        case "true":
+            return DDPMTrue(config)
+        case "pytorch_diffusion":
+            return DDPMPytorchDiffusion(config)
+        case _:
+            raise ValueError(f"Unknown model name: {config.ddpm.model_name}")

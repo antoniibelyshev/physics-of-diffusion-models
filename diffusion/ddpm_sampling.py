@@ -1,14 +1,14 @@
 from tqdm import trange
-from torch import Tensor, from_numpy
 import torch
-from .ddpm import DDPM, get_ddpm
-from .diffusion_utils import DynamicCoeffs
-from config import Config
-from typing import Optional, Callable, Any
-import numpy as np
+from torch import Tensor, from_numpy
 from torch.autograd.functional import jacobian
+import numpy as np
+from typing import Optional, Callable, Any
 
-from utils import get_time_evenly_spaced
+from config import Config
+from utils import norm_sqr
+from .ddpm import DDPM, get_ddpm
+from .diffusion_dynamic import DynamicCoeffs
 
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -22,8 +22,8 @@ def batch_jacobian(func: Callable[[Tensor], Tensor], x: Tensor) -> Tensor:
 
 
 @torch.no_grad()
-def sde_step(xt: Tensor, idx: int, t: Tensor, ddpm: DDPM, dynamic_coeffs: DynamicCoeffs) -> Tensor:
-    x0 = ddpm.get_predictions(xt, t).x0
+def sde_step(xt: Tensor, idx: int, tau: Tensor, ddpm: DDPM, dynamic_coeffs: DynamicCoeffs) -> Tensor:
+    x0 = ddpm.get_predictions(xt, tau).x0
     posterior_x0_coef = dynamic_coeffs.posterior_x0_coef[idx]
     posterior_xt_coef = dynamic_coeffs.posterior_xt_coef[idx]
     posterior_sigma = dynamic_coeffs.posterior_sigma[idx]
@@ -31,20 +31,20 @@ def sde_step(xt: Tensor, idx: int, t: Tensor, ddpm: DDPM, dynamic_coeffs: Dynami
     return posterior_x0_coef * x0 + posterior_xt_coef * xt + eps * posterior_sigma.sqrt() # type: ignore
 
 
-def ode_step(xt: Tensor, idx: int, t: Tensor, ddpm: DDPM, dynamic_coeffs: DynamicCoeffs) -> Tensor:
+def ode_step(xt: Tensor, idx: int, tau: Tensor, ddpm: DDPM, dynamic_coeffs: DynamicCoeffs) -> Tensor:
     beta = dynamic_coeffs.beta[idx]
-    score = ddpm.get_predictions(xt, t).score
+    score = ddpm.get_predictions(xt, tau).score
     return xt + 0.5 * beta * (xt + score) # type: ignore
 
 
-def step(xt: Tensor, idx: int, t: Tensor, ddpm: DDPM, dynamic_coeffs: DynamicCoeffs, step_type: str = "sde") -> Tensor:
+def step(xt: Tensor, idx: int, tau: Tensor, ddpm: DDPM, dynamic_coeffs: DynamicCoeffs, step_type: str = "sde") -> Tensor:
     match step_type:
         case "sde":
-            return sde_step(xt, idx, t, ddpm, dynamic_coeffs)
+            return sde_step(xt, idx, tau, ddpm, dynamic_coeffs)
         case "ode":
-            return ode_step(xt, idx, t, ddpm, dynamic_coeffs)
+            return ode_step(xt, idx, tau, ddpm, dynamic_coeffs)
         case _:
-            raise ValueError("Invalid type")
+            raise ValueError(f"Invalid step type: {step_type}")
 
 
 def sample(
@@ -54,11 +54,11 @@ def sample(
         *,
         device: torch.device = DEVICE,
         step_type: str = "sde",
+        track_states: bool = False,
         track_ll: bool = False,
         x_start: Optional[Tensor] = None,
         init_ll: Optional[Tensor] = None,
-        idx_start: int | None = None,
-        min_t: float = 1e-10,
+        idx_start: Optional[int] = None,
         verbose: bool = True,
 ) -> dict[str, Tensor]:
     if x_start is not None:
@@ -73,68 +73,66 @@ def sample(
     ddpm.to(device)
     ddpm.eval()
 
-    states: list[Tensor] = []
+    states: list[Tensor] | None = [] if track_states else None
     ll_lst: list[Tensor] | None = None
     if track_ll:
         assert step_type == "ode", "Log-likelihood tracking is only supported for ODE sampling"
         if init_ll is None:
-            init_ll = -0.5 * (xt.pow(2).sum(dim=tuple(range(1, len(shape)))).cpu() + np.log(2 * np.pi) * np.prod(shape[1:]))
+            init_ll = -0.5 * norm_sqr(xt.flatten(1).cpu() + np.log(2 * np.pi) * np.prod(shape[1:]))
         ll_lst = [init_ll]
 
-    t_grid = get_time_evenly_spaced(n_steps, min_t = min_t, max_t = 0.8).to(device)
-    dynamic_coeffs = DynamicCoeffs(ddpm.dynamic.get_temp(t_grid))
+    tau_grid = torch.linspace(0, 1, n_steps, device=device)
+    dynamic_coeffs = DynamicCoeffs(ddpm.dynamic.get_temp(tau_grid))
 
-    for idx in (trange if verbose else range)(idx_start or len(t_grid) - 1, -1, -1):
-        t = t_grid[idx][None]
-        states.append(xt.cpu())
-        if track_ll:
+    for idx in (trange if verbose else range)(idx_start or len(tau_grid) - 1, -1, -1):
+        if states is not None:
+            states.append(xt.cpu())
+
+        tau = tau_grid[idx][None]
+
+        if ll_lst is not None:
             def next_val(x: Tensor) -> Tensor:
-                return step(x.view(shape), idx, t, ddpm, dynamic_coeffs, step_type).view(shape[0], -1)
+                return step(x.view(shape), idx, tau, ddpm, dynamic_coeffs, step_type).view(shape[0], -1)
 
-            assert ll_lst is not None, "ll_lst should not be None"
             ll_lst.append(ll_lst[-1] - torch.logdet(batch_jacobian(next_val, xt.view(shape[0], -1))).cpu())
 
         with torch.no_grad():
-            xt = step(xt, idx, t, ddpm, dynamic_coeffs, step_type)
+            xt = step(xt, idx, tau, ddpm, dynamic_coeffs, step_type)
 
-    res = {"x": xt.cpu(), "states": torch.stack(states[::-1], dim=1), "temp": dynamic_coeffs.temp.cpu()}
-    if track_ll:
-        assert ll_lst is not None, "ll_lst should not be None"
+    res = {"x": xt.cpu(), "temp": dynamic_coeffs.temp.cpu()}
+    if states is not None:
+        res["states"] = torch.stack(states[::-1], dim=1)
+    if ll_lst is not None:
         res["ll"] = torch.stack(ll_lst[::-1], dim=1)
-
     return res
 
 
-def get_samples(ddpm: DDPM, kwargs: dict[str, Any], n_repeats: int) -> dict[str, Tensor]:
-    verbose = n_repeats >= kwargs["n_steps"]
-    kwargs["verbose"] = not verbose
-    results = sample(ddpm, **kwargs)
-    for _ in (trange if verbose else range)(n_repeats - 1):
-        for key, val in sample(ddpm, **kwargs).items():
-            results[key] = torch.cat([results[key], val], dim=0) if key != "temp" else val
-    return results
-
-
-def get_and_save_samples(config: Config, *, save: bool = True) -> dict[str, Tensor]:
+def get_samples(config: Config, *, save: bool = True) -> dict[str, Tensor]:
     ddpm = get_ddpm(config, pretrained = True)
     kwargs: dict[str, Any] = {
         "n_steps": config.sample.n_steps,
         "n_samples": config.sample.n_samples,
         "device": DEVICE,
         "step_type": config.sample.step_type,
+        "track_states": config.sample.track_states,
         "track_ll": config.sample.track_ll,
-        "min_t": config.ddpm.min_t,
     }
     save_path = config.samples_path
-    if (idx_start := config.sample.idx_start) is not None:
+    if (idx_start := config.sample.idx_start) != -1:
         kwargs["idx_start"] = idx_start
         samples = np.load(config.samples_path)
         kwargs["x_start"] =  from_numpy(samples["states"][idx_start])
         if kwargs["track_ll"]:
             kwargs["init_ll"] = from_numpy(samples["ll"][idx_start])
         save_path = config.samples_from_timestamp_path
-    
-    samples = get_samples(ddpm, kwargs, config.sample.n_repeats)
+
+    verbose = config.sample.n_repeats > 10
+    kwargs["verbose"] = not verbose
+    samples = sample(ddpm, **kwargs)
+    for _ in (trange if verbose else range)(config.sample.n_repeats - 1):
+        for key, val in sample(ddpm, **kwargs).items():
+            samples[key] = torch.cat([samples[key], val], dim=0) if key != "temp" else val
+
     if save:
         np.savez(save_path, **samples)  # pyright: ignore
     return samples # type: ignore

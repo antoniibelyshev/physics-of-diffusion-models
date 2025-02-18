@@ -1,11 +1,20 @@
-from pydantic import BaseModel, Field, model_validator
-from typing import Any
-from typing_extensions import Self
+from pydantic import BaseModel, Field
+
+
+class DiffusionConfig(BaseModel):
+    noise_schedule: str = Field(..., description="Type of the noise schedule")
+
+    @property
+    def temp_range(self) -> tuple[float, float]:
+        if self.noise_schedule in ["linear", "cosine"]:
+            return 1e-4, 1e4
+        if self.noise_schedule.startswith("entropy"):
+            return 1e-2, 1e4
+        raise ValueError(f"Unknown noise schedule {self.noise_schedule}")
 
 
 class DataConfig(BaseModel):
     dataset_name: str = Field(..., description="Name of the dataset")
-    batch_size: int = Field(..., description="Batch size for training")
 
     @property
     def obj_size(self) -> tuple[int, ...]:
@@ -19,35 +28,22 @@ class DataConfig(BaseModel):
             case "fashion_mnist":
                 return 1, 32, 32
             case _:
-                raise ValueError
+                raise ValueError(f"Unknown dataset: {self.dataset_name}")
 
 
 class DDPMConfig(BaseModel):
     model_name: str = Field(..., description="Name of the model architecture")
     parametrization: str = Field(..., description="Parametrization of the model")
-    beta0: float = Field(..., description="Minimum value of beta")
-    beta1: float = Field(..., description="Maximum value of beta")
-    schedule_type: str = Field(..., description="Type of the temperature schedule")
     dim: int = Field(..., description="Base number of channels in the Unet")
     dim_mults: list[int] = Field(..., description="Base channel multipliers in the Unet")
     use_lrelu: bool = Field(..., description="Whether to use LeakyReLU instead of ReLU")
 
-    @property
-    def min_t(self) -> float:
-        match self.schedule_type:
-            case "linear_beta":
-                return 1e-3
-            case "cosine":
-                return 0
-            case _:
-                return 1e-3
-
 
 class DDPMTrainingConfig(BaseModel):
+    batch_size: int = Field(..., description="Batch size for training")
     total_iters: int = Field(..., description="Total number of iterations for training")
     learning_rate: float = Field(..., description="Learning rate for training")
     weight_decay: float = Field(..., description="Weight decay for training")
-    continuous_time: bool = Field(..., description="Whether to use continuous time sampling during training")
 
 
 class GANConfig(BaseModel):
@@ -70,7 +66,7 @@ class GANTrainingConfig(BaseModel):
     temp: float = Field(..., description="Temperature for noise")
     real_temp: float = Field(..., description="Temperature for noise in real samples")
     n_images: int = Field(..., description="Number of images to log")
-    show_images_steps: int = Field(..., decsription="Number of steps between logging resulting images")
+    show_images_steps: int = Field(..., description="Number of steps between logging resulting images")
     eval_steps: int = Field(..., description="Number of steps between evaluation")
     project_name: str = Field(..., description="Name of the project")
     total_iters: int = Field(..., description="Total number of iterations for training")
@@ -80,16 +76,17 @@ class SampleConfig(BaseModel):
     n_steps: int = Field(..., description="Number of steps for sampling")
     n_samples: int = Field(..., description="Number of samples to generate")
     n_repeats: int = Field(..., description="Number of repeats")
-    idx_start: int | None = Field(None, description="Starting index")
-    step_type: str = Field("sde", description="Type of step")
-    track_ll: bool = Field(False, description="Whether to track log likelihood")
+    step_type: str = Field(..., description="Type of step")
+    track_ll: bool = Field(..., description="Whether to track log likelihood")
+    track_states: bool = Field(..., description="Whether to track states")
+    idx_start: int = Field(..., description="Starting index")
 
 
 class ForwardStatsConfig(BaseModel):
     n_samples: int = Field(..., description="Number of samples to generate")
     n_repeats: int = Field(..., description="Number of repeats")
-    min_temp: float = Field(..., description="Minimum value of log10(temp)")
-    max_temp: float = Field(..., description="Maximum value of log10(temp)")
+    min_temp: float = Field(..., description="Minimum value of temp")
+    max_temp: float = Field(..., description="Maximum value of temp")
     n_temps: int = Field(..., description="Number of temperatures")
 
 
@@ -97,7 +94,6 @@ class BackwardStatsConfig(BaseModel):
     n_samples: int = Field(..., description="Number of samples to generate")
     n_repeats: int = Field(..., description="Number of repeats")
     batch_size: int = Field(..., description="Batch size for stats computation")
-    step_type: str = Field(..., description="Type of step")
 
 
 class VariedDatasetStatsConfig(ForwardStatsConfig):
@@ -108,11 +104,12 @@ class VariedDatasetStatsConfig(ForwardStatsConfig):
 
 
 class Config(BaseModel):
-    ddpm: DDPMConfig = Field(..., description="Diffusion model configuration")
+    diffusion: DiffusionConfig = Field(..., description="Diffusion configuration")
+    data: DataConfig = Field(..., description="Data configuration")
+    ddpm: DDPMConfig = Field(..., description="DDPM configuration")
     ddpm_training: DDPMTrainingConfig = Field(..., description="DDPM training configuration")
     gan: GANConfig = Field(..., description="GAN configuration")
     gan_training: GANTrainingConfig = Field(..., description="GAN training configuration")
-    data: DataConfig = Field(..., description="Data configuration")
     sample: SampleConfig = Field(..., description="Sample configuration")
     forward_stats: ForwardStatsConfig = Field(..., description="Forward statistics configuration")
     backward_stats: BackwardStatsConfig = Field(..., description="Backward statistics configuration")
@@ -120,16 +117,12 @@ class Config(BaseModel):
         ..., description="Varied dataset statistics configuration"
     )
 
-    # wandb setup
     @property
     def experiment_name(self) -> str:
         return "_".join([
             self.data.dataset_name,
-            # self.ddpm.model_name,
-            # self.ddpm.parametrization,
-            # str(self.ddpm_training.total_iters),
-            # "iter",
-            self.ddpm.schedule_type,
+            self.ddpm.model_name,
+            self.diffusion.noise_schedule,
             "schedule",
         ])
 
@@ -148,8 +141,6 @@ class Config(BaseModel):
 
     @property
     def samples_path(self) -> str:
-        # return "results/mnist_true_diffusion_samples.npz"
-        # return f"{self.samples_prefix}_samples_short_08.npz"
         return f"{self.samples_prefix}_samples.npz"
 
     @property
@@ -170,7 +161,7 @@ class Config(BaseModel):
 
     @property
     def flattening_temp_stats_path(self) -> str:
-        match self.ddpm.schedule_type:
+        match self.diffusion.noise_schedule:
             case "entropy":
                 return self.forward_stats_path
             case "entropy_u":

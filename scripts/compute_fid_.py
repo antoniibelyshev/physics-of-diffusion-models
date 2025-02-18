@@ -5,7 +5,7 @@ import argparse
 from config import load_config
 from utils import get_data_tensor, extract_features_statistics, compute_fid, LeNet
 
-def main(samples_path: str):
+def main(samples_path: str) -> None:
     config = load_config()
     train_data = get_data_tensor(config)
     

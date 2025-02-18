@@ -7,10 +7,9 @@ from torch import from_numpy
 from pytorch_fid import fid_score # type: ignore
 from scipy.linalg import sqrtm # type: ignore
 import pandas as pd
-from diffusion import get_and_save_samples
 
 
-schedule_types = ["linear_beta", "cosine", "flattening_temp_unbiased"]
+noise_schedules = ["linear_beta", "cosine", "flattening_temp_unbiased"]
 n_steps_lst = [10, 100, 1000]
 
 
@@ -36,37 +35,25 @@ def main(config: Config) -> None:
         "fid": fid,
     }]
 
-    for n_steps, schedule_type in product(n_steps_lst, schedule_types):
-        config.ddpm.schedule_type = schedule_type
+    for n_steps, noise_schedule in product(n_steps_lst, noise_schedules):
+        config.diffusion.noise_schedule = noise_schedule
         config.sample.n_steps = n_steps
-        # if schedule_type == "flattening_temp_unbiased":
-        #     fake_data = get_and_save_samples(config, save=True)["x"]
-        # else:
-        #     fake_data = from_numpy(np.load(config.samples_path)["x"])
         fake_data = from_numpy(np.load(config.samples_path)["x"])
         mu_fake, sigma_fake = extract_features_statistics(fake_data, lenet)
         mean_diff_term, cov_diff_term, fid = compute_fid(mu_real, sigma_real, mu_fake, sigma_fake)
 
-        print(f"Schedule: {schedule_type}, number of sampling steps: {n_steps}.")
+        print(f"Schedule: {noise_schedule}, number of sampling steps: {n_steps}.")
         print(f"Mean Difference Term: {mean_diff_term}")
         print(f"Covariance Difference Term: {cov_diff_term}")
         print(f"FID: {fid}")
 
         results.append({
-            "schedule_type": schedule_type,
+            "noise_schedule": noise_schedule,
             "n_steps": n_steps,
             "mean_diff_term": mean_diff_term,
             "cov_diff_term": cov_diff_term,
             "fid": fid,
         })
-
-        # fid_value = fid_score.calculate_fid_given_paths(
-        #     [real_dir, fake_dir],
-        #     batch_size=50,
-        #     device='cuda' if torch.cuda.is_available() else 'cpu',
-        #     dims=2048,
-        # )
-        # print(f"Schedule: {schedule_type}, number of sampling steps: {n_steps}. FID: {fid_value}")
 
     results_df = pd.DataFrame(results)
     results_df.to_csv(f"results/fid_{config.data.dataset_name}.csv", index=False)

@@ -13,7 +13,7 @@ class CustomDataset(Dataset[torch.Tensor]):
 
         self.data = data
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.data)
 
     def __getitem__(self, idx: int) -> torch.Tensor:

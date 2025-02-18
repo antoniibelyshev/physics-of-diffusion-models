@@ -1,12 +1,13 @@
-from torch import Tensor
 import torch
-from torch_ema import ExponentialMovingAverage # type: ignore
+from torch import Tensor
 from torch.nn.functional import mse_loss
+from torch_ema import ExponentialMovingAverage # type: ignore
 from typing import Generator
 from tqdm import trange
-from .ddpm import DDPM
-from config import Config
 import wandb
+
+from config import Config
+from .ddpm import DDPM
 
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")

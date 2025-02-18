@@ -16,7 +16,6 @@ from .synthetic_datasets import (
 )
 from .utils import (
     dict_map as dict_map,
-    get_time_evenly_spaced as get_time_evenly_spaced,
     replace_activations as replace_activations,
     get_unet as get_unet,
 )

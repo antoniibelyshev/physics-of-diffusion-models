@@ -1,13 +1,12 @@
+diffusion:
+  noise_schedule: entropy_u
+
 data:
   dataset_name: mnist
-  batch_size: 128
 
 ddpm:
   model_name: unet
   parametrization: x0
-  beta0: 1e-1
-  beta1: 2e1
-  schedule_type: entropy_u
   dim: 64
   dim_mults:
     - 1
@@ -17,10 +16,10 @@ ddpm:
   use_lrelu: True
 
 ddpm_training:
+  batch_size: 128
   total_iters: 50000
   learning_rate: 2e-4
   weight_decay: 1e-2
-  continuous_time: True
 
 gan:
   dim_mults_g:
@@ -60,6 +59,8 @@ sample:
   n_repeats: 60
   step_type: sde
   track_ll: False
+  track_states: False
+  idx_start: -1
 
 forward_stats:
   n_samples: 40
@@ -72,7 +73,6 @@ backward_stats:
   n_samples: 1000
   n_repeats: 1
   batch_size: 20
-  step_type: sde
 
 varied_dataset_stats:
   n_samples: 100
