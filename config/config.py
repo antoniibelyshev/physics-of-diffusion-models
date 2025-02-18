@@ -85,8 +85,6 @@ class SampleConfig(BaseModel):
 class ForwardStatsConfig(BaseModel):
     n_samples: int = Field(..., description="Number of samples to generate")
     n_repeats: int = Field(..., description="Number of repeats")
-    min_temp: float = Field(..., description="Minimum value of temp")
-    max_temp: float = Field(..., description="Maximum value of temp")
     n_temps: int = Field(..., description="Number of temperatures")
 
 
