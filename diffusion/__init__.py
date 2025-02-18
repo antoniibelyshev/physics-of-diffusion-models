@@ -5,8 +5,9 @@ from .ddpm import (
     get_ddpm as get_ddpm,
 )
 from .ddpm_trainer import DDPMTrainer as DDPMTrainer
-from .ddpm_sampling import (
-    sample as sample,
-    get_samples as get_samples,
+from .ddpm_sampling import get_samples as get_samples
+from .diffusion_dynamic import (
+    DDPMDynamic as DDPMDynamic,
+    get_temp_schedule as get_temp_schedule,
+    DynamicCoeffs as DynamicCoeffs,
 )
-from .diffusion_dynamic import DDPMDynamic as DDPMDynamic

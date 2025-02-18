@@ -6,7 +6,7 @@ class DiffusionConfig(BaseModel):
 
     @property
     def temp_range(self) -> tuple[float, float]:
-        if self.noise_schedule in ["linear", "cosine"]:
+        if self.noise_schedule in ["linear_beta", "cosine"]:
             return 1e-4, 1e4
         if self.noise_schedule.startswith("entropy"):
             return 1e-2, 1e4
