@@ -143,8 +143,7 @@ class Config(BaseModel):
 
     @property
     def samples_prefix(self) -> str:
-        step_type = "_ode" if self.sample.step_type == "ode" else ""
-        return f"results/{self.experiment_name}_{self.sample.n_steps}{step_type}_steps"
+        return f"results/{self.experiment_name}_{self.sample.n_steps}_{self.sample.step_type}_steps"
 
     @property
     def samples_path(self) -> str:
@@ -178,5 +177,5 @@ class Config(BaseModel):
 
     @property
     def fid_results_path(self) -> str:
-        return f"results/{self.experiment_name}_{'train' if self.fid.train else 'test'}_fid.csv"
+        return f"results/{self.data.dataset_name}_{'train' if self.fid.train else 'test'}_fid.csv"
 

@@ -1,11 +1,11 @@
 diffusion:
-  noise_schedule: cosine
+  noise_schedule: entropy_u
 
 data:
-  dataset_name: mnist
+  dataset_name: cifar10
 
 ddpm:
-  model_name: unet
+  model_name: pytorch_diffusion
   parametrization: x0
   dim: 64
   dim_mults:
@@ -55,8 +55,8 @@ gan_training:
 
 sample:
   n_steps: 50
-  n_samples: 1000
-  n_repeats: 60
+  n_samples: 100
+  n_repeats: 1
   step_type: sde
   track_ll: False
   track_states: False

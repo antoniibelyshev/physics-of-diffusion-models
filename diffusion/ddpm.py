@@ -1,5 +1,6 @@
-from torch import nn, Tensor, load, searchsorted, clip, where, abs
+from torch import nn, Tensor, load, searchsorted, clip, where, abs, from_numpy
 from pytorch_diffusion import Diffusion # type: ignore
+from typing import Callable
 
 from .diffusion_dynamic import DDPMDynamic
 from config import Config
@@ -62,19 +63,23 @@ class DDPMPytorchDiffusion(DDPM):
         config.ddpm.parametrization = "eps"
         super().__init__(config)
         self.model = Diffusion.from_pretrained(config.data.dataset_name)
+        self.tau_to_t = self.get_tau_to_t()
 
-    def get_timestamps(self, tau: Tensor) -> Tensor:
-        alpha_bar_pd = self.model.alphas_cumprod
-        alpha_bar = self.dynamic.get_alpha_bar(tau).squeeze()
+    def get_tau_to_t(self) -> Callable[[Tensor], Tensor]:
+        temp_pd = from_numpy(self.model.sqrt_recipm1_alphas_cumprod).pow(2).cuda()
 
-        idx = clip(searchsorted(alpha_bar_pd, alpha_bar), 1, len(alpha_bar_pd) - 1)
-        left = alpha_bar_pd[idx - 1]
-        right = alpha_bar_pd[idx]
-        closest_idx = where(abs(alpha_bar - left) <= abs(alpha_bar - right), idx - 1, idx)
-        return closest_idx
+        def tau_to_t(tau: Tensor) -> Tensor:
+            temp = self.dynamic.get_temp(tau).squeeze()
+            idx = clip(searchsorted(temp_pd, temp), 1, len(temp_pd) - 1)
+            left = temp_pd[idx - 1]
+            right = temp_pd[idx]
+            closest_idx = where(abs(temp - left) <= abs(temp - right), idx - 1, idx)
+            return closest_idx.reshape(-1)
+
+        return tau_to_t
 
     def forward(self, xt: Tensor, tau: Tensor) -> Tensor:
-        return self.model(xt, self.get_timestamps(tau)) # type: ignore
+        return self.model.model(xt, self.tau_to_t(tau)) # type: ignore
 
 
 def get_ddpm(config: Config, pretrained: bool = False) -> DDPM:

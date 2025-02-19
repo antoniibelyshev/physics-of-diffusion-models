@@ -5,9 +5,10 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.linalg import sqrtm # type: ignore
 from typing import Callable
+from torchmetrics.image.fid import FrechetInceptionDistance
 
 from config import Config
-from .data import get_data_tensor
+from .data import get_data_tensor, to_uint8
 from .lenet import LeNet
 
 
@@ -52,11 +53,19 @@ def get_fid_model(config: Config) -> nn.Module:
 
 def get_compute_fid(config: Config) -> Callable[[Tensor], float]:
     reference = get_data_tensor(config, train=config.fid.train)
-    model = get_fid_model(config).cuda()
-    mu_train, sigma_train = extract_features_statistics(reference, model)
+    if config.data.dataset_name == "mnist":
+        model = get_fid_model(config).cuda()
+        mu_train, sigma_train = extract_features_statistics(reference, model)
 
-    def _compute_fid(data: Tensor) -> float:
-        mu_eval, sigma_eval = extract_features_statistics(data, model)
-        return compute_fid(mu_train, sigma_train, mu_eval, sigma_eval)
+        def _compute_fid(data: Tensor) -> float:
+            mu_eval, sigma_eval = extract_features_statistics(data, model)
+            return compute_fid(mu_train, sigma_train, mu_eval, sigma_eval)
+    else:
+        fid = FrechetInceptionDistance(feature=2048)
+        fid.update(to_uint8(reference), real=True)
+    
+        def _compute_fid(data: Tensor) -> float:
+            fid.update(to_uint8(data), real=False)
+            return fid.compute()
 
     return _compute_fid

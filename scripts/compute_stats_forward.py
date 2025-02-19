@@ -15,6 +15,7 @@ def main(config: Config, *, unbiased: bool) -> None:
     temp = torch.logspace(np.log10(min_temp), np.log10(max_temp), config.forward_stats.n_temps)
     compute_stats_func = compute_stats_unbiased if unbiased else compute_stats
     stats = compute_stats_func(y, temp, config.forward_stats.n_samples, config.forward_stats.n_repeats)
+    path = config.forward_unbiased_stats_path if unbiased else config.forward_stats_path
     np.savez(config.forward_stats_path, temp = temp, **stats) # type: ignore
 
 

@@ -2,7 +2,7 @@ import torch
 from torch import Tensor
 from torch.utils.data import DataLoader, TensorDataset
 from torchvision.datasets import MNIST, CIFAR10, CIFAR100, FashionMNIST # type: ignore
-from torchvision.transforms import Compose, Resize, ToTensor # type: ignore
+from torchvision.transforms import Compose, Resize, ToTensor, Normalize # type: ignore
 from typing import Generator
 
 from config import Config
@@ -20,6 +20,7 @@ class ImageDataset(TensorDataset):
         transform = Compose([
             Resize(image_size[1:]),
             ToTensor(),
+            *(() if dataset_name == "mnist" else (Normalize(mean=0.5, std=0.5),)),
         ])
         dataset = self.DATASET_CLASSES[dataset_name](
             "data",
@@ -62,3 +63,8 @@ def get_data_generator(
 def get_data_tensor(config: Config, train: bool = True) -> Tensor:
     dataset = get_dataset(config, train=train)
     return torch.stack([dataset[i][0] for i in range(len(dataset))], 0)
+
+
+def to_uint8(images: Tensor, values_range: tuple[float, float] = (-1, 1)) -> Tensor:
+    a, b = values_range
+    return ((torch.clip(images, a, b) - a) / (b - a) * 255).to(dtype=torch.uint8)
