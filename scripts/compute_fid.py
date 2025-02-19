@@ -21,7 +21,7 @@ def main(config: Config) -> None:
         config.sample.step_type = step_type
         samples = get_samples(config)
         if config.fid.save_imgs:
-            np.savez(config.samples_path, **samples)
+            np.savez(config.samples_path, **samples) # type: ignore
         fid = compute_fid(samples["x"])
         print(f"n_steps: {n_steps}, noise_schedule: {noise_schedule}, step_type: {step_type}, fid: {fid:.2f}")
         fids.append({"n_steps": n_steps, "noise_schedule": noise_schedule, "step_type": step_type, "fid": fid})

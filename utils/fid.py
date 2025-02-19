@@ -66,6 +66,6 @@ def get_compute_fid(config: Config) -> Callable[[Tensor], float]:
     
         def _compute_fid(data: Tensor) -> float:
             fid.update(to_uint8(data), real=False)
-            return fid.compute()
+            return fid.compute().item()
 
     return _compute_fid
