@@ -51,9 +51,9 @@ def get_fid_model(config: Config) -> nn.Module:
 
 
 def get_compute_fid(config: Config) -> Callable[[Tensor], float]:
-    train_data = get_data_tensor(config)
+    reference = get_data_tensor(config, train=config.fid.train)
     model = get_fid_model(config).cuda()
-    mu_train, sigma_train = extract_features_statistics(train_data, model)
+    mu_train, sigma_train = extract_features_statistics(reference, model)
 
     def _compute_fid(data: Tensor) -> float:
         mu_eval, sigma_eval = extract_features_statistics(data, model)

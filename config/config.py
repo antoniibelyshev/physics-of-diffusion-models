@@ -102,9 +102,11 @@ class VariedDatasetStatsConfig(ForwardStatsConfig):
 
 
 class FIDConfig(BaseModel):
-    n_steps: tuple[int] = Field(..., description="Number of steps for sampling")
-    noise_schedules: tuple[str] = Field(..., description="Noise schedules")
-    results_path: str = Field(..., description="Path to save results")
+    n_steps: list[int] = Field(..., description="Number of steps for sampling")
+    noise_schedules: list[str] = Field(..., description="Noise schedules for diffusion")
+    step_types: list[str] = Field(..., description="Step types for sampling")
+    train: bool = Field(..., description="Whether to use train sample for reference")
+    save_imgs: bool = Field(..., description="Whether to save generated images")
 
 
 class Config(BaseModel):
@@ -173,3 +175,8 @@ class Config(BaseModel):
                 return self.forward_unbiased_stats_path
             case _:
                 raise ValueError
+
+    @property
+    def fid_results_path(self) -> str:
+        return f"results/{self.experiment_name}_{'train' if self.fid.train else 'test'}_fid.csv"
+

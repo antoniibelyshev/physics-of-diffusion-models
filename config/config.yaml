@@ -1,5 +1,5 @@
 diffusion:
-  noise_schedule: entropy_u
+  noise_schedule: cosine
 
 data:
   dataset_name: mnist
@@ -54,7 +54,7 @@ gan_training:
   total_iters: 50000
 
 sample:
-  n_steps: 10
+  n_steps: 50
   n_samples: 1000
   n_repeats: 60
   step_type: sde
@@ -91,12 +91,11 @@ varied_dataset_stats:
 fid:
   n_steps:
     - 10
-    - 20
-    - 30
-    - 40
-    - 50
-  noise_schedules:
-    - linear_beta
-    - cosine
+  noise_schedules: 
     - entropy_u
-  save_path: results/fid.csv
+    - cosine
+  step_types:
+    - sde
+    - dpm
+  train: False
+  save_imgs: True

@@ -69,7 +69,7 @@ class DynamicCoeffs:
         self.posterior_sigma = (1 - alpha_bar_prev) / (1 - self.alpha_bar) * self.beta
 
         self.dpm_xt_coef = self.alpha.pow(-0.5)
-        self.dpm_eps_coef = -(1 - self.alpha_bar).sqrt() / self.alpha.sqrt() - (1 - alpha_bar_prev).sqrt()
+        self.dpm_eps_coef = -(1 - self.alpha_bar).sqrt() / self.alpha.sqrt() + (1 - alpha_bar_prev).sqrt()
 
 
 class DDPMDynamic(nn.Module):

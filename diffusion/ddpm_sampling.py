@@ -32,10 +32,12 @@ def sde_step(xt: Tensor, idx: int, tau: Tensor, ddpm: DDPM, dynamic_coeffs: Dyna
 
 
 def ode_step(xt: Tensor, idx: int, tau: Tensor, ddpm: DDPM, dynamic_coeffs: DynamicCoeffs) -> Tensor:
+    if idx == 0:
+        return ddpm.get_predictions(xt, tau).x0
     beta = dynamic_coeffs.beta[idx]
     alpha = dynamic_coeffs.alpha[idx]
     score = ddpm.get_predictions(xt, tau).score
-    return xt / alpha.sqrt() + 0.5 * beta * score # type: ignore
+    return xt + 0.5 * beta * (score + xt) # type: ignore
 
 
 def dpm_step(xt: Tensor, idx: int, tau: Tensor, ddpm: DDPM, dynamic_coeffs: DynamicCoeffs) -> Tensor:
@@ -133,7 +135,7 @@ def get_samples(config: Config) -> dict[str, Tensor]:
         if kwargs["track_ll"]:
             kwargs["init_ll"] = from_numpy(samples["ll"][idx_start])
 
-    verbose = config.sample.n_repeats > 10
+    verbose = config.sample.n_repeats >= 10
     kwargs["verbose"] = not verbose
     samples = sample(ddpm, **kwargs)
     for _ in (trange if verbose else range)(config.sample.n_repeats - 1):
