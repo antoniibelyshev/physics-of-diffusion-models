@@ -5,7 +5,7 @@ data:
   dataset_name: cifar10
 
 ddpm:
-  model_name: pytorch_diffusion
+  model_name: diffusers
   parametrization: x0
   dim: 64
   dim_mults:
@@ -55,9 +55,9 @@ gan_training:
 
 sample:
   n_steps: 50
-  n_samples: 100
-  n_repeats: 1
-  step_type: sde
+  n_samples: 1000
+  n_repeats: 60
+  step_type: dpm
   track_ll: False
   track_states: False
   idx_start: -1
@@ -91,11 +91,16 @@ varied_dataset_stats:
 fid:
   n_steps:
     - 10
-  noise_schedules: 
-    - entropy_u
+    - 20
+    - 30
+    - 40
+    - 50
+  noise_schedules:
+    - linear_beta
     - cosine
+    - entropy_u
   step_types:
     - sde
     - dpm
-  train: False
+  train: True
   save_imgs: True

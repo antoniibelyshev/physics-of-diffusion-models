@@ -1,5 +1,5 @@
 from torch import nn, Tensor, load, searchsorted, clip, where, abs, from_numpy
-from pytorch_diffusion import Diffusion # type: ignore
+from diffusers import DDPMPipeline
 from typing import Callable
 
 from .diffusion_dynamic import DDPMDynamic
@@ -58,28 +58,34 @@ class DDPMTrue(DDPM):
         return self.dynamic.get_true_score(xt, tau, self.train_data)
 
 
-class DDPMPytorchDiffusion(DDPM):
+class DDPMDiffusers(DDPM):
+    MODEL_IDS = {
+        "cifar10": "google/ddpm-cifar10-32",
+    }
+
     def __init__(self, config: Config) -> None:
         config.ddpm.parametrization = "eps"
         super().__init__(config)
-        self.model = Diffusion.from_pretrained(config.data.dataset_name)
-        self.tau_to_t = self.get_tau_to_t()
 
-    def get_tau_to_t(self) -> Callable[[Tensor], Tensor]:
-        temp_pd = from_numpy(self.model.sqrt_recipm1_alphas_cumprod).pow(2).cuda()
+        pipeline = DDPMPipeline.from_pretrained(self.MODEL_IDS[config.data.dataset_name])
+        self.unet = pipeline.unet
+        alpha_bar = pipeline.scheduler.alphas_cumprod
+        temp = (1 - alpha_bar) / alpha_bar
+        self.tau_to_t = self.get_tau_to_t(temp.cuda())
 
+    def get_tau_to_t(self, model_temp: Tensor) -> Callable[[Tensor], Tensor]:
         def tau_to_t(tau: Tensor) -> Tensor:
             temp = self.dynamic.get_temp(tau).squeeze()
-            idx = clip(searchsorted(temp_pd, temp), 1, len(temp_pd) - 1)
-            left = temp_pd[idx - 1]
-            right = temp_pd[idx]
+            idx = clip(searchsorted(model_temp, temp), 1, len(model_temp) - 1)
+            left = model_temp[idx - 1]
+            right = model_temp[idx]
             closest_idx = where(abs(temp - left) <= abs(temp - right), idx - 1, idx)
             return closest_idx.reshape(-1)
 
         return tau_to_t
 
     def forward(self, xt: Tensor, tau: Tensor) -> Tensor:
-        return self.model.model(xt, self.tau_to_t(tau)) # type: ignore
+        return self.unet(xt, self.tau_to_t(tau)).sample # type: ignore
 
 
 def get_ddpm(config: Config, pretrained: bool = False) -> DDPM:
@@ -91,7 +97,7 @@ def get_ddpm(config: Config, pretrained: bool = False) -> DDPM:
             return ddpm
         case "true":
             return DDPMTrue(config)
-        case "pytorch_diffusion":
-            return DDPMPytorchDiffusion(config)
+        case "diffusers":
+            return DDPMDiffusers(config)
         case _:
             raise ValueError(f"Unknown model name: {config.ddpm.model_name}")

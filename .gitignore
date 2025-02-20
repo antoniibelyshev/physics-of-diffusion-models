@@ -3,7 +3,7 @@ venv/
 .python-version
 
 # Ignore cache files
-__pycache__/
+*__pycache__/
 
 # Ignore logs
 *.log
@@ -23,3 +23,6 @@ tmp*
 
 # Ignore environment files
 .env
+
+# Ignore sources of packages
+src/
