@@ -2,10 +2,10 @@ diffusion:
   noise_schedule: entropy_u
 
 data:
-  dataset_name: cifar10
+  dataset_name: mnist
 
 ddpm:
-  model_name: diffusers
+  model_name: unet
   parametrization: x0
   dim: 64
   dim_mults:
@@ -96,11 +96,12 @@ fid:
     - 40
     - 50
   noise_schedules:
-    - linear_beta
+    # - linear_beta
     - cosine
     - entropy_u
   step_types:
     - sde
     - dpm
+  sample: False
   train: True
   save_imgs: True

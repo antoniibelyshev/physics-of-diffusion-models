@@ -32,6 +32,6 @@ class LeNetFeatureExtractor(nn.Module):
 def get_feature_extractor(config: Config) -> nn.Module:
     match config.data.dataset_name:
         case "mnist":
-            return LeNetFeatureExtractor
+            return LeNetFeatureExtractor()
         case _:
             return InceptionV3FeatureExtractor()
