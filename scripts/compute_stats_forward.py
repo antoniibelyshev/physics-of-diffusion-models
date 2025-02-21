@@ -16,7 +16,7 @@ def main(config: Config, *, unbiased: bool) -> None:
     compute_stats_func = compute_stats_unbiased if unbiased else compute_stats
     stats = compute_stats_func(y, temp, config.forward_stats.n_samples, config.forward_stats.n_repeats)
     path = config.forward_unbiased_stats_path if unbiased else config.forward_stats_path
-    np.savez(config.forward_stats_path, temp = temp, **stats) # type: ignore
+    np.savez(path, temp = temp, **stats) # type: ignore
 
 
 if __name__ == "__main__":

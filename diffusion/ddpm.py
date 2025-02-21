@@ -67,7 +67,7 @@ class DDPMDiffusers(DDPM):
         config.ddpm.parametrization = "eps"
         super().__init__(config)
 
-        pipeline = DDPMPipeline.from_pretrained(self.MODEL_IDS[config.data.dataset_name])
+        pipeline = DDPMPipeline.from_pretrained(self.MODEL_IDS[config.data.dataset_name]) # type: ignore
         self.unet = pipeline.unet
         alpha_bar = pipeline.scheduler.alphas_cumprod
         temp = (1 - alpha_bar) / alpha_bar

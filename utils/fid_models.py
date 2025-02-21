@@ -8,17 +8,17 @@ from .data import to_uint8
 
 
 class InceptionV3FeatureExtractor(nn.Module):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
         self.fid = FrechetInceptionDistance(feature=2048).cuda()
 
     def forward(self, x: Tensor) -> Tensor:
-        return self.fid.inception(to_uint8(x))
+        return self.fid.inception(to_uint8(x)) # type: ignore
 
 
 class LeNetFeatureExtractor(nn.Module):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
         self.lenet = LeNet(1024, 10)
@@ -32,6 +32,6 @@ class LeNetFeatureExtractor(nn.Module):
 def get_feature_extractor(config: Config) -> nn.Module:
     match config.data.dataset_name:
         case "mnist":
-            return LeNetFeatureExtractor
+            return LeNetFeatureExtractor()
         case _:
             return InceptionV3FeatureExtractor()
