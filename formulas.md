@@ -115,3 +115,23 @@ $$p(y|x, T) \approx \phi(y), p(x, T) \approx N(x|0, T)$$
 $$U(x, T) = \int p(y|x, T) \frac{||x - y||^2}{2}dy \approx \frac{x^2}{2}$$
 $$\mathbb{E}_{x \sim p(x, T)} U(x, T) = \mathbb{E}_{x \sim p(x, T)} \frac{x^2}{2} \approx \frac{T}{2}$$
 $$\frac{d}{dT} \mathbb{E}_{x \sim p(x, T)} U(x, T) \approx \frac{1}{2}$$
+
+# Sampling
+
+$$T(t) = \frac{1 - \bar\alpha_t}{\bar\alpha_t}$$
+$$z_t = z_0 + \sqrt{T(t)}\epsilon_t$$
+$$s_z(z, t) = \nabla_z\log p_z(z, t) = -\frac{\epsilon_t}{\sqrt{T(t)}} = \frac{1}{T(t)}z_0 - \frac{1}{T(t)}z_t$$
+$$z_t = \sqrt{1 + T(t)}x_t = \frac{x_t}{\sqrt{\bar\alpha_t}}$$
+
+### DDPM
+
+$$x_{t - 1} = \frac{\sqrt{\bar\alpha_{t - 1}}\beta_t}{1 - \bar\alpha_t}x_0 + \frac{\sqrt{\alpha_t}(1 - \bar\alpha_{t - 1})}{1 - \bar\alpha_t}x_t + \sqrt{\frac{1 - \bar\alpha_{t - 1}}{1 - \bar\alpha_t}\beta_t}\xi_t$$
+
+$$z_{t - 1} = \frac{1}{\sqrt{\bar\alpha_{t - 1}}}\frac{\sqrt{\bar\alpha_{t - 1}}\beta_t}{1 - \bar\alpha_t}z_0 + \frac{\sqrt{\bar\alpha_t}}{\sqrt{\bar\alpha_{t - 1}}}\frac{\sqrt{\alpha_t}(1 - \bar\alpha_{t - 1})}{1 - \bar\alpha_t}z_t + \frac{1}{\sqrt{\bar\alpha_{t - 1}}}\sqrt{\frac{1 - \bar\alpha_{t - 1}}{1 - \bar\alpha_t}\beta_t}\xi_t =$$
+$$\frac{\beta_t}{1 - \bar\alpha_t}z_0 + \frac{\alpha_t(1 - \bar\alpha_{t - 1})}{1 - \bar\alpha_t}z_t + \sqrt{\frac{\beta_t}{\bar\alpha_t}}\sqrt{\frac{1 - \bar\alpha_t - \beta_t}{1 - \bar\alpha_t}}\xi_t = z_t + \frac{\beta_t}{\bar\alpha_t}s_z(z, t) + \sqrt{\frac{\beta_t}{\bar\alpha_t}}\sqrt{1 - \frac{\beta_t}{1 - \bar\alpha_t}}\xi_t$$
+
+### DDIM
+
+$$x_{t - 1} = \sqrt{\bar\alpha_{t - 1}}x_0 + \sqrt{1 - \bar\alpha_{t - 1}}\epsilon_\theta = \sqrt{\bar\alpha_{t - 1}}x_0 + \sqrt{1 - \bar\alpha_{t - 1}}\frac{x_t - \sqrt{\bar\alpha_t}x_0}{\sqrt{1 - \bar\alpha_t}}$$
+$$z_{t - 1} = z_0 + \sqrt{\frac{T(t - 1)}{T(t)}}(z_t - z_0) = z_t + \left( \sqrt{\frac{T(t - 1)}{T(t)}} - 1 \right)T(t)s_z(z, t)$$
+$$\sqrt{\frac{T(t - 1)}{T(t)}} - 1 = \sqrt{\alpha_t\frac{1 - \bar\alpha_{t - 1}}{1 - \bar\alpha_t}} - 1 = \sqrt{1 - \frac{\beta_t}{1 - \bar\alpha_t}} - 1$$
