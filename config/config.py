@@ -9,7 +9,7 @@ class DiffusionConfig(BaseModel):
         if self.noise_schedule in ["linear_beta", "cosine"]:
             return 1e-4, 1e4
         if self.noise_schedule.startswith("entropy"):
-            return 1e-2, 1e4
+            return 1e-4, 1e4
         raise ValueError(f"Unknown noise schedule {self.noise_schedule}")
 
 
@@ -106,7 +106,12 @@ class FIDConfig(BaseModel):
     noise_schedules: list[str] = Field(..., description="Noise schedules for diffusion")
     step_types: list[str] = Field(..., description="Step types for sampling")
     train: bool = Field(..., description="Whether to use train sample for reference")
+    sample: bool = Field(..., description="Whether to sample images or use sampled")
     save_imgs: bool = Field(..., description="Whether to save generated images")
+
+    @property
+    def n_samples(self) -> int:
+        return 60000 if self.train else 10000
 
 
 class Config(BaseModel):

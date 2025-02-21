@@ -70,17 +70,18 @@ class DDPMDiffusers(DDPM):
         pipeline = DDPMPipeline.from_pretrained(self.MODEL_IDS[config.data.dataset_name]) # type: ignore
         self.unet = pipeline.unet
         alpha_bar = pipeline.scheduler.alphas_cumprod
-        temp = (1 - alpha_bar) / alpha_bar
-        self.tau_to_t = self.get_tau_to_t(temp.cuda())
+        log_temp = (1 - alpha_bar).log() - alpha_bar.log()
+        self.tau_to_t = self.get_tau_to_t(log_temp.cuda())
 
-    def get_tau_to_t(self, model_temp: Tensor) -> Callable[[Tensor], Tensor]:
+    def get_tau_to_t(self, model_log_temp: Tensor) -> Callable[[Tensor], Tensor]:
         def tau_to_t(tau: Tensor) -> Tensor:
-            temp = self.dynamic.get_temp(tau).squeeze()
-            idx = clip(searchsorted(model_temp, temp), 1, len(model_temp) - 1)
-            left = model_temp[idx - 1]
-            right = model_temp[idx]
-            closest_idx = where(abs(temp - left) <= abs(temp - right), idx - 1, idx)
-            return closest_idx.reshape(-1)
+            log_temp = self.dynamic.get_temp(tau).squeeze().log()
+            idx = clip(searchsorted(model_log_temp, log_temp), 1, len(model_log_temp) - 1)
+            left_temp = model_log_temp[idx - 1]
+            right_temp = model_log_temp[idx]
+            return (idx - (right_temp - log_temp) / (right_temp - left_temp)).reshape(-1)
+            # closest_idx = where(abs(temp - left) <= abs(temp - right), idx - 1, idx)
+            # return closest_idx.reshape(-1)
 
         return tau_to_t
 
