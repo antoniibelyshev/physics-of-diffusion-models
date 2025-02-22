@@ -171,7 +171,7 @@ class Config(BaseModel):
         return f"results/{self.experiment_name}_backward_stats.npz"
 
     @property
-    def flattening_temp_stats_path(self) -> str:
+    def schedule_stats_path(self) -> str:
         match self.diffusion.noise_schedule:
             case "entropy":
                 return self.forward_stats_path

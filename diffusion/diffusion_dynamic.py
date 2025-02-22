@@ -5,61 +5,63 @@ import numpy as np
 from typing import Callable
 
 from config import Config
-from utils import norm_sqr, get_inv_cdf
+from utils import norm_sqr, get_cdf, get_inv_cdf
 
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def get_entropy_temp_schedule(stats_path: str) -> Callable[[Tensor], Tensor]:
-    stats = np.load(stats_path)
-    temp = stats["temp"]
-    log_temp = np.log(temp)
-    heat_capacity = stats["var_H"] / temp ** 2
-    inv_cdf = get_inv_cdf(log_temp, heat_capacity)
-    def entropy_temp_schedule(tau: Tensor) -> Tensor:
-        return from_numpy(inv_cdf(tau.cpu().numpy())).float().exp().to(tau.device)
-    return entropy_temp_schedule
-
-
-def get_linear_beta_temp_schedule(min_temp: float, max_temp: float) -> Callable[[Tensor], Tensor]:
+def get_linear_beta_log_temp_schedule(config: Config) -> tuple[Callable[[Tensor], Tensor], Callable[[Tensor], Tensor]]:
+    min_temp, max_temp = config.diffusion.temp_range
     scale = 1 + min_temp
     gamma = np.log((1 + max_temp) / scale)
-    def linear_beta_temp_schedule(tau: Tensor) -> Tensor:
-        return (tau.pow(2) * gamma).exp() * scale - 1 # type: ignore
-    return linear_beta_temp_schedule
+    def linear_beta_log_temp_schedule(tau: Tensor) -> Tensor:
+        return ((tau.pow(2) * gamma).exp() * scale - 1).log() # type: ignore
+    def linear_beta_log_temp_schedule_inverse(temp: Tensor) -> Tensor:
+        return (((temp.exp() + 1) / scale).log() / gamma).sqrt() # type: ignore
+    return linear_beta_log_temp_schedule, linear_beta_log_temp_schedule_inverse
 
 
-def get_cosine_temp_schedule(min_temp: float, max_temp: float) -> Callable[[Tensor], Tensor]:
+def get_cosine_log_temp_schedule(config: Config) -> tuple[Callable[[Tensor], Tensor], Callable[[Tensor], Tensor]]:
+    min_temp, max_temp = config.diffusion.temp_range
     tau_min = 2 * np.arctan(min_temp ** 0.5) / np.pi
     tau_max = 2 * np.arctan(max_temp ** 0.5) / np.pi
     scale = 0.5 * np.pi * (tau_max - tau_min)
     shift = 0.5 * np.pi * tau_min
-    def cosine_temp_schedule(tau: Tensor) -> Tensor:
-        return (tau * scale + shift).tan().pow(2) # type: ignore
-    return cosine_temp_schedule
+    def cosine_log_temp_schedule(tau: Tensor) -> Tensor:
+        return (tau * scale + shift).tan().log() * 2 # type: ignore
+    def cosine_log_temp_schedule_inverse(temp: Tensor) -> Tensor:
+        return ((temp * 0.5).exp().atan() - shift) / scale # type: ignore
+    return cosine_log_temp_schedule, cosine_log_temp_schedule_inverse
 
 
-def get_temp_schedule(config: Config) -> Callable[[Tensor], Tensor]:
-    min_temp, max_temp = config.diffusion.temp_range
+def get_entropy_log_temp_schedule(config: Config) -> tuple[Callable[[Tensor], Tensor], Callable[[Tensor], Tensor]]:
+    stats = np.load(config.schedule_stats_path)
+    temp = stats["temp"]
+    log_temp = np.log(temp)
+    heat_capacity = stats["var_H"] / temp ** 2
+    return get_inv_cdf(log_temp, heat_capacity), get_cdf(log_temp, heat_capacity)
+
+
+def get_log_temp_schedule(config: Config) -> tuple[Callable[[Tensor], Tensor], Callable[[Tensor], Tensor]]:
     if config.diffusion.noise_schedule == "linear_beta":
-        return get_linear_beta_temp_schedule(min_temp, max_temp)
+        return get_linear_beta_log_temp_schedule(config)
     elif config.diffusion.noise_schedule == "cosine":
-        return get_cosine_temp_schedule(min_temp, max_temp)
+        return get_cosine_log_temp_schedule(config)
     elif config.diffusion.noise_schedule.startswith("entropy"):
-        return get_entropy_temp_schedule(config.flattening_temp_stats_path)
+        return get_entropy_log_temp_schedule(config)
     else:
         raise ValueError(f"Unknown schedule type: {config.diffusion.noise_schedule}")
 
 
-def get_alpha_bar(temp: Tensor) -> Tensor:
-    return (temp + 1).pow(-1)
+def get_alpha_bar_from_temp(log_temp: Tensor) -> Tensor:
+    return (log_temp.exp() + 1).inverse()
 
 
 class DynamicCoeffs:
     def __init__(self, temp: Tensor) -> None:
         self.temp = temp
-        self.alpha_bar = get_alpha_bar(temp)
+        self.alpha_bar = get_alpha_bar_from_temp(temp)
         alpha_bar_prev = pad(self.alpha_bar[:-1], (*(0,) * (len(temp.shape) * 2 - 2), 1, 0), value=1.0)
         self.alpha = self.alpha_bar / alpha_bar_prev
         self.beta = 1 - self.alpha
@@ -72,18 +74,18 @@ class DynamicCoeffs:
         self.dpm_eps_coef = -(1 - self.alpha_bar).sqrt() / self.alpha.sqrt() + (1 - alpha_bar_prev).sqrt()
 
 
-class DDPMDynamic(nn.Module):
+class DiffusionDynamic(nn.Module):
     def __init__(self, config: Config) -> None:
         super().__init__()
 
         self.obj_size = config.data.obj_size
-        self.temp_schedule = get_temp_schedule(config)
+        self.log_temp_schedule, self.log_temp_schedule_inv = get_log_temp_schedule(config)
 
-    def get_temp(self, t: Tensor) -> Tensor:
-        return self.temp_schedule(t).view(-1, *[1] * len(self.obj_size))
+    def get_log_temp(self, tau: Tensor) -> Tensor:
+        return self.log_temp_schedule(tau).view(-1, *[1] * len(self.obj_size))
 
-    def get_alpha_bar(self, t: Tensor) -> Tensor:
-        return get_alpha_bar(self.get_temp(t))
+    def get_alpha_bar(self, tau: Tensor) -> Tensor:
+        return get_alpha_bar_from_temp(self.get_log_temp(tau))
 
     def forward(self, x0: Tensor) -> tuple[Tensor, Tensor, Tensor]:
         tau = torch.rand((len(x0),), device=x0.device)

@@ -2,7 +2,7 @@ from torch import nn, Tensor, load, searchsorted, clip, where, abs, from_numpy
 from diffusers import DDPMPipeline
 from typing import Callable
 
-from .diffusion_dynamic import DDPMDynamic
+from .diffusion_dynamic import DiffusionDynamic
 from config import Config
 from utils import get_data_tensor, get_unet
 
@@ -27,7 +27,7 @@ class DDPMPredictions:
 class DDPM(nn.Module):
     def __init__(self, config: Config):
         super().__init__()
-        self.dynamic = DDPMDynamic(config)
+        self.dynamic = DiffusionDynamic(config)
         self.parametrization = config.ddpm.parametrization
         assert self.parametrization in ["x0", "eps", "score"]
     
@@ -79,7 +79,7 @@ class DDPMDiffusers(DDPM):
             idx = clip(searchsorted(model_log_temp, log_temp), 1, len(model_log_temp) - 1)
             left_temp = model_log_temp[idx - 1]
             right_temp = model_log_temp[idx]
-            return (idx - (right_temp - log_temp) / (right_temp - left_temp)).reshape(-1)
+            return (idx - (right_temp - log_temp) / (right_temp - left_temp)).reshape(-1) # type: ignore
             # closest_idx = where(abs(temp - left) <= abs(temp - right), idx - 1, idx)
             # return closest_idx.reshape(-1)
 

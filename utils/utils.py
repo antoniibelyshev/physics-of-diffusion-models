@@ -1,5 +1,5 @@
 from typing import Callable, TypeVar
-from torch import nn
+from torch import nn, Tensor, from_numpy
 from denoising_diffusion_pytorch import Unet # type: ignore
 import numpy as np
 from numpy.typing import NDArray
@@ -41,16 +41,20 @@ def get_unet(base_channels: int, dim_mults: list[int], channels: int, use_lrelu:
     return unet
 
 
+def numpy_fun_to_tensor_fun(fun: Callable[[ArrayT], ArrayT]) -> Callable[[Tensor], Tensor]:
+    return lambda tensor: from_numpy(fun(tensor.cpu().numpy())).float().to(tensor.device)
+
+
 def compute_cdf(x: ArrayT, p: ArrayT) -> ArrayT:
     cdf = np.cumsum(np.append(0, 0.5 * (p[1:] + p[:-1]) / (x[1:] - x[:-1])))
     return cdf / cdf[-1] # type: ignore
 
 
-def get_cdf(x: ArrayT, p: ArrayT) -> Callable[[ArrayT], ArrayT]:
+def get_cdf(x: ArrayT, p: ArrayT) -> Callable[[Tensor], Tensor]:
     cdf = compute_cdf(x, p)
-    return interp1d(x, cdf, kind='linear', fill_value="extrapolate") # type: ignore
+    return numpy_fun_to_tensor_fun(interp1d(x, cdf, kind='linear', fill_value="extrapolate"))
 
 
-def get_inv_cdf(x: ArrayT, p: ArrayT) -> Callable[[ArrayT], ArrayT]:
+def get_inv_cdf(x: ArrayT, p: ArrayT) -> Callable[[Tensor], Tensor]:
     cdf = compute_cdf(x, p)
-    return interp1d(cdf, x, kind='linear', fill_value="extrapolate") # type: ignore
+    return numpy_fun_to_tensor_fun(interp1d(cdf, x, kind='linear', fill_value="extrapolate"))
