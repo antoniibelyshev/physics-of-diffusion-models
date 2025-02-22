@@ -102,6 +102,6 @@ fid:
   step_types:
     - sde
     - dpm
-  sample: False
+  sample: True
   train: True
   save_imgs: True

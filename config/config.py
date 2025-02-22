@@ -111,7 +111,7 @@ class FIDConfig(BaseModel):
 
     @property
     def n_samples(self) -> int:
-        return 60000 if self.train else 10000
+        return 10000 if self.train else 60000
 
 
 class Config(BaseModel):
