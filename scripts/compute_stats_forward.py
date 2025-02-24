@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import argparse
-from stats import compute_stats, compute_stats_unbiased
+from utils import compute_stats
 
 from config import Config, with_config
 from utils import get_data_tensor
@@ -10,13 +10,12 @@ from utils import get_data_tensor
 @with_config()
 def main(config: Config, *, unbiased: bool) -> None:
     y = get_data_tensor(config)
-    config.diffusion.noise_schedule = f"entropy{'_u' if unbiased else''}"
+    config.diffusion.noise_schedule_type = f"entropy{'_u' if unbiased else''}"
     min_temp, max_temp = config.diffusion.temp_range
     temp = torch.logspace(np.log10(min_temp), np.log10(max_temp), config.forward_stats.n_temps)
-    compute_stats_func = compute_stats_unbiased if unbiased else compute_stats
-    stats = compute_stats_func(y, temp, config.forward_stats.n_samples, config.forward_stats.n_repeats)
+    stats = compute_stats(y, temp, config.forward_stats.n_samples, config.forward_stats.batch_size, unbiased)
     path = config.forward_unbiased_stats_path if unbiased else config.forward_stats_path
-    np.savez(path, temp = temp, **stats) # type: ignore
+    np.savez(path, **stats) # type: ignore
 
 
 if __name__ == "__main__":

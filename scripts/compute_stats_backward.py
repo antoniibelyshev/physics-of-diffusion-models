@@ -3,7 +3,7 @@ import numpy as np
 from tqdm import tqdm
 
 from config import Config, with_config
-from stats import compute_stats_traj_batch
+from utils import compute_stats_traj_batch
 from utils import get_data_tensor
 from diffusion import get_samples
 
@@ -11,7 +11,6 @@ from diffusion import get_samples
 @with_config()
 def main(config: Config) -> None:
     config.sample.n_samples = config.backward_stats.n_samples
-    config.sample.n_repeats = config.backward_stats.n_repeats
     samples = get_samples(config)
     temp = samples["temp"]
     states = samples["states"]
@@ -23,7 +22,7 @@ def main(config: Config) -> None:
         stats_lst.append(compute_stats_traj_batch(x * (1 + temp).sqrt().view(-1, *[1] * len(y.shape[1:])), y, temp))
 
     stats = {key: stack([stats[key] for stats in stats_lst], 1).mean(1) for key in stats_lst[0].keys()}
-    np.savez("results/mnist_backward_stats.npz", temp = temp, **stats) # type: ignore
+    np.savez("results/mnist_backward_stats.npz", **stats) # type: ignore
 
 
 if __name__ == "__main__":

@@ -1,77 +1,86 @@
 import torch
-from torch import nn, Tensor, from_numpy
-from torch.nn.functional import pad
+from torch import nn, Tensor
+from torch.nn.functional import sigmoid
 import numpy as np
-from typing import Callable
+from typing import Optional
+from abc import ABC, abstractmethod
 
 from config import Config
 from utils import norm_sqr, get_cdf, get_inv_cdf
 
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+class NoiseScheduler(nn.Module, ABC):
+    def __call__(self, x: Tensor) -> Tensor:
+        return super().__call__(x) # type: ignore
+
+    @abstractmethod
+    def forward(self, tau: Tensor) -> Tensor:
+        pass
+
+    @abstractmethod
+    def get_tau(self, log_temp: Tensor) -> Tensor:
+        pass
+
+    @staticmethod
+    def from_config(config: Config, *, noise_schedule_type: Optional[str] = None) -> "NoiseScheduler":
+        noise_schedule_type = noise_schedule_type or config.diffusion.noise_schedule_type
+        if noise_schedule_type == "linear_beta":
+            return LinearBetaNoiseScheduler(config)
+        elif noise_schedule_type == "cosine":
+            return CosineNoiseScheduler(config)
+        elif noise_schedule_type.startswith("entropy"):
+            return EntropyNoiseScheduler(config)
+        else:
+            raise ValueError(f"Unknown schedule type: {config.diffusion.noise_schedule_type}")
 
 
-def get_linear_beta_log_temp_schedule(config: Config) -> tuple[Callable[[Tensor], Tensor], Callable[[Tensor], Tensor]]:
-    min_temp, max_temp = config.diffusion.temp_range
-    scale = 1 + min_temp
-    gamma = np.log((1 + max_temp) / scale)
-    def linear_beta_log_temp_schedule(tau: Tensor) -> Tensor:
-        return ((tau.pow(2) * gamma).exp() * scale - 1).log() # type: ignore
-    def linear_beta_log_temp_schedule_inverse(temp: Tensor) -> Tensor:
-        return (((temp.exp() + 1) / scale).log() / gamma).sqrt() # type: ignore
-    return linear_beta_log_temp_schedule, linear_beta_log_temp_schedule_inverse
+class LinearBetaNoiseScheduler(NoiseScheduler):
+    def __init__(self, config: Config):
+        super().__init__()
+
+        min_temp, max_temp = config.diffusion.temp_range
+        self.scale = 1 + min_temp
+        self.gamma = np.log((1 + max_temp) / self.scale)
+
+    def forward(self, tau: Tensor) -> Tensor:
+        return ((tau.pow(2) * self.gamma).exp() * self.scale - 1).log()  # type: ignore
+
+    def get_tau(self, log_temp: Tensor) -> Tensor:
+        return (((temp.exp() + 1) / self.scale).log() / self.gamma).sqrt()  # type: ignore
 
 
-def get_cosine_log_temp_schedule(config: Config) -> tuple[Callable[[Tensor], Tensor], Callable[[Tensor], Tensor]]:
-    min_temp, max_temp = config.diffusion.temp_range
-    tau_min = 2 * np.arctan(min_temp ** 0.5) / np.pi
-    tau_max = 2 * np.arctan(max_temp ** 0.5) / np.pi
-    scale = 0.5 * np.pi * (tau_max - tau_min)
-    shift = 0.5 * np.pi * tau_min
-    def cosine_log_temp_schedule(tau: Tensor) -> Tensor:
-        return (tau * scale + shift).tan().log() * 2 # type: ignore
-    def cosine_log_temp_schedule_inverse(temp: Tensor) -> Tensor:
-        return ((temp * 0.5).exp().atan() - shift) / scale # type: ignore
-    return cosine_log_temp_schedule, cosine_log_temp_schedule_inverse
+class CosineNoiseScheduler(NoiseScheduler):
+    def __init__(self, config: Config):
+        super().__init__()
+
+        min_temp, max_temp = config.diffusion.temp_range
+        tau_min = 2 * np.arctan(min_temp ** 0.5) / np.pi
+        tau_max = 2 * np.arctan(max_temp ** 0.5) / np.pi
+        self.scale = 0.5 * np.pi * (tau_max - tau_min)
+        self.shift = 0.5 * np.pi * tau_min
+
+    def forward(self, tau: Tensor) -> Tensor:
+        return (tau * self.scale + self.shift).tan().log() * 2  # type: ignore
+
+    def get_tau(self, log_temp: Tensor) -> Tensor:
+        return ((log_temp * 0.5).exp().atan() - self.shift) / self.scale  # type: ignore
 
 
-def get_entropy_log_temp_schedule(config: Config) -> tuple[Callable[[Tensor], Tensor], Callable[[Tensor], Tensor]]:
-    stats = np.load(config.schedule_stats_path)
-    temp = stats["temp"]
-    log_temp = np.log(temp)
-    heat_capacity = stats["var_H"] / temp ** 2
-    return get_inv_cdf(log_temp, heat_capacity), get_cdf(log_temp, heat_capacity)
+class EntropyNoiseScheduler(NoiseScheduler):
+    def __init__(self, config: Config):
+        super().__init__()
 
+        stats = np.load(config.schedule_stats_path)
+        temp = stats["temp"]
+        log_temp = np.log(temp)
+        heat_capacity = stats["heat_capacity"]
+        self._forward, self._get_tau = get_inv_cdf(log_temp, heat_capacity), get_cdf(log_temp, heat_capacity)
 
-def get_log_temp_schedule(config: Config) -> tuple[Callable[[Tensor], Tensor], Callable[[Tensor], Tensor]]:
-    if config.diffusion.noise_schedule == "linear_beta":
-        return get_linear_beta_log_temp_schedule(config)
-    elif config.diffusion.noise_schedule == "cosine":
-        return get_cosine_log_temp_schedule(config)
-    elif config.diffusion.noise_schedule.startswith("entropy"):
-        return get_entropy_log_temp_schedule(config)
-    else:
-        raise ValueError(f"Unknown schedule type: {config.diffusion.noise_schedule}")
+    def forward(self, tau: Tensor) -> Tensor:
+        return self._forward(tau)
 
-
-def get_alpha_bar_from_temp(log_temp: Tensor) -> Tensor:
-    return (log_temp.exp() + 1).inverse()
-
-
-class DynamicCoeffs:
-    def __init__(self, temp: Tensor) -> None:
-        self.temp = temp
-        self.alpha_bar = get_alpha_bar_from_temp(temp)
-        alpha_bar_prev = pad(self.alpha_bar[:-1], (*(0,) * (len(temp.shape) * 2 - 2), 1, 0), value=1.0)
-        self.alpha = self.alpha_bar / alpha_bar_prev
-        self.beta = 1 - self.alpha
-
-        self.posterior_x0_coef = (alpha_bar_prev.sqrt() * self.beta) / (1 - self.alpha_bar)
-        self.posterior_xt_coef = (self.alpha.sqrt() * (1 - alpha_bar_prev)) / (1 - self.alpha_bar)
-        self.posterior_sigma = (1 - alpha_bar_prev) / (1 - self.alpha_bar) * self.beta
-
-        self.dpm_xt_coef = self.alpha.pow(-0.5)
-        self.dpm_eps_coef = -(1 - self.alpha_bar).sqrt() / self.alpha.sqrt() + (1 - alpha_bar_prev).sqrt()
+    def get_tau(self, log_temp: Tensor) -> Tensor:
+        return self._get_tau(log_temp)
 
 
 class DiffusionDynamic(nn.Module):
@@ -79,13 +88,13 @@ class DiffusionDynamic(nn.Module):
         super().__init__()
 
         self.obj_size = config.data.obj_size
-        self.log_temp_schedule, self.log_temp_schedule_inv = get_log_temp_schedule(config)
+        self.noise_scheduler = NoiseScheduler.from_config(config)
 
     def get_log_temp(self, tau: Tensor) -> Tensor:
-        return self.log_temp_schedule(tau).view(-1, *[1] * len(self.obj_size))
+        return self.noise_scheduler(tau).view(-1, *[1] * len(self.obj_size))
 
     def get_alpha_bar(self, tau: Tensor) -> Tensor:
-        return get_alpha_bar_from_temp(self.get_log_temp(tau))
+        return sigmoid(self.get_log_temp(tau))
 
     def forward(self, x0: Tensor) -> tuple[Tensor, Tensor, Tensor]:
         tau = torch.rand((len(x0),), device=x0.device)

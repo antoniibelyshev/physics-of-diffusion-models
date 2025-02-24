@@ -31,8 +31,24 @@ class DDPM(nn.Module):
         self.parametrization = config.ddpm.parametrization
         assert self.parametrization in ["x0", "eps", "score"]
     
-    def get_predictions(self, xt: Tensor, tau: Tensor) -> DDPMPredictions:
+    def get_predictions(self, xt: Tensor, log_temp: Tensor) -> DDPMPredictions:
+        tau = self.dynamic.log_temp_schedule_inv(log_temp)
         return DDPMPredictions(self(xt, tau), xt, self.dynamic.get_alpha_bar(tau), self.parametrization)
+
+    @classmethod
+    def from_config(cls, config: Config, pretrained: bool = False) -> "DDPM":
+        match config.ddpm.model_name:
+            case "unet":
+                ddpm = DDPMUnet(config)
+                if pretrained:
+                    ddpm.load_state_dict(load(config.ddpm_checkpoint_path))
+                return ddpm
+            case "true":
+                return DDPMTrue(config)
+            case "diffusers":
+                return DDPMDiffusers(config)
+            case _:
+                raise ValueError(f"Unknown model name: {config.ddpm.model_name}")
 
 
 class DDPMUnet(DDPM):
@@ -80,25 +96,8 @@ class DDPMDiffusers(DDPM):
             left_temp = model_log_temp[idx - 1]
             right_temp = model_log_temp[idx]
             return (idx - (right_temp - log_temp) / (right_temp - left_temp)).reshape(-1) # type: ignore
-            # closest_idx = where(abs(temp - left) <= abs(temp - right), idx - 1, idx)
-            # return closest_idx.reshape(-1)
 
         return tau_to_t
 
     def forward(self, xt: Tensor, tau: Tensor) -> Tensor:
         return self.unet(xt, self.tau_to_t(tau)).sample # type: ignore
-
-
-def get_ddpm(config: Config, pretrained: bool = False) -> DDPM:
-    match config.ddpm.model_name:
-        case "unet":
-            ddpm = DDPMUnet(config)
-            if pretrained:
-                ddpm.load_state_dict(load(config.ddpm_checkpoint_path))
-            return ddpm
-        case "true":
-            return DDPMTrue(config)
-        case "diffusers":
-            return DDPMDiffusers(config)
-        case _:
-            raise ValueError(f"Unknown model name: {config.ddpm.model_name}")

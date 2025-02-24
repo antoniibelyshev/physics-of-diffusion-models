@@ -1,5 +1,7 @@
 diffusion:
-  noise_schedule: entropy_u
+  noise_schedule_type: entropy_u
+  min_temp: 1e-4
+  max_temp: 1e4
 
 data:
   dataset_name: mnist
@@ -55,21 +57,20 @@ gan_training:
 
 sample:
   n_steps: 50
-  n_samples: 1000
-  n_repeats: 60
-  step_type: dpm
+  n_samples: 60000
+  batch_size: 1000
+  step_type: ddim
+  noise_schedule_type: linear_beta
   track_ll: False
   track_states: False
-  idx_start: -1
 
 forward_stats:
-  n_samples: 20
-  n_repeats: 500
+  n_samples: 1000
+  batch_size: 20
   n_temps: 100
 
 backward_stats:
   n_samples: 1000
-  n_repeats: 1
   batch_size: 20
 
 varied_dataset_stats:
@@ -95,7 +96,7 @@ fid:
     - 30
     - 40
     - 50
-  noise_schedules:
+  noise_schedule_types:
     # - linear_beta
     - cosine
     - entropy_u

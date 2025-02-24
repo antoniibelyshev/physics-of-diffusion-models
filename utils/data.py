@@ -16,7 +16,8 @@ class ImageDataset(TensorDataset):
         "fashion_mnist": FashionMNIST,
     }
 
-    def __init__(self, dataset_name: str, image_size: tuple[int, int, int], *, train: bool = True):
+    def __init__(self, dataset_name: str, image_size: tuple[int, ...], *, train: bool = True):
+        assert len(image_size) == 3
         transform = Compose([
             Resize(image_size[1:]),
             ToTensor(),
@@ -36,7 +37,6 @@ def get_dataset(config: Config, *, train: bool = True) -> TensorDataset:
     dataset_name = config.data.dataset_name
     if dataset_name in ImageDataset.DATASET_CLASSES:
         obj_size = config.data.obj_size
-        assert len(obj_size) == 3
         return ImageDataset(dataset_name, obj_size, train=train)
     raise ValueError(f"Unknown dataset {dataset_name}")
 

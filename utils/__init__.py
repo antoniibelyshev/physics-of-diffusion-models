@@ -15,10 +15,14 @@ from .synthetic_datasets import (
 )
 from .utils import (
     dict_map as dict_map,
+    append_dict as append_dict,
+    extend_dict as extend_dict,
     replace_activations as replace_activations,
     get_unet as get_unet,
     get_cdf as get_cdf,
     get_inv_cdf as get_inv_cdf,
+    get_default_device as get_default_device,
+    batch_jacobian as batch_jacobian,
 )
 from .fid import (
     extract_features_statistics as extract_features_statistics,
@@ -28,4 +32,8 @@ from .fid import (
 from .lenet import (
     LeNet as LeNet,
     train_lenet as train_lenet,
+)
+from .stats import (
+    compute_stats as compute_stats,
+    compute_stats_traj_batch as compute_stats_traj_batch,
 )

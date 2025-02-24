@@ -8,13 +8,11 @@ import wandb
 
 from config import Config
 from .ddpm import DDPM
-
-
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+from utils import get_default_device
 
 
 class DDPMTrainer:
-    def __init__(self, config: Config, ddpm: DDPM, device: torch.device = DEVICE) -> None:
+    def __init__(self, config: Config, ddpm: DDPM, device: str = get_default_device()) -> None:
         self.ddpm = ddpm
         self.ddpm.to(device)
         self.ema = ExponentialMovingAverage(ddpm.parameters(), decay=0.999)
@@ -37,9 +35,9 @@ class DDPMTrainer:
         self.ema.restore(self.ddpm.parameters())
 
     def calc_loss(self, x0: Tensor) -> Tensor:
-        t, eps, xt = self.ddpm.dynamic(x0)
+        tau, eps, xt = self.ddpm.dynamic(x0)
 
-        pred = self.ddpm(xt, t)
+        pred = self.ddpm(xt, tau)
         target = eps if self.ddpm.parametrization == "eps" else x0
         return mse_loss(target, pred)
 
@@ -49,11 +47,7 @@ class DDPMTrainer:
         self.optimizer.step()
         self.ema.update(self.ddpm.parameters())
 
-    def train(
-        self,
-        train_generator: Generator[tuple[Tensor, ...], None, None],
-        total_iters: int = 2500,
-    ) -> None:
+    def train(self, train_generator: Generator[tuple[Tensor, ...], None, None], total_iters: int) -> None:
         wandb.init(project = self.project_name, name = self.experiment_name)
 
         self.ddpm.train()

@@ -6,8 +6,7 @@ import numpy as np
 
 @with_config()
 def main(config: Config) -> None:
-    path = config.samples_path if config.sample.idx_start == -1 else config.samples_from_timestamp_path
-    np.savez(path, **get_samples(config)) # type: ignore
+    np.savez(config.samples_path, **get_samples(config)) # type: ignore
 
 
 if __name__ == "__main__":

@@ -2,15 +2,13 @@ from pydantic import BaseModel, Field
 
 
 class DiffusionConfig(BaseModel):
-    noise_schedule: str = Field(..., description="Type of the noise schedule")
+    noise_schedule_type: str = Field(..., description="Type of the noise schedule")
+    min_temp: float = Field(..., description="Minimum temperature")
+    max_temp: float = Field(..., description="Maximum temperature")
 
     @property
     def temp_range(self) -> tuple[float, float]:
-        if self.noise_schedule in ["linear_beta", "cosine"]:
-            return 1e-4, 1e4
-        if self.noise_schedule.startswith("entropy"):
-            return 1e-4, 1e4
-        raise ValueError(f"Unknown noise schedule {self.noise_schedule}")
+        return self.min_temp, self.max_temp
 
 
 class DataConfig(BaseModel):
@@ -74,23 +72,22 @@ class GANTrainingConfig(BaseModel):
 
 class SampleConfig(BaseModel):
     n_steps: int = Field(..., description="Number of steps for sampling")
-    n_samples: int = Field(..., description="Number of samples to generate")
-    n_repeats: int = Field(..., description="Number of repeats")
     step_type: str = Field(..., description="Type of step")
+    noise_schedule_type: str = Field(..., description="Type of the noise schedule")
+    n_samples: int = Field(..., description="Number of samples to generate")
+    batch_size: int = Field(..., description="Batch size for sampling")
     track_ll: bool = Field(..., description="Whether to track log likelihood")
     track_states: bool = Field(..., description="Whether to track states")
-    idx_start: int = Field(..., description="Starting index")
 
 
 class ForwardStatsConfig(BaseModel):
     n_samples: int = Field(..., description="Number of samples to generate")
-    n_repeats: int = Field(..., description="Number of repeats")
+    batch_size: int = Field(..., description="Number of repeats")
     n_temps: int = Field(..., description="Number of temperatures")
 
 
 class BackwardStatsConfig(BaseModel):
     n_samples: int = Field(..., description="Number of samples to generate")
-    n_repeats: int = Field(..., description="Number of repeats")
     batch_size: int = Field(..., description="Batch size for stats computation")
 
 
@@ -103,7 +100,7 @@ class VariedDatasetStatsConfig(ForwardStatsConfig):
 
 class FIDConfig(BaseModel):
     n_steps: list[int] = Field(..., description="Number of steps for sampling")
-    noise_schedules: list[str] = Field(..., description="Noise schedules for diffusion")
+    noise_schedule_types: list[str] = Field(..., description="Noise schedules for diffusion")
     step_types: list[str] = Field(..., description="Step types for sampling")
     train: bool = Field(..., description="Whether to use train sample for reference")
     sample: bool = Field(..., description="Whether to sample images or use sampled")
@@ -134,7 +131,7 @@ class Config(BaseModel):
         return "_".join([
             self.data.dataset_name,
             self.ddpm.model_name,
-            self.diffusion.noise_schedule,
+            self.diffusion.noise_schedule_type,
             "schedule",
         ])
 
@@ -155,10 +152,6 @@ class Config(BaseModel):
         return f"{self.samples_prefix}_samples.npz"
 
     @property
-    def samples_from_timestamp_path(self) -> str:
-        return f"{self.samples_prefix}_samples_from_timestamp_{self.sample.idx_start}.npz"
-
-    @property
     def forward_stats_path(self) -> str:
         return f"results/{self.data.dataset_name}_forward_stats.npz"
 
@@ -172,7 +165,7 @@ class Config(BaseModel):
 
     @property
     def schedule_stats_path(self) -> str:
-        match self.diffusion.noise_schedule:
+        match self.diffusion.noise_schedule_type:
             case "entropy":
                 return self.forward_stats_path
             case "entropy_u":
@@ -183,4 +176,3 @@ class Config(BaseModel):
     @property
     def fid_results_path(self) -> str:
         return f"results/{self.data.dataset_name}_{'train' if self.fid.train else 'test'}_fid.csv"
-
