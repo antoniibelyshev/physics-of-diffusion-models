@@ -97,12 +97,12 @@ fid:
     - 40
     - 50
   noise_schedule_types:
-    # - linear_beta
-    - cosine
-    - entropy_u
+    - linear_beta
+    # - cosine
+    # - entropy_u
   step_types:
-    - sde
-    - dpm
+    - ddpm
+    - ddim
   sample: True
   train: True
-  save_imgs: True
+  save_imgs: False

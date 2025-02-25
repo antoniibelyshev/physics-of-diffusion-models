@@ -24,7 +24,7 @@ class SamplingCoeffs:
         self.ddpm_xt_coef = (alpha.sqrt() * (1 - prev_alpha_bar)) / (1 - alpha_bar)
         self.ddpm_noise_coef = ((1 - prev_alpha_bar) / (1 - alpha_bar) * beta).sqrt()
 
-        self.ddim_xt_coef = alpha.sqrt().inverse()
+        self.ddim_xt_coef = alpha.pow(-0.5)
         self.ddim_eps_coef = -beta / ((1 - prev_alpha_bar).sqrt() + (1 - prev_alpha_bar - beta).sqrt())
 
 

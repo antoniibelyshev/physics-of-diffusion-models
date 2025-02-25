@@ -32,7 +32,7 @@ class DDPM(nn.Module):
         assert self.parametrization in ["x0", "eps", "score"]
     
     def get_predictions(self, xt: Tensor, log_temp: Tensor) -> DDPMPredictions:
-        tau = self.dynamic.log_temp_schedule_inv(log_temp)
+        tau = self.dynamic.noise_scheduler.get_tau(log_temp)
         return DDPMPredictions(self(xt, tau), xt, self.dynamic.get_alpha_bar(tau), self.parametrization)
 
     @classmethod
