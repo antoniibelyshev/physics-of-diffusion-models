@@ -22,8 +22,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--unbiased",
-        type=bool,
-        default=True,
+        action="store_true",
         help="Whether to use an unbiased scheme. Default: True"
     )
     args = parser.parse_args()

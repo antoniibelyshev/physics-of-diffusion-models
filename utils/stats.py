@@ -7,7 +7,7 @@ from tqdm import trange
 from collections import defaultdict
 
 from .distance import compute_pw_dist_sqr
-from .utils import dict_map, append_dict
+from .utils import dict_map, append_dict, get_default_device
 
 
 def get_noise(temp: Tensor, batch_size: int, obj_shape: tuple[int, ...], device: torch.device) -> Tensor:
@@ -49,9 +49,10 @@ def compute_stats(
         temp: Tensor,
         n_samples: int,
         batch_size: int,
-        unbiased: bool
+        unbiased: bool,
 ) -> dict[str, Tensor]:
-    x0 = x0.cuda()
+    device = get_default_device()
+    x0 = x0.to(device)
     _x0 = x0
     batch_stats: dict[str, list[Tensor]] = defaultdict(list)
     for _ in trange(ceil(n_samples / batch_size), desc="Computing statistics..."):

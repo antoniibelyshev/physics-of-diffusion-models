@@ -13,12 +13,12 @@ def main(config: Config) -> None:
     temp = torch.logspace(log10(min_temp), log10(max_temp), config.varied_dataset_stats.n_temps)
     for dataset_name in config.varied_dataset_stats.dataset_names:
         config.data.dataset_name = dataset_name
-        y = get_data_tensor(config)
+        x0 = get_data_tensor(config)
 
         for data_fraction in config.varied_dataset_stats.sample_fractions:
-            size = int(data_fraction * len(y))
-            filename = f"results/{dataset_name}_{size}_forward_stats.npz"
-            train_samples = y[np.random.choice(range(len(y)), size=size, replace=False)]
+            size = int(data_fraction * len(x0))
+            filename = config.samples_path if size == 1 else f"results/{dataset_name}_{size}_forward_stats.npz"
+            train_samples = x0[np.random.choice(range(len(x0)), size=size, replace=False)]
             stats = compute_stats(
                 train_samples,
                 temp,
