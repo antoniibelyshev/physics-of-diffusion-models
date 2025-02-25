@@ -2,13 +2,12 @@ from torch import Tensor, stack
 import numpy as np
 from tqdm import tqdm
 
-from config import Config, with_config
-from utils import compute_stats_traj_batch
-from utils import get_data_tensor
+from config import Config
+from utils import compute_stats_traj_batch, with_config, get_data_tensor
 from diffusion import get_samples
 
 
-@with_config()
+@with_config(parse_args=(__name__ == "__main__"))
 def main(config: Config) -> None:
     config.sample.n_samples = config.backward_stats.n_samples
     samples = get_samples(config)

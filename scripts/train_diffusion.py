@@ -2,10 +2,10 @@ from utils import get_dataset, get_data_generator
 import torch
 from diffusion import DDPM, DDPMTrainer
 from config import Config
-from config import with_config
+from utils import with_config
 
 
-@with_config()
+@with_config(parse_args=(__name__ == "__main__"))
 def main(config: Config) -> None:
     dataset = get_dataset(config)
     data_generator = get_data_generator(dataset, config.ddpm_training.batch_size)

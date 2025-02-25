@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader, Dataset
 import numpy as np
 from gan import GANGenerator, GANDiscriminator, GANTrainer, add_noise
 from config import Config
-from config import with_config
+from utils import with_config
 
 
 class CustomDataset(Dataset[torch.Tensor]):
@@ -20,7 +20,7 @@ class CustomDataset(Dataset[torch.Tensor]):
         return self.data[idx]
 
 
-@with_config()
+@with_config(parse_args=(__name__ == "__main__"))
 def main(config: Config) -> None:
     generator = GANGenerator(config)
     discriminator = GANDiscriminator(config)

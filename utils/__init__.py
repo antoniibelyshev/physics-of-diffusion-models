@@ -18,11 +18,13 @@ from .utils import (
     append_dict as append_dict,
     extend_dict as extend_dict,
     replace_activations as replace_activations,
+    batch_jacobian as batch_jacobian,
     get_unet as get_unet,
+    load_config as load_config,
+    with_config as with_config,
     get_cdf as get_cdf,
     get_inv_cdf as get_inv_cdf,
     get_default_device as get_default_device,
-    batch_jacobian as batch_jacobian,
 )
 from .fid import (
     extract_features_statistics as extract_features_statistics,

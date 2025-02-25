@@ -1,10 +1,10 @@
 import torch
-from torch.utils.data import TensorDataset
 from utils import get_dataset, LeNet, train_lenet
-from config import with_config, Config
+from config import Config
+from utils import with_config
 
 
-@with_config()
+@with_config(parse_args=(__name__ == "__main__"))
 def main(config: Config) -> None:
     train_dataset = get_dataset(config)
     eval_dataset = get_dataset(config, train=False)

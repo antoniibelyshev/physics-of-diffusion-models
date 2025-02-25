@@ -84,6 +84,7 @@ class ForwardStatsConfig(BaseModel):
     n_samples: int = Field(..., description="Number of samples to generate")
     batch_size: int = Field(..., description="Number of repeats")
     n_temps: int = Field(..., description="Number of temperatures")
+    unbiased: bool = Field(..., description="Whether to use unbiased estimation")
 
 
 class BackwardStatsConfig(BaseModel):
@@ -153,11 +154,7 @@ class Config(BaseModel):
 
     @property
     def forward_stats_path(self) -> str:
-        return f"results/{self.data.dataset_name}_forward_stats.npz"
-
-    @property
-    def forward_unbiased_stats_path(self) -> str:
-        return f"results/{self.data.dataset_name}_forward_unbiased_stats.npz"
+        return f"results/{self.data.dataset_name}_forward{'_unbiased' if self.forward_stats.unbiased else ''}_stats.npz"
 
     @property
     def backward_stats_path(self) -> str:
@@ -165,13 +162,12 @@ class Config(BaseModel):
 
     @property
     def schedule_stats_path(self) -> str:
-        match self.diffusion.noise_schedule_type:
-            case "entropy":
-                return self.forward_stats_path
-            case "entropy_u":
-                return self.forward_unbiased_stats_path
-            case _:
-                raise ValueError
+        assert self.diffusion.noise_schedule_type in ["entropy", "entropy_u"]
+        prev_unbiased = self.forward_stats.unbiased
+        self.forward_stats.unbiased = self.diffusion.noise_schedule_type.endswith("_u")
+        stats_path = self.forward_stats_path
+        self.forward_stats.unbiased = prev_unbiased
+        return stats_path
 
     @property
     def fid_results_path(self) -> str:

@@ -1,15 +1,45 @@
 import torch
 from torch import Tensor, nn
 from torch.utils.data import DataLoader
+from torchmetrics.image.fid import FrechetInceptionDistance
 import numpy as np
 from numpy.typing import NDArray
 from scipy.linalg import sqrtm # type: ignore
 from typing import Callable
 
 from config import Config
-from .fid_models import get_feature_extractor
 from .data import get_data_tensor
 from .lenet import LeNet
+from .data import to_uint8
+
+
+class InceptionV3FeatureExtractor(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.fid = FrechetInceptionDistance(feature=2048).cuda()
+
+    def forward(self, x: Tensor) -> Tensor:
+        return self.fid.inception(to_uint8(x)) # type: ignore
+
+
+class LeNetFeatureExtractor(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.lenet = LeNet(1024, 10)
+        self.lenet.load_state_dict(torch.load("checkpoints/lenet_mnist.pth"))
+
+    def forward(self, x: Tensor) -> Tensor:
+        return self.lenet.features(x)
+
+
+def get_feature_extractor(config: Config) -> nn.Module:
+    match config.data.dataset_name:
+        case "mnist":
+            return LeNetFeatureExtractor()
+        case _:
+            return InceptionV3FeatureExtractor()
 
 
 ArrayT = NDArray[np.float32]

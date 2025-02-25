@@ -1,5 +1,5 @@
-from config import Config, with_config
-from utils import get_compute_fid
+from config import Config
+from utils import get_compute_fid, with_config
 from itertools import product
 from diffusion import get_samples
 import pandas as pd
@@ -8,7 +8,7 @@ import numpy as np
 from torch import from_numpy
 
 
-@with_config()
+@with_config(parse_args=(__name__ == "__main__"))
 def main(config: Config) -> None:
     config.sample.track_ll = False
     config.sample.track_states = False

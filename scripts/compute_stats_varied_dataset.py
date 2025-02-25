@@ -4,10 +4,11 @@ from utils import compute_stats
 import numpy as np
 from math import log10
 
-from config import Config, with_config
+from config import Config
+from utils import with_config
 
 
-@with_config()
+@with_config(parse_args=(__name__ == "__main__"))
 def main(config: Config) -> None:
     min_temp, max_temp = config.diffusion.temp_range
     temp = torch.logspace(log10(min_temp), log10(max_temp), config.varied_dataset_stats.n_temps)

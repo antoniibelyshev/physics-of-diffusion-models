@@ -68,6 +68,7 @@ forward_stats:
   n_samples: 1000
   batch_size: 20
   n_temps: 1000
+  unbiased: False
 
 backward_stats:
   n_samples: 1000
@@ -76,9 +77,8 @@ backward_stats:
 varied_dataset_stats:
   n_samples: 1000
   batch_size: 20
-  min_temp: 1e-3
-  max_temp: 1e4
   n_temps: 1000
+  unbiased: False
   dataset_names:
     - mnist
     - cifar10
