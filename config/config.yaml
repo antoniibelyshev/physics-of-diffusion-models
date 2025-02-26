@@ -94,10 +94,13 @@ fid:
     - 10
     - 20
     - 30
-  noise_schedule_types:
+  diffusion_noise_schedule_types:
     - linear_beta
     - cosine
-    # - entropy
+    - entropy_u
+  sampling_noise_schedule_types:
+    - linear_beta
+    - cosine
     - entropy_u
   step_types:
     - ddpm

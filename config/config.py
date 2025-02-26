@@ -101,7 +101,8 @@ class VariedDatasetStatsConfig(ForwardStatsConfig):
 
 class FIDConfig(BaseModel):
     n_steps: list[int] = Field(..., description="Number of steps for sampling")
-    noise_schedule_types: list[str] = Field(..., description="Noise schedules for diffusion")
+    diffusion_noise_schedule_types: list[str] = Field(..., description="Noise schedules of diffusion")
+    sampling_noise_schedule_types: list[str] = Field(..., description="Noise schedules for sampling")
     step_types: list[str] = Field(..., description="Step types for sampling")
     train: bool = Field(..., description="Whether to use train sample for reference")
     sample: bool = Field(..., description="Whether to sample images or use sampled")
@@ -160,11 +161,10 @@ class Config(BaseModel):
     def backward_stats_path(self) -> str:
         return f"results/{self.experiment_name}_backward_stats.npz"
 
-    @property
-    def schedule_stats_path(self) -> str:
-        assert self.diffusion.noise_schedule_type in ["entropy", "entropy_u"]
+    def get_noise_schedule_stats_path(self, noise_schedule_type: str) -> str:
+        assert noise_schedule_type in ["entropy", "entropy_u"]
         prev_unbiased = self.forward_stats.unbiased
-        self.forward_stats.unbiased = self.diffusion.noise_schedule_type.endswith("_u")
+        self.forward_stats.unbiased = noise_schedule_type.endswith("_u")
         stats_path = self.forward_stats_path
         self.forward_stats.unbiased = prev_unbiased
         return stats_path

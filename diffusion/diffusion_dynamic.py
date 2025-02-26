@@ -23,13 +23,14 @@ class NoiseScheduler(nn.Module, ABC):
 
     @staticmethod
     def from_config(config: Config, *, noise_schedule_type: Optional[str] = None) -> "NoiseScheduler":
-        noise_schedule_type = noise_schedule_type or config.diffusion.noise_schedule_type
+        if noise_schedule_type is None or noise_schedule_type == "original":
+            noise_schedule_type = config.diffusion.noise_schedule_type
         if noise_schedule_type == "linear_beta":
             return LinearBetaNoiseScheduler(config)
         elif noise_schedule_type == "cosine":
             return CosineNoiseScheduler(config)
         elif noise_schedule_type.startswith("entropy"):
-            return EntropyNoiseScheduler(config)
+            return EntropyNoiseScheduler(config, noise_schedule_type)
         else:
             raise ValueError(f"Unknown schedule type: {config.diffusion.noise_schedule_type}")
 
@@ -67,10 +68,10 @@ class CosineNoiseScheduler(NoiseScheduler):
 
 
 class EntropyNoiseScheduler(NoiseScheduler):
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, noise_schedule_type: str):
         super().__init__()
 
-        stats = np.load(config.schedule_stats_path)
+        stats = np.load(config.get_noise_schedule_stats_path(noise_schedule_type))
         temp = stats["temp"]
         log_temp = np.log(temp)
         heat_capacity = stats["heat_capacity"]
