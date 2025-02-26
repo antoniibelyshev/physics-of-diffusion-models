@@ -112,6 +112,7 @@ def parse_args_from_config(config: Config) -> argparse.Namespace:
         if isinstance(value, bool):
             parser.add_argument(f"--{key}", action="store_true", help=f"Enable {key}")
             parser.add_argument(f"--no-{key}", dest=key, action="store_false", help=f"Disable {key}")
+            parser.set_defaults(**{key: value})
         else:
             arg_type = type(value)
             parser.add_argument(f"--{key}", type=arg_type, help=f"Set config value for {key}")
