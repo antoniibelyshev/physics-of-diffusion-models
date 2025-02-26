@@ -56,8 +56,8 @@ gan_training:
   total_iters: 50000
 
 sample:
-  n_steps: 50
-  n_samples: 60000
+  n_steps: 10
+  n_samples: 100
   batch_size: 1000
   step_type: ddim
   noise_schedule_type: linear_beta
@@ -94,12 +94,11 @@ fid:
     - 10
     - 20
     - 30
-    - 40
-    - 50
   noise_schedule_types:
     - linear_beta
-    # - cosine
-    # - entropy_u
+    - cosine
+    # - entropy
+    - entropy_u
   step_types:
     - ddpm
     - ddim

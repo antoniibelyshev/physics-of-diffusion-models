@@ -1,7 +1,6 @@
 from tqdm import trange
 import torch
 from torch import Tensor
-from torch.nn.functional import sigmoid
 import numpy as np
 from math import ceil
 from typing import Iterable
@@ -10,13 +9,13 @@ from collections import defaultdict
 from config import Config
 from utils import norm_sqr, get_default_device, batch_jacobian, dict_map, append_dict
 from .ddpm import DDPM, DDPMPredictions
-from .diffusion_dynamic import NoiseScheduler
+from .diffusion_dynamic import NoiseScheduler, get_alpha_bar_from_log_temp
 
 
 class SamplingCoeffs:
     def __init__(self, log_temp: Tensor, prev_log_temp: Tensor) -> None:
-        alpha_bar = sigmoid(log_temp)
-        prev_alpha_bar = sigmoid(prev_log_temp)
+        alpha_bar = get_alpha_bar_from_log_temp(log_temp)
+        prev_alpha_bar = get_alpha_bar_from_log_temp(prev_log_temp)
         alpha = alpha_bar / prev_alpha_bar
         beta = 1 - alpha
 
@@ -25,13 +24,13 @@ class SamplingCoeffs:
         self.ddpm_noise_coef = ((1 - prev_alpha_bar) / (1 - alpha_bar) * beta).sqrt()
 
         self.ddim_xt_coef = alpha.pow(-0.5)
-        self.ddim_eps_coef = -beta / ((1 - prev_alpha_bar).sqrt() + (1 - prev_alpha_bar - beta).sqrt())
+        self.ddim_eps_coef = -self.ddim_xt_coef * beta / ((1 - alpha_bar).sqrt() + (1 - alpha_bar - beta).sqrt())
 
 
 def ddpm_step(xt: Tensor, coeffs: SamplingCoeffs, predictions: DDPMPredictions) -> Tensor:
     x0 = predictions.x0
     noise = torch.randn_like(xt)
-    return coeffs.ddpm_x0_coef * x0 + coeffs.ddpm_xt_coef * xt + coeffs.ddpm_noise__coef * noise  # type: ignore
+    return coeffs.ddpm_x0_coef * x0 + coeffs.ddpm_xt_coef * xt + coeffs.ddpm_noise_coef * noise  # type: ignore
 
 
 def ddim_step(xt: Tensor, coeffs: SamplingCoeffs, predictions: DDPMPredictions) -> Tensor:
@@ -66,7 +65,7 @@ class DDPMSampler:
         self.ddpm.eval()
         self.device = device
         self.n_steps = config.sample.n_steps
-        tau = torch.linspace(0, 1, self.n_steps, device=device)
+        tau = torch.linspace(0, 1, self.n_steps, device=device).reshape(-1, 1)
         noise_scheduler = NoiseScheduler.from_config(config, noise_schedule_type=config.sample.noise_schedule_type)
         self.log_temp = noise_scheduler(tau)
         self.clean_log_temp = torch.full((1,), -torch.inf, device=device)

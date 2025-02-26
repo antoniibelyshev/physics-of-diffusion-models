@@ -46,7 +46,7 @@ class LinearBetaNoiseScheduler(NoiseScheduler):
         return ((tau.pow(2) * self.gamma).exp() * self.scale - 1).log()  # type: ignore
 
     def get_tau(self, log_temp: Tensor) -> Tensor:
-        return (((temp.exp() + 1) / self.scale).log() / self.gamma).sqrt()  # type: ignore
+        return (((log_temp.exp() + 1) / self.scale).log() / self.gamma).sqrt()  # type: ignore
 
 
 class CosineNoiseScheduler(NoiseScheduler):
@@ -83,6 +83,10 @@ class EntropyNoiseScheduler(NoiseScheduler):
         return self._get_tau(log_temp)
 
 
+def get_alpha_bar_from_log_temp(log_temp: Tensor) -> Tensor:
+    return sigmoid(-log_temp)
+
+
 class DiffusionDynamic(nn.Module):
     def __init__(self, config: Config) -> None:
         super().__init__()
@@ -94,7 +98,7 @@ class DiffusionDynamic(nn.Module):
         return self.noise_scheduler(tau).view(-1, *[1] * len(self.obj_size))
 
     def get_alpha_bar(self, tau: Tensor) -> Tensor:
-        return sigmoid(self.get_log_temp(tau))
+        return get_alpha_bar_from_log_temp(self.get_log_temp(tau))
 
     def forward(self, x0: Tensor) -> tuple[Tensor, Tensor, Tensor]:
         tau = torch.rand((len(x0),), device=x0.device)
