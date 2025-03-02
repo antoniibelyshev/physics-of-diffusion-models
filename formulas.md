@@ -135,3 +135,18 @@ $$\frac{\beta_t}{1 - \bar\alpha_t}z_0 + \frac{\alpha_t(1 - \bar\alpha_{t - 1})}{
 $$x_{t - 1} = \sqrt{\bar\alpha_{t - 1}}x_0 + \sqrt{1 - \bar\alpha_{t - 1}}\epsilon_\theta = \sqrt{\bar\alpha_{t - 1}}x_0 + \sqrt{1 - \bar\alpha_{t - 1}}\frac{x_t - \sqrt{\bar\alpha_t}x_0}{\sqrt{1 - \bar\alpha_t}}$$
 $$z_{t - 1} = z_0 + \sqrt{\frac{T(t - 1)}{T(t)}}(z_t - z_0) = z_t + \left( \sqrt{\frac{T(t - 1)}{T(t)}} - 1 \right)T(t)s_z(z, t)$$
 $$\sqrt{\frac{T(t - 1)}{T(t)}} - 1 = \sqrt{\alpha_t\frac{1 - \bar\alpha_{t - 1}}{1 - \bar\alpha_t}} - 1 = \sqrt{1 - \frac{\beta_t}{1 - \bar\alpha_t}} - 1$$
+
+# Low temperature limit
+
+$$S(x_t|T) = \log Z(x_t|T) + \frac{U(x_t|T)}{T}$$
+$$S(T) = \mathbb{E}_{x_p(x_t|T)} S(x_t|T)$$
+
+$$p(x_0 = x^{(k)}|x_t, T) =
+\frac{p(x_t|x_0 = x^{(k)}, T)}{\frac{1}{N}\sum\limits_{i = 1}^N p(x_t|x_0 = x^{(i)}, T)} =
+\frac{\exp\left(-\frac{||x_t - x^{(k)}||^2}{2T}\right)}{\frac{1}{N}\sum\limits_{i = 1}^N \exp\left(-\frac{||x_t - x^{(i)}||^2}{2T}\right)}$$
+
+$$x_t = x^{(m)} + \sqrt{T}\xi$$
+$$\log Z(x_t, T) =
+\log\sum\limits_{i = 1}^N \exp\left(-\frac{||x_t - x^{(i)}||^2}{2T}\right) -\log N =
+-\frac{||\xi||^2}{2} + \log\left( 1 + \sum\limits_{i \ne m} \exp\left( -\frac{||x^{(i)} - x^{(m)} + \xi\sqrt{T}||^2}{2T} + \frac{||\xi||^2}{2} \right) \right) - \log N =$$
+$$-\frac{||\xi||}{2} + \log\left(1 + \sum\limits_{i \ne m} \exp\left(-\frac{||x^{(i)} - x^{(m)}||^2}{2T}\right)\exp\left(\frac{(x^{(m)} - x^{(i)})\cdot\xi}{\sqrt{T}}\right)\right) - \log N$$

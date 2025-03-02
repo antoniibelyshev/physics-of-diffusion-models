@@ -67,7 +67,7 @@ def compute_fid(mu1: ArrayT, sigma1: ArrayT, mu2: ArrayT, sigma2: ArrayT) -> flo
     cov_sqrt = sqrtm(sigma1 @ sigma2 + 1e-7)
     if np.iscomplexobj(cov_sqrt):
         cov_sqrt = cov_sqrt.real
-    cov_diff_term = np.trace(sigma1 + sigma2 - 2 * cov_sqrt).mean()
+    cov_diff_term = np.trace(sigma1 + sigma2 - 2 * cov_sqrt)
     return mean_diff_term + cov_diff_term # type: ignore
 
 

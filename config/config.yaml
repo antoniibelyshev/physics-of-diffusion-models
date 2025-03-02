@@ -19,8 +19,8 @@ ddpm:
 
 ddpm_training:
   batch_size: 128
-  total_iters: 50000
-  learning_rate: 2e-4
+  total_iters: 100000
+  learning_rate: 1e-4
   weight_decay: 1e-2
 
 gan:
@@ -62,7 +62,7 @@ sample:
   step_type: ddim
   noise_schedule_type: linear_beta
   track_ll: False
-  track_states: False
+  track_states: True
 
 forward_stats:
   n_samples: 1000
@@ -99,12 +99,13 @@ fid:
     - cosine
     - entropy_u
   sampling_noise_schedule_types:
-    - linear_beta
-    - cosine
-    - entropy_u
+    # - linear_beta
+    # - cosine
+    # - entropy_u
+    - original
   step_types:
     - ddpm
     - ddim
   sample: True
   train: True
-  save_imgs: False
+  save_imgs: True
