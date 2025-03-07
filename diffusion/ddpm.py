@@ -76,7 +76,7 @@ class DDPMTrue(DDPM):
 
 class DDPMDiffusers(DDPM):
     MODEL_IDS = {
-        "cifar10": "google/ddpm-cifar10-32",
+        "cifar10": "./checkpoints/ddpm_ema_cifar10",
     }
 
     def __init__(self, config: Config) -> None:
