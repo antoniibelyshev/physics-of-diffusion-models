@@ -30,11 +30,19 @@ class DataConfig(BaseModel):
 
 
 class DDPMConfig(BaseModel):
+    DIFFUSERS_MODEL_IDS = {
+        "cifar10": "google/ddpm-cifar10-32",
+    }
+
     model_name: str = Field(..., description="Name of the model architecture")
     parametrization: str = Field(..., description="Parametrization of the model")
     dim: int = Field(..., description="Base number of channels in the Unet")
     dim_mults: list[int] = Field(..., description="Base channel multipliers in the Unet")
     use_lrelu: bool = Field(..., description="Whether to use LeakyReLU instead of ReLU")
+
+    def get_diffusers_model_id(self, dataset_name: str) -> str:
+        assert self.model_name == "diffusers"
+        return self.DIFFUSERS_MODEL_IDS[dataset_name]
 
 
 class DDPMTrainingConfig(BaseModel):

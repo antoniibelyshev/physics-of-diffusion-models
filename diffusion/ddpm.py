@@ -1,7 +1,7 @@
-from torch import nn, Tensor, load, searchsorted, clip, where, abs, from_numpy
-from diffusers import DDPMPipeline
+from torch import nn, Tensor, load, searchsorted, clip
 from typing import Callable
 
+from utils import get_diffusers_pipeline
 from .diffusion_dynamic import DiffusionDynamic
 from config import Config
 from utils import get_data_tensor, get_unet
@@ -75,29 +75,13 @@ class DDPMTrue(DDPM):
 
 
 class DDPMDiffusers(DDPM):
-    MODEL_IDS = {
-        "cifar10": "google/ddpm-cifar10-32",
-    }
-
     def __init__(self, config: Config) -> None:
         config.ddpm.parametrization = "eps"
         super().__init__(config)
 
-        pipeline = DDPMPipeline.from_pretrained(self.MODEL_IDS[config.data.dataset_name]) # type: ignore
-        self.unet = pipeline.unet
-        alpha_bar = pipeline.scheduler.alphas_cumprod
-        log_temp = (1 - alpha_bar).log() - alpha_bar.log()
-        self.tau_to_t = self.get_tau_to_t(log_temp.cuda())
-
-    def get_tau_to_t(self, model_log_temp: Tensor) -> Callable[[Tensor], Tensor]:
-        def tau_to_t(tau: Tensor) -> Tensor:
-            log_temp = self.dynamic.get_temp(tau).squeeze().log()
-            idx = clip(searchsorted(model_log_temp, log_temp), 1, len(model_log_temp) - 1)
-            left_temp = model_log_temp[idx - 1]
-            right_temp = model_log_temp[idx]
-            return (idx - (right_temp - log_temp) / (right_temp - left_temp)).reshape(-1) # type: ignore
-
-        return tau_to_t
+        pipeline = get_diffusers_pipeline(config)
+        self.unet = pipeline.unet # type: ignore
+        self.n_steps = len(pipeline.scheduler.timestamps) # type: ignore
 
     def forward(self, xt: Tensor, tau: Tensor) -> Tensor:
-        return self.unet(xt, self.tau_to_t(tau)).sample # type: ignore
+        return self.unet(xt, tau * self.n_steps).sample # type: ignore

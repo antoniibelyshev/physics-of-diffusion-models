@@ -6,7 +6,7 @@ from typing import Optional
 from abc import ABC, abstractmethod
 
 from config import Config
-from utils import norm_sqr, get_cdf, get_inv_cdf
+from utils import norm_sqr, interp1d_tensor_fun, get_diffusers_pipeline
 
 
 class NoiseScheduler(nn.Module, ABC):
@@ -31,6 +31,8 @@ class NoiseScheduler(nn.Module, ABC):
             return CosineNoiseScheduler(config)
         elif noise_schedule_type.startswith("entropy"):
             return EntropyNoiseScheduler(config, noise_schedule_type)
+        elif noise_schedule_type == "from_diffusers":
+            return FromDiffusersNoiseScheduler(config)
         else:
             raise ValueError(f"Unknown schedule type: {config.diffusion.noise_schedule_type}")
 
@@ -67,21 +69,42 @@ class CosineNoiseScheduler(NoiseScheduler):
         return ((log_temp * 0.5).exp().atan() - self.shift) / self.scale  # type: ignore
 
 
-class EntropyNoiseScheduler(NoiseScheduler):
-    def __init__(self, config: Config, noise_schedule_type: str):
+class InterpolatedDiscreteTimeNoiseScheduler(NoiseScheduler):
+    def __init__(self, config: Config, timestamps: Tensor, temp: Tensor):
         super().__init__()
 
-        stats = np.load(config.get_noise_schedule_stats_path(noise_schedule_type))
-        temp = stats["temp"]
-        log_temp = np.log(temp)
-        heat_capacity = stats["heat_capacity"]
-        self._forward, self._get_tau = get_inv_cdf(log_temp, heat_capacity), get_cdf(log_temp, heat_capacity)
+        self._get_log_temp = interp1d_tensor_fun(timestamps.numpy(), temp.log().numpy())
+        self._get_tau = interp1d_tensor_fun(temp.log().numpy(), timestamps.numpy())
 
     def forward(self, tau: Tensor) -> Tensor:
-        return self._forward(tau)
+        return self._get_log_temp(tau)
 
     def get_tau(self, log_temp: Tensor) -> Tensor:
         return self._get_tau(log_temp)
+
+
+class EntropyNoiseScheduler(InterpolatedDiscreteTimeNoiseScheduler):
+    def __init__(self, config: Config, noise_schedule_type: str):
+        stats = np.load(config.get_noise_schedule_stats_path(noise_schedule_type))
+        temp = stats["temp"]
+        entropy = stats["entropy"]
+        timestamps = entropy - entropy.min()
+        timestamps /= timestamps.max()
+
+        super().__init__(config, timestamps, temp)
+
+
+class FromDiffusersNoiseScheduler(InterpolatedDiscreteTimeNoiseScheduler):
+    def __init__(self, config: Config):
+        scheduler = get_diffusers_pipeline(config).scheduler # type: ignore
+        alpha_bar = scheduler.alphas_cumprod
+        log_temp = get_log_temp_from_alpha_bar(alpha_bar)
+
+        super().__init__(config, torch.linspace(0, 1, len(log_temp)), log_temp)
+
+
+def get_log_temp_from_alpha_bar(alpha_bar: Tensor) -> Tensor:
+    return (1 - alpha_bar).log() - alpha_bar.log() # type: ignore
 
 
 def get_alpha_bar_from_log_temp(log_temp: Tensor) -> Tensor:

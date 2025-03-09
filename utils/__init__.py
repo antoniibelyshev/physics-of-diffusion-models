@@ -20,10 +20,10 @@ from .utils import (
     replace_activations as replace_activations,
     batch_jacobian as batch_jacobian,
     get_unet as get_unet,
+    get_diffusers_pipeline as get_diffusers_pipeline,
     load_config as load_config,
     with_config as with_config,
-    get_cdf as get_cdf,
-    get_inv_cdf as get_inv_cdf,
+    interp1d_tensor_fun as interp1d_tensor_fun,
     get_default_device as get_default_device,
 )
 from .fid import (

@@ -1,4 +1,5 @@
 import torch
+from diffusers import DDPMPipeline
 from torch import nn, Tensor, from_numpy
 from torch.autograd.functional import jacobian
 from denoising_diffusion_pytorch import Unet # type: ignore
@@ -68,28 +69,8 @@ def batch_jacobian(func: Callable[[Tensor], Tensor], x: Tensor) -> Tensor:
     return jacobian(_func_sum, x).permute(1, 0, 2) # type: ignore
 
 
-# Smooth cdf
-
-ArrayT = NDArray[np.float32]
-
-
-def numpy_fun_to_tensor_fun(fun: Callable[[ArrayT], ArrayT]) -> Callable[[Tensor], Tensor]:
-    return lambda tensor: from_numpy(fun(tensor.cpu().numpy())).float().to(tensor.device)
-
-
-def compute_cdf(x: ArrayT, p: ArrayT) -> ArrayT:
-    cdf = np.cumsum(np.append(0, 0.5 * (p[1:] + p[:-1]) / (x[1:] - x[:-1])))
-    return cdf / cdf[-1] # type: ignore
-
-
-def get_cdf(x: ArrayT, p: ArrayT) -> Callable[[Tensor], Tensor]:
-    cdf = compute_cdf(x, p)
-    return numpy_fun_to_tensor_fun(interp1d(x, cdf, kind='linear', fill_value="extrapolate"))
-
-
-def get_inv_cdf(x: ArrayT, p: ArrayT) -> Callable[[Tensor], Tensor]:
-    cdf = compute_cdf(x, p)
-    return numpy_fun_to_tensor_fun(interp1d(cdf, x, kind='linear', fill_value="extrapolate"))
+def get_diffusers_pipeline(config: Config) -> DDPMPipeline:
+    return DDPMPipeline.from_pretrained(config.ddpm.get_diffusers_model_id(config.data.dataset_name)) # type: ignore
 
 
 # Config
@@ -165,3 +146,16 @@ def with_config(
 
 def get_default_device() -> str:
     return "cuda" if torch.cuda.is_available() else "cpu"
+
+
+ArrayT = NDArray[np.float32]
+
+
+def interp1d_tensor_fun(x: ArrayT, y: ArrayT) -> Callable[[Tensor], Tensor]:
+    interp1d_numpy_fun = interp1d(x, y, kind='linear', fill_value="extrapolate")
+    return lambda x_tensor: from_numpy(interp1d_numpy_fun(x_tensor.cpu().numpy())).float().to(x_tensor.device)
+
+
+def compute_cdf(x: ArrayT, non_normalized_p: ArrayT) -> ArrayT:
+    cdf = np.cumsum(np.append(0, 0.5 * (non_normalized_p[1:] + non_normalized_p[:-1]) / (x[1:] - x[:-1])))
+    return cdf / cdf[-1] # type: ignore
