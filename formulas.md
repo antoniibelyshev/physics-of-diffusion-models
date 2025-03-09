@@ -139,14 +139,50 @@ $$\sqrt{\frac{T(t - 1)}{T(t)}} - 1 = \sqrt{\alpha_t\frac{1 - \bar\alpha_{t - 1}}
 # Low temperature limit
 
 $$S(x_t|T) = \log Z(x_t|T) + \frac{U(x_t|T)}{T}$$
-$$S(T) = \mathbb{E}_{x_p(x_t|T)} S(x_t|T)$$
+$$S(T) = \mathbb{E}_{x_t \sim p(x_t|T)} S(x_t|T)$$
 
 $$p(x_0 = x^{(k)}|x_t, T) =
-\frac{p(x_t|x_0 = x^{(k)}, T)}{\frac{1}{N}\sum\limits_{i = 1}^N p(x_t|x_0 = x^{(i)}, T)} =
-\frac{\exp\left(-\frac{||x_t - x^{(k)}||^2}{2T}\right)}{\frac{1}{N}\sum\limits_{i = 1}^N \exp\left(-\frac{||x_t - x^{(i)}||^2}{2T}\right)}$$
+\frac{p(x_t|x_0 = x^{(k)}, T)}{\sum\limits_{i = 1}^N p(x_t|x_0 = x^{(i)}, T)} =
+\frac{\exp\left(-\frac{||x_t - x^{(k)}||^2}{2T}\right)}{\sum\limits_{i = 1}^N \exp\left(-\frac{||x_t - x^{(i)}||^2}{2T}\right)}$$
 
 $$x_t = x^{(m)} + \sqrt{T}\xi$$
 $$\log Z(x_t, T) =
-\log\sum\limits_{i = 1}^N \exp\left(-\frac{||x_t - x^{(i)}||^2}{2T}\right) -\log N =
--\frac{||\xi||^2}{2} + \log\left( 1 + \sum\limits_{i \ne m} \exp\left( -\frac{||x^{(i)} - x^{(m)} + \xi\sqrt{T}||^2}{2T} + \frac{||\xi||^2}{2} \right) \right) - \log N =$$
-$$-\frac{||\xi||}{2} + \log\left(1 + \sum\limits_{i \ne m} \exp\left(-\frac{||x^{(i)} - x^{(m)}||^2}{2T}\right)\exp\left(\frac{(x^{(m)} - x^{(i)})\cdot\xi}{\sqrt{T}}\right)\right) - \log N$$
+\log\sum\limits_{i = 1}^N \exp\left(-\frac{||x_t - x^{(i)}||^2}{2T}\right)=
+-\frac{||\xi||^2}{2} + \log\left( 1 + \sum\limits_{i \ne m} \exp\left( -\frac{||x^{(i)} - x^{(m)} + \xi\sqrt{T}||^2}{2T} + \frac{||\xi||^2}{2} \right) \right) =$$
+$$-\frac{||\xi||^2}{2} + \log\left(1 + \sum\limits_{i \ne m} \exp\left(-\frac{||x^{(i)} - x^{(m)}||^2}{2T}\right)\exp\left(\frac{(x^{(m)} - x^{(i)})\cdot\xi}{\sqrt{T}}\right)\right)$$
+
+$$\mathbb{E}_{\eta\sim\mathcal{N}(\mu, \sigma^2)}\log (1 + \exp(\eta)) \approx
+\int\limits_0^\infty \mathcal{N}(\eta|\mu, \sigma^2)\eta\mathrm{d}\eta =
+\sigma\int\limits_{-\mu / \sigma}^\infty \frac{1}{\sqrt{2\pi}} \exp(-\zeta^2 / 2)\zeta\mathrm{d}\zeta =$$
+$$[\text{assuming } \mu < 0, \text{ denoting } z = \zeta^2 / 2] =
+\frac{\sigma}{\sqrt{2\pi}}\int\limits_{\mu^2 / (2\sigma^2)}^\infty e^{-z}\mathrm{d}z =
+\frac{\sigma}{\sqrt{2\pi}} \exp(-\mu^2 / (2\sigma^2))$$
+
+$$s(X, T) =
+\mathbb{E}_{\xi\sim\mathcal{N}(0, I)} \log\left( 1 + \sum\limits_{i = 1, i\ne m}^N \exp\left( -\frac{||x^{(i)} - x^{(m)}||^2}{2T} + \frac{(x^{(i)} - x^{(m)})\cdot\xi}{\sqrt{T}} \right) \right)$$
+
+Assume that either the sum is very small, or it is dominated by the term with the lowest value of $||x^{(i)} - x^{(m)}||$. Then denote
+
+$$j = \arg \min\limits_{i} ||x^{(i)} - x^{(m)}||,\
+\delta = ||x^{(j)} - x^{(m)}||,\
+\eta = -\frac{\delta^2}{2T} + \frac{(x^{(i)} - x^{(m)})\cdot\xi}{\sqrt{T}}$$
+$$\eta \sim\mathcal{N}\left( -\frac{\delta^2}{2T}, \frac{\delta^2}{T} \right)$$
+
+$$s(X, T) \approx \mathbb{E}_\eta \log(1 + \exp(\eta)) \approx
+\frac{\delta}{\sqrt{2\pi T}} \exp(-\delta^2 / (8T))$$
+
+When $N \to \infty$
+$$P(\delta > r) \approx
+(1 - V_dr^d\phi\left(x^{(m)}\right))^N \approx
+\exp(-V_dr^d\phi\left(x^{(m)}\right)N)$$
+$$p(\delta) = cd\delta^{d - 1}\exp(-c\delta^d),\
+c = V_d\phi\left(x^{(m)}\right)N$$
+Where $V_d$ is a volume of a unit ball in $\mathbb{R}^d$, $\phi$ is a population distribution.
+
+$$\mathbb{E}_X s(X, T) \approx
+\mathbb{E}_{x^{(m)}}\mathbb{E}_{\delta \sim p(\delta)} \frac{\delta}{\sqrt{2\pi}}\exp(-\delta^2 / (8T)) \approx \left[\delta \approx \sqrt{T} \ll \frac{1}{c^{(1/d)}}\right] \approx$$
+$$\mathbb{E}_{x^{(m)}}\int\limits_0^\infty \frac{cd\delta^d}{\sqrt{2\pi}}\exp(-\delta^2 / (8T))\mathrm{d}\delta =
+\left[ \Gamma(z) = 2c^z \int\limits_0^\infty t^{2z - 1}\exp(-ct^2)\mathrm{d}t \right] =
+\mathbb{E}_{x^{(m)}}\frac{cd}{\sqrt{2\pi}}\frac{\Gamma((d + 1) / 2)}{2}(8T)^{(d + 1) / 2} =$$
+$$[\text{substituting the expression for } c] =
+\mathbb{E}_{x^{(m)}}\left(\phi\left(x^{(m)}\right)\right) \frac{\pi^{d / 2}d}{2\sqrt{2\pi}}N(8T)^{(d + 1) / 2}$$

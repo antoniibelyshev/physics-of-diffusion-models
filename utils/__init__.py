@@ -29,8 +29,9 @@ from .utils import (
 from .fid import (
     extract_features_statistics as extract_features_statistics,
     compute_fid as compute_fid,
-    get_compute_fid as get_compute_fid,
+    # get_compute_fid as get_compute_fid,
 )
+from .fid_alternative import get_compute_fid as get_compute_fid
 from .lenet import (
     LeNet as LeNet,
     train_lenet as train_lenet,
