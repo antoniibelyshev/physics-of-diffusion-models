@@ -81,7 +81,7 @@ class DDPMDiffusers(DDPM):
 
         pipeline = get_diffusers_pipeline(config)
         self.unet = pipeline.unet # type: ignore
-        self.n_steps = len(pipeline.scheduler.timestamps) # type: ignore
+        self.n_steps = len(pipeline.scheduler.timesteps) # type: ignore
 
     def forward(self, xt: Tensor, tau: Tensor) -> Tensor:
         return self.unet(xt, tau * self.n_steps).sample # type: ignore

@@ -30,8 +30,9 @@ class DataConfig(BaseModel):
 
 
 class DDPMConfig(BaseModel):
-    DIFFUSERS_MODEL_IDS = {
-        "cifar10": "google/ddpm-cifar10-32",
+    DIFFUSERS_MODEL_IDS: dict[str, str] = {
+        # "cifar10": "google/ddpm-cifar10-32",
+        "cifar10": "./checkpoints/ddpm_ema_cifar10",
     }
 
     model_name: str = Field(..., description="Name of the model architecture")
@@ -118,6 +119,7 @@ class FIDConfig(BaseModel):
 
     @property
     def n_samples(self) -> int:
+        return 50000
         return 10000 if self.train else 60000
 
 

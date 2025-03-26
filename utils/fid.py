@@ -6,6 +6,7 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.linalg import sqrtm # type: ignore
 from typing import Callable
+from tqdm import tqdm
 
 from config import Config
 from .data import get_data_tensor
@@ -48,13 +49,13 @@ ArrayT = NDArray[np.float32]
 def extract_features_statistics(
         dataset: Tensor,
         feature_extractor: nn.Module,
-        batch_size: int = 500,
+        batch_size: int = 100,
         device: str = 'cuda'
 ) -> tuple[ArrayT, ArrayT]:
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False) # type: ignore
     all_features = []
     with torch.no_grad():
-        for data in dataloader:
+        for data in tqdm(dataloader):
             data = data.to(device)
             features = feature_extractor(data)
             all_features.append(features)

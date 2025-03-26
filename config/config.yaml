@@ -1,5 +1,5 @@
 diffusion:
-  noise_schedule_type: entropy_u
+  noise_schedule_type: from_diffusers
   min_temp: 1e-4
   max_temp: 1e4
 
@@ -8,7 +8,7 @@ data:
 
 ddpm:
   model_name: diffusers
-  parametrization: x0
+  parametrization: eps
   dim: 64
   dim_mults:
     - 1
@@ -65,9 +65,9 @@ sample:
   track_states: True
 
 forward_stats:
-  n_samples: 1000
-  batch_size: 20
-  n_temps: 1000
+  n_samples: 5000
+  batch_size: 1000
+  n_temps: 40
   unbiased: False
 
 backward_stats:
@@ -75,18 +75,20 @@ backward_stats:
   batch_size: 20
 
 varied_dataset_stats:
-  n_samples: 1000
-  batch_size: 20
-  n_temps: 1000
+  n_samples: 5000
+  batch_size: 1000
+  n_temps: 40
   unbiased: False
   dataset_names:
-    - mnist
+    # - mnist
     - cifar10
-    - cifar100
-    - fashion_mnist
+    # - cifar100
+    # - fashion_mnist
   sample_fractions:
     - 1.0
+    - 0.4
     - 0.1
+    - 0.04
     - 0.01
 
 fid:
@@ -94,15 +96,19 @@ fid:
     - 10
     - 20
     - 30
+    - 50
+    - 100
   diffusion_noise_schedule_types:
-    - linear_beta
-    - cosine
-    - entropy_u
-  sampling_noise_schedule_types:
     # - linear_beta
     # - cosine
     # - entropy_u
-    - original
+    - from_diffusers
+  sampling_noise_schedule_types:
+    - entropy_u
+    - entropy_u_extrapolated
+    - linear_beta
+    - cosine
+    # - original
   step_types:
     # - ddpm
     - ddim

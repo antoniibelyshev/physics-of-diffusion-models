@@ -69,12 +69,15 @@ class CosineNoiseScheduler(NoiseScheduler):
         return ((log_temp * 0.5).exp().atan() - self.shift) / self.scale  # type: ignore
 
 
+ArrayT = np.typing.NDArray[np.float32]
+
+
 class InterpolatedDiscreteTimeNoiseScheduler(NoiseScheduler):
-    def __init__(self, config: Config, timestamps: Tensor, temp: Tensor):
+    def __init__(self, config: Config, timestamps: ArrayT, log_temp: ArrayT):
         super().__init__()
 
-        self._get_log_temp = interp1d_tensor_fun(timestamps.numpy(), temp.log().numpy())
-        self._get_tau = interp1d_tensor_fun(temp.log().numpy(), timestamps.numpy())
+        self._get_log_temp = interp1d_tensor_fun(timestamps, log_temp)
+        self._get_tau = interp1d_tensor_fun(log_temp, timestamps)
 
     def forward(self, tau: Tensor) -> Tensor:
         return self._get_log_temp(tau)
@@ -85,13 +88,42 @@ class InterpolatedDiscreteTimeNoiseScheduler(NoiseScheduler):
 
 class EntropyNoiseScheduler(InterpolatedDiscreteTimeNoiseScheduler):
     def __init__(self, config: Config, noise_schedule_type: str):
-        stats = np.load(config.get_noise_schedule_stats_path(noise_schedule_type))
+        extrapolated = noise_schedule_type.endswith("_extrapolated")
+        stats = np.load(config.get_noise_schedule_stats_path(noise_schedule_type[:-13] if extrapolated else noise_schedule_type))
         temp = stats["temp"]
         entropy = stats["entropy"]
+
+        if extrapolated:
+            tau = entropy - entropy.min()
+            tau /= tau.max()
+
+            tau1 = 0.2
+            tau2 = 0.8
+
+            left_mask = tau < tau1
+            left_temp = temp[left_mask]
+            left_entropy = entropy[left_mask]
+
+            right_mask = tau2 < tau
+            right_temp = temp[right_mask]
+            right_entropy = entropy[right_mask]
+
+            middle_mask = ~(left_mask | right_mask)
+            middle_temp = temp[middle_mask]
+            middle_entropy = entropy[middle_mask]
+
+            middle_X = np.stack([np.ones(middle_mask.sum()), np.log(middle_temp)], axis=1)
+            beta = np.linalg.inv((middle_X.T @ middle_X)) @ middle_X.T @ middle_entropy
+            t0 = 1e-2
+            e0 = np.array([[1, np.log(t0)]]) @ beta
+
+            temp = np.concatenate([np.exp(np.log(left_temp) - np.log(left_temp.max()) + np.log(t0)), right_temp])
+            entropy = np.concatenate([left_entropy - left_entropy.max() + e0, right_entropy])
+
         timestamps = entropy - entropy.min()
         timestamps /= timestamps.max()
 
-        super().__init__(config, timestamps, temp)
+        super().__init__(config, timestamps, np.log(np.clip(temp, 1e-20, np.inf)))
 
 
 class FromDiffusersNoiseScheduler(InterpolatedDiscreteTimeNoiseScheduler):
@@ -100,7 +132,7 @@ class FromDiffusersNoiseScheduler(InterpolatedDiscreteTimeNoiseScheduler):
         alpha_bar = scheduler.alphas_cumprod
         log_temp = get_log_temp_from_alpha_bar(alpha_bar)
 
-        super().__init__(config, torch.linspace(0, 1, len(log_temp)), log_temp)
+        super().__init__(config, np.linspace(0, 1, len(log_temp)), log_temp.numpy())
 
 
 def get_log_temp_from_alpha_bar(alpha_bar: Tensor) -> Tensor:
