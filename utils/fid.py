@@ -9,7 +9,7 @@ from .data import get_data_tensor
 from .lenet import LeNet
 from .data import to_uint8
 
-EPS = 0
+EPS = 1e-10
 
 
 class TensorAsDataset(Dataset[Tensor]):

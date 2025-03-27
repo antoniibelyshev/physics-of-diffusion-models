@@ -103,7 +103,7 @@ class SampleConfig(BaseModel):
     batch_size: int = Field(..., description="Batch size for sampling")
     track_ll: bool = Field(..., description="Whether to track log likelihood")
     track_states: bool = Field(..., description="Whether to track states")
-    n_effective: int | None = Field(None, description="Effective size of dataset for noise schedule extrapolation")
+    n_effective: float = Field(0, description="Effective size of dataset for noise schedule extrapolation")
 
 
 class ForwardStatsConfig(BaseModel):

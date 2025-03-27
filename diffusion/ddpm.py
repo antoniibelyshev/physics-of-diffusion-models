@@ -83,7 +83,8 @@ class DDPMDiffusers(DDPM):
         super().__init__(config)
 
         pipeline = get_diffusers_pipeline(config)
-        self.unet = pipeline.unet # type: ignore
+        pipeline.unet.set_attn_processor(AttnProcessor2_0())  # type: ignore
+        self.unet = torch.compile(pipeline.unet, mode="reduce-overhead", fullgraph=True) # type: ignore
         self.n_steps = len(pipeline.scheduler.timesteps) # type: ignore
 
     def forward(self, xt: Tensor, tau: Tensor) -> Tensor:
