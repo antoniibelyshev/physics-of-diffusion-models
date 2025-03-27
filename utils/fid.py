@@ -1,38 +1,51 @@
 import torch
 from torch import Tensor, nn
-from torch.utils.data import DataLoader
+from torch.utils.data import Dataset, DataLoader
 from torchmetrics.image.fid import FrechetInceptionDistance
-import numpy as np
-from numpy.typing import NDArray
-from scipy.linalg import sqrtm # type: ignore
 from typing import Callable
 from tqdm import tqdm
-
 from config import Config
 from .data import get_data_tensor
 from .lenet import LeNet
 from .data import to_uint8
 
+EPS = 0
+
+
+class TensorAsDataset(Dataset[Tensor]):
+    def __init__(self, tensor: Tensor):
+        self.tensor = tensor
+
+    def __len__(self) -> int:
+        return len(self.tensor)
+
+    def __getitem__(self, index: int) -> Tensor:
+        return self.tensor[index]
+
+
+def sqrtm_torch(matrix: Tensor) -> Tensor:
+    u, s, v = torch.svd(matrix + EPS * torch.eye(matrix.shape[0], device=matrix.device))
+    return (u @ torch.diag(torch.sqrt(s)) @ v.T).real
+
 
 class InceptionV3FeatureExtractor(nn.Module):
     def __init__(self) -> None:
         super().__init__()
-
         self.fid = FrechetInceptionDistance(feature=2048).cuda()
 
     def forward(self, x: Tensor) -> Tensor:
-        return self.fid.inception(to_uint8(x)) # type: ignore
+        return self.fid.inception(to_uint8(x).cuda())  # type: ignore
 
 
 class LeNetFeatureExtractor(nn.Module):
     def __init__(self) -> None:
         super().__init__()
-
-        self.lenet = LeNet(1024, 10)
+        self.lenet = LeNet(1024, 10).cuda()
         self.lenet.load_state_dict(torch.load("checkpoints/lenet_mnist.pth"))
+        self.lenet.eval()
 
     def forward(self, x: Tensor) -> Tensor:
-        return self.lenet.features(x)
+        return self.lenet.features(x.cuda())
 
 
 def get_feature_extractor(config: Config) -> nn.Module:
@@ -43,38 +56,35 @@ def get_feature_extractor(config: Config) -> nn.Module:
             return InceptionV3FeatureExtractor()
 
 
-ArrayT = NDArray[np.float32]
-
-
 def extract_features_statistics(
         dataset: Tensor,
         feature_extractor: nn.Module,
         batch_size: int = 100,
         device: str = 'cuda'
-) -> tuple[ArrayT, ArrayT]:
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False) # type: ignore
+) -> tuple[Tensor, Tensor]:
+    dataloader = DataLoader(TensorAsDataset(dataset), batch_size=batch_size, shuffle=False)
     all_features = []
     with torch.no_grad():
         for data in tqdm(dataloader):
             data = data.to(device)
             features = feature_extractor(data)
             all_features.append(features)
-    features = torch.cat(all_features, dim=0).cpu().numpy()
-    return np.mean(features, axis=0), np.cov(features, rowvar=False)
+    features = torch.cat(all_features, dim=0)
+    mu = features.mean(dim=0)
+    sigma = torch.cov(features.T)
+    return mu, sigma
 
 
-def compute_fid(mu1: ArrayT, sigma1: ArrayT, mu2: ArrayT, sigma2: ArrayT) -> float:
-    mean_diff_term = ((mu1 - mu2) ** 2).sum()
-    cov_sqrt = sqrtm(sigma1 @ sigma2 + 1e-7)
-    if np.iscomplexobj(cov_sqrt):
-        cov_sqrt = cov_sqrt.real
-    cov_diff_term = np.trace(sigma1 + sigma2 - 2 * cov_sqrt)
-    return mean_diff_term + cov_diff_term # type: ignore
+def compute_fid(mu1: Tensor, sigma1: Tensor, mu2: Tensor, sigma2: Tensor) -> float:
+    mean_diff_term = torch.sum((mu1 - mu2) ** 2)
+    cov_sqrt = sqrtm_torch(sigma1 @ sigma2 + 1e-7 * torch.eye(sigma1.shape[0], device=sigma1.device))
+    cov_diff_term = torch.trace(sigma1 + sigma2 - 2 * cov_sqrt)
+    return (mean_diff_term + cov_diff_term).item()
 
 
 def get_compute_fid(config: Config) -> Callable[[Tensor], float]:
     reference = get_data_tensor(config, train=config.fid.train)
-    model = get_feature_extractor(config).cuda()
+    model = get_feature_extractor(config).cuda().eval()
     mu_train, sigma_train = extract_features_statistics(reference, model)
 
     def _compute_fid(data: Tensor) -> float:

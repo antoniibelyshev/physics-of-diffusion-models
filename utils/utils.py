@@ -9,7 +9,7 @@ import argparse
 from yaml import safe_load
 from typing import Callable, Optional, ParamSpec, TypeVar, Concatenate, Any
 from functools import wraps, partial
-from scipy import curve_fit  # type: ignore
+from scipy.optimize import curve_fit  # type: ignore
 
 from config import Config
 
