@@ -61,17 +61,15 @@ def get_range(*rng_args: int, verbose: bool) -> Iterable[int]:
 class DDPMSampler:
     def __init__(self, config: Config) -> None:
         device = get_default_device()
+        config.ddpm.noise_schedule_type = config.sample.ddpm_noise_schedule_type
         self.ddpm = DDPM.from_config(config, pretrained=True).to(device)
         self.ddpm.eval()
         self.device = device
-        self.n_steps = config.sample.n_steps
-        tau = torch.linspace(0, 1, self.n_steps, device=device).reshape(-1, 1)
-        if config.sample.noise_schedule_type.startswith("entropy"):
-            tau = torch.clip(tau, 1e-4, 1)
-        noise_scheduler = NoiseScheduler.from_config(config, noise_schedule_type=config.sample.noise_schedule_type)
+        tau = torch.linspace(0, 1, config.sample.n_steps, device=device).unsqueeze(1)
+        noise_scheduler = NoiseScheduler.from_config(
+            config, noise_schedule_type=config.sample.sample_noise_schedule_type
+        )
         self.log_temp = noise_scheduler(tau)
-        if config.sample.noise_schedule_type.startswith("entropy"):
-            self.log_temp = torch.clip(self.log_temp, -9.21, torch.inf)
         self.clean_log_temp = torch.full((1,), -torch.inf, device=device)
         self.n_samples = config.sample.n_samples
         self.batch_size = config.sample.batch_size

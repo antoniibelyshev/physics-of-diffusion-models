@@ -23,15 +23,15 @@ from .utils import (
     get_diffusers_pipeline as get_diffusers_pipeline,
     load_config as load_config,
     with_config as with_config,
-    interp1d_tensor_fun as interp1d_tensor_fun,
+    interp1d as interp1d,
     get_default_device as get_default_device,
+    fit_entropy_fun as fit_entropy_fun,
 )
 from .fid import (
     extract_features_statistics as extract_features_statistics,
     compute_fid as compute_fid,
     get_compute_fid as get_compute_fid,
 )
-# from .fid_alternative import get_compute_fid as get_compute_fid
 from .lenet import (
     LeNet as LeNet,
     train_lenet as train_lenet,

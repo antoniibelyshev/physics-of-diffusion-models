@@ -1,18 +1,17 @@
 import torch
 from diffusers import DDPMPipeline
-from torch import nn, Tensor, from_numpy
+from torch import nn, Tensor, searchsorted
 from torch.autograd.functional import jacobian
-from denoising_diffusion_pytorch import Unet # type: ignore
+from denoising_diffusion_pytorch import Unet  # type: ignore
 import numpy as np
 from numpy.typing import NDArray
-from scipy.interpolate import interp1d # type: ignore
 import argparse
 from yaml import safe_load
 from typing import Callable, Optional, ParamSpec, TypeVar, Concatenate, Any
-from functools import wraps
+from functools import wraps, partial
+from scipy import curve_fit  # type: ignore
 
 from config import Config
-
 
 T = TypeVar("T")
 V = TypeVar("V")
@@ -66,11 +65,11 @@ def batch_jacobian(func: Callable[[Tensor], Tensor], x: Tensor) -> Tensor:
     def _func_sum(x_: Tensor) -> Tensor:
         return func(x_).sum(dim=0)
 
-    return jacobian(_func_sum, x).permute(1, 0, 2) # type: ignore
+    return jacobian(_func_sum, x).permute(1, 0, 2)  # type: ignore
 
 
 def get_diffusers_pipeline(config: Config) -> DDPMPipeline:
-    return DDPMPipeline.from_pretrained(config.ddpm.get_diffusers_model_id(config.data.dataset_name)) # type: ignore
+    return DDPMPipeline.from_pretrained(config.ddpm.get_diffusers_model_id(config.data.dataset_name))  # type: ignore
 
 
 # Config
@@ -134,11 +133,14 @@ def with_config(
     if parse_args:
         script_args = parse_args_from_config(config)
         update_config_from_args(config, script_args)
+
     def decorator(func: Callable[Concatenate[Config, P], R]) -> Callable[P, R]:
         @wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             return func(config, *args, **kwargs)
+
         return wrapper
+
     return decorator
 
 
@@ -151,11 +153,28 @@ def get_default_device() -> str:
 ArrayT = NDArray[np.float32]
 
 
-def interp1d_tensor_fun(x: ArrayT, y: ArrayT) -> Callable[[Tensor], Tensor]:
-    interp1d_numpy_fun = interp1d(x, y, kind='linear', fill_value="extrapolate")
-    return lambda x_tensor: from_numpy(interp1d_numpy_fun(x_tensor.cpu().numpy())).float().to(x_tensor.device)
+def interp1d(x_vals: Tensor, y_vals: Tensor) -> Callable[[Tensor], Tensor]:
+    def interpolate(x: Tensor) -> Tensor:
+        left_idx = searchsorted(x_vals, x).clamp(0, len(x_vals) - 2)
+
+        xl, xr = x_vals[left_idx], x_vals[left_idx + 1]
+        yl, yr = y_vals[left_idx], y_vals[left_idx + 1]
+
+        wl = torch.where(xl == xr, 0.5, (xr - x) / (xr - xl))
+        return wl * yl + (1 - wl) * yr  # type: ignore
+
+    return interpolate
 
 
 def compute_cdf(x: ArrayT, non_normalized_p: ArrayT) -> ArrayT:
     cdf = np.cumsum(np.append(0, 0.5 * (non_normalized_p[1:] + non_normalized_p[:-1]) / (x[1:] - x[:-1])))
-    return cdf / cdf[-1] # type: ignore
+    return cdf / cdf[-1]  # type: ignore
+
+
+def entropy_fun_gompertz(temp: ArrayT, b: float, logn: float) -> ArrayT:
+    return logn * np.exp(-b / logn / temp) - logn  # type: ignore
+
+
+def fit_entropy_fun(temp: Tensor, entropy: Tensor, n: int, n_effective: int) -> Callable[[Tensor], Tensor]:
+    b, = curve_fit(partial(entropy_fun_gompertz, logn=np.log(n)), temp.numpy(), entropy.numpy(), p0=[1])
+    return partial(entropy_fun_gompertz, b=b, logn=np.log(n_effective))  # type: ignore

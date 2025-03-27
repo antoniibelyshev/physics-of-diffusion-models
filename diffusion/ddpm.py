@@ -1,5 +1,6 @@
-from torch import nn, Tensor, load, searchsorted, clip
-from typing import Callable
+from abc import abstractmethod
+
+from torch import nn, Tensor, load
 
 from utils import get_diffusers_pipeline
 from .diffusion_dynamic import DiffusionDynamic
@@ -35,6 +36,10 @@ class DDPM(nn.Module):
         tau = self.dynamic.noise_scheduler.get_tau(log_temp)
         return DDPMPredictions(self(xt, tau), xt, self.dynamic.get_alpha_bar(tau), self.parametrization)
 
+    @abstractmethod
+    def forward(self, xt: Tensor, tau: Tensor) -> Tensor:
+        pass
+
     @classmethod
     def from_config(cls, config: Config, pretrained: bool = False) -> "DDPM":
         match config.ddpm.model_name:
@@ -62,8 +67,6 @@ class DDPMUnet(DDPM):
 
 
 class DDPMTrue(DDPM):
-    train_data: Tensor
-
     def __init__(self, config: Config):
         assert config.ddpm.parametrization == "score"
         super().__init__(config)

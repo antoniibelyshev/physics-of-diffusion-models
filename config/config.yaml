@@ -1,5 +1,4 @@
 diffusion:
-  noise_schedule_type: from_diffusers
   min_temp: 1e-4
   max_temp: 1e4
 
@@ -9,6 +8,7 @@ data:
 ddpm:
   model_name: diffusers
   parametrization: eps
+  noise_schedule_type: from_diffusers
   dim: 64
   dim_mults:
     - 1
@@ -60,9 +60,11 @@ sample:
   n_samples: 100
   batch_size: 1000
   step_type: ddim
-  noise_schedule_type: linear_beta
+  ddpm_noise_schedule_type: from_diffusers
+  sample_noise_schedule_type: entropy_u_extrapolated
   track_ll: False
   track_states: True
+  n_effective: 5e4
 
 forward_stats:
   n_samples: 5000
@@ -92,26 +94,41 @@ varied_dataset_stats:
     - 0.01
 
 fid:
-  n_steps:
-    - 10
-    - 20
-    - 30
-    - 50
-    - 100
-  diffusion_noise_schedule_types:
-    # - linear_beta
-    # - cosine
-    # - entropy_u
-    - from_diffusers
-  sampling_noise_schedule_types:
-    - entropy_u
-    - entropy_u_extrapolated
-    - linear_beta
-    - cosine
-    # - original
-  step_types:
-    # - ddpm
-    - ddim
+  varied_parameters:
+    n_effective:
+      - 5e4
+      - 1e6
+      - 1e7
+      - 1e8
+      - 1e9
+      - 1e10
+      - 1e11
+      - 1e12
+      - 1e13
+      - 1e14
+      - 1e15
+      - 1e16
+
+#    n_steps:
+#      - 10
+#      - 20
+#      - 30
+#      - 50
+#      - 100
+#    ddpm_noise_schedule_type:
+      # - linear_beta
+      # - cosine
+      # - entropy_u
+#      - from_diffusers
+#    sample_noise_schedule_type:
+#      - entropy_u
+#      - entropy_u_extrapolated
+#      - linear_beta
+#      - cosine
+#      - original
+#    step_type:
+      # - ddpm
+#      - ddim
   sample: True
   train: True
   save_imgs: True

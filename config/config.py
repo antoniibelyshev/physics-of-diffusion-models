@@ -1,8 +1,8 @@
 from pydantic import BaseModel, Field
+from typing import Any
 
 
 class DiffusionConfig(BaseModel):
-    noise_schedule_type: str = Field(..., description="Type of the noise schedule")
     min_temp: float = Field(..., description="Minimum temperature")
     max_temp: float = Field(..., description="Maximum temperature")
 
@@ -28,6 +28,20 @@ class DataConfig(BaseModel):
             case _:
                 raise ValueError(f"Unknown dataset: {self.dataset_name}")
 
+    @property
+    def dataset_size(self) -> int:
+        match self.dataset_name:
+            case "mnist":
+                return 60000
+            case "cifar10":
+                return 50000
+            case "cifar100":
+                return 50000
+            case "fashion_mnist":
+                return 60000
+            case _:
+                raise ValueError(f"Unknown dataset: {self.dataset_name}")
+
 
 class DDPMConfig(BaseModel):
     DIFFUSERS_MODEL_IDS: dict[str, str] = {
@@ -37,6 +51,7 @@ class DDPMConfig(BaseModel):
 
     model_name: str = Field(..., description="Name of the model architecture")
     parametrization: str = Field(..., description="Parametrization of the model")
+    noise_schedule_type: str = Field(..., description="Type of noise schedule")
     dim: int = Field(..., description="Base number of channels in the Unet")
     dim_mults: list[int] = Field(..., description="Base channel multipliers in the Unet")
     use_lrelu: bool = Field(..., description="Whether to use LeakyReLU instead of ReLU")
@@ -82,11 +97,13 @@ class GANTrainingConfig(BaseModel):
 class SampleConfig(BaseModel):
     n_steps: int = Field(..., description="Number of steps for sampling")
     step_type: str = Field(..., description="Type of step")
-    noise_schedule_type: str = Field(..., description="Type of the noise schedule")
+    ddpm_noise_schedule_type: str = Field(..., description="Type of noise schedule in the model")
+    sample_noise_schedule_type: str = Field(..., description="Type of the noise schedule for sampling")
     n_samples: int = Field(..., description="Number of samples to generate")
     batch_size: int = Field(..., description="Batch size for sampling")
     track_ll: bool = Field(..., description="Whether to track log likelihood")
     track_states: bool = Field(..., description="Whether to track states")
+    n_effective: int | None = Field(None, description="Effective size of dataset for noise schedule extrapolation")
 
 
 class ForwardStatsConfig(BaseModel):
@@ -109,10 +126,11 @@ class VariedDatasetStatsConfig(ForwardStatsConfig):
 
 
 class FIDConfig(BaseModel):
-    n_steps: list[int] = Field(..., description="Number of steps for sampling")
-    diffusion_noise_schedule_types: list[str] = Field(..., description="Noise schedules of diffusion")
-    sampling_noise_schedule_types: list[str] = Field(..., description="Noise schedules for sampling")
-    step_types: list[str] = Field(..., description="Step types for sampling")
+    varied_parameters: dict[str, list[Any]] = Field(..., description="List of parameters to vary")
+    # n_steps: list[int] = Field(..., description="Number of steps for sampling")
+    # ddpm_noise_schedule_type: list[str] = Field(..., description="Type of noise schedules in the model")
+    # sample_noise_schedule_type: list[str] = Field(..., description="Type of noise schedules for sampling")
+    # step_type: list[str] = Field(..., description="Step types for sampling")
     train: bool = Field(..., description="Whether to use train sample for reference")
     sample: bool = Field(..., description="Whether to sample images or use sampled")
     save_imgs: bool = Field(..., description="Whether to save generated images")
@@ -143,7 +161,7 @@ class Config(BaseModel):
         return "_".join([
             self.data.dataset_name,
             self.ddpm.model_name,
-            self.diffusion.noise_schedule_type,
+            self.ddpm.noise_schedule_type,
             "schedule",
         ])
 
@@ -172,7 +190,7 @@ class Config(BaseModel):
         return f"results/{self.experiment_name}_backward_stats.npz"
 
     def get_noise_schedule_stats_path(self, noise_schedule_type: str) -> str:
-        assert noise_schedule_type in ["entropy", "entropy_u"]
+        assert noise_schedule_type.startswith("entropy")
         prev_unbiased = self.forward_stats.unbiased
         self.forward_stats.unbiased = noise_schedule_type.endswith("_u")
         stats_path = self.forward_stats_path
