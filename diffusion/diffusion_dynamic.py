@@ -4,6 +4,7 @@ from torch.nn.functional import sigmoid
 import numpy as np
 from typing import Optional
 from abc import ABC, abstractmethod
+import matplotlib.pyplot as plt
 
 from config import Config
 from utils import norm_sqr, interp1d, get_diffusers_pipeline, fit_entropy_fun
@@ -95,7 +96,11 @@ class EntropyNoiseScheduler(InterpolatedDiscreteTimeNoiseScheduler):
         if noise_schedule_type.endswith("_extrapolated"):
             n_effective = config.sample.n_effective or config.data.dataset_size
             entropy_fun = fit_entropy_fun(temp, entropy, config.data.dataset_size, n_effective)
-            temp = torch.logspace(temp[0], temp[-1], 1000)
+            # plt.scatter(temp, entropy)
+            # plt.plot(temp, entropy_fun(temp))
+            # plt.xscale("log")
+            # plt.savefig("entropy_extrapolation.pdf")
+            # plt.close()
             entropy = entropy_fun(temp)
 
         timestamps = entropy - entropy.min()
