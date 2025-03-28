@@ -157,10 +157,10 @@ def interp1d(x_vals: Tensor, y_vals: Tensor) -> Callable[[Tensor], Tensor]:
     def interpolate(x: Tensor) -> Tensor:
         device = x.device
         _x = x.to(x_vals.device)
-        left_idx = searchsorted(x_vals, _x).clamp(0, len(x_vals) - 2)
+        idx_right = searchsorted(x_vals, _x).clamp(1, len(x_vals) - 1)
 
-        xl, xr = x_vals[left_idx], x_vals[left_idx + 1]
-        yl, yr = y_vals[left_idx], y_vals[left_idx + 1]
+        xl, xr = x_vals[idx_right - 1], x_vals[idx_right]
+        yl, yr = y_vals[idx_right - 1], y_vals[idx_right]
 
         wl = torch.where(xl == xr, 0.5, (xr - _x) / (xr - xl))
         return (wl * yl + (1 - wl) * yr).to(device)  # type: ignore
@@ -177,6 +177,6 @@ def entropy_fun_gompertz(temp: ArrayT, b: float, logn: float) -> ArrayT:
     return logn * np.exp(-b / logn / temp) - logn  # type: ignore
 
 
-def fit_entropy_fun(temp: Tensor, entropy: Tensor, n: float, n_effective: float) -> Callable[[Tensor], Tensor]:
-    (b,), _ = curve_fit(partial(entropy_fun_gompertz, logn=np.log(n)), temp.numpy(), entropy.numpy(), p0=[1])
-    return partial(entropy_fun_gompertz, b=b, logn=np.log(n_effective))  # type: ignore
+def fit_entropy_fun(temp: Tensor, entropy: Tensor, log_n: float, log_n_effective: float) -> Callable[[Tensor], Tensor]:
+    (b,), _ = curve_fit(partial(entropy_fun_gompertz, logn=log_n), temp.numpy(), entropy.numpy(), p0=[1])
+    return partial(entropy_fun_gompertz, b=b, logn=log_n_effective)  # type: ignore

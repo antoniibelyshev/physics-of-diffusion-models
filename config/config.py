@@ -104,6 +104,7 @@ class SampleConfig(BaseModel):
     track_ll: bool = Field(..., description="Whether to track log likelihood")
     track_states: bool = Field(..., description="Whether to track states")
     log_n_effective: float = Field(0, description="Effective size of dataset for noise schedule extrapolation")
+    min_temp: float = Field(1e-4, description="Minimal temperature for sampling")
 
 
 class ForwardStatsConfig(BaseModel):
