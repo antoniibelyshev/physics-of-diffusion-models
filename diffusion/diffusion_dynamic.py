@@ -93,11 +93,31 @@ class EntropyNoiseScheduler(InterpolatedDiscreteTimeNoiseScheduler):
         temp = from_numpy(stats["temp"])
         entropy = from_numpy(stats["entropy"])
 
+
         if noise_schedule_type.endswith("_extrapolated"):
-            log_n_effective = config.sample.log_n_effective or np.log(config.data.dataset_size)
-            entropy_fun = fit_entropy_fun(temp, entropy, np.log(config.data.dataset_size), log_n_effective)
-            entropy = entropy_fun(temp)
-            temp = temp.clamp(min=config.sample.min_temp)
+            # gompertz
+            # log_n_effective = config.sample.log_n_effective or np.log(config.data.dataset_size)
+            # entropy_fun = fit_entropy_fun(temp, entropy, np.log(config.data.dataset_size), log_n_effective)
+            # entropy = entropy_fun(temp)
+            # temp = temp.clamp(min=config.sample.min_temp)
+
+            # linear middle
+            gamma = 0.2
+            left_mask = entropy / entropy.min() > 1 - gamma
+            left_log_temp = temp[left_mask].log()
+            left_entropy = entropy[left_mask]
+            right_mask = entropy / entropy.min() < gamma
+            right_log_temp = temp[right_mask].log()
+            right_entropy = entropy[right_mask]
+            mid_mask = ~(left_mask | right_mask)
+            mid_log_temp = temp[mid_mask].log()
+            mid_entropy = entropy[mid_mask]
+            mid_x = torch.stack([torch.ones_like(mid_log_temp), mid_log_temp], 1)
+            beta = (mid_x.T @ mid_x).inverse() @ mid_x.T @ mid_entropy
+            l_log_temp = np.log(config.sample.l_temp)
+            l_entropy = torch.tensor([[1., l_log_temp]]) @ beta
+            temp = torch.cat([left_log_temp - left_log_temp.max() + l_log_temp, right_log_temp]).exp()
+            entropy = torch.cat([left_entropy - left_entropy.max() + l_entropy, right_entropy])
 
         timestamps = entropy - entropy.min()
         timestamps /= timestamps.max()
