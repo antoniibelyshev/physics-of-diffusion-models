@@ -21,7 +21,7 @@ def main(config: Config) -> None:
     for params in parameter_combinations:
         params_dict = dict(zip(config.fid.varied_parameters, params))
         for name, value in params_dict.items():
-            setattr(config.sample, name, config.sample.model_fields[name].annotation(value))
+            setattr(config.sample, name, config.sample.model_fields[name].annotation(value))  # type: ignore
         config.sample.n_samples = config.fid.n_samples
         if config.fid.sample:
             samples = get_samples(config)

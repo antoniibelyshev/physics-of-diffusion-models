@@ -8,7 +8,7 @@ from numpy.typing import NDArray
 import argparse
 from yaml import safe_load
 from typing import Callable, Optional, ParamSpec, TypeVar, Concatenate, Any
-from functools import wraps, partial
+from functools import wraps
 from scipy.optimize import curve_fit  # type: ignore
 
 from config import Config
@@ -173,10 +173,35 @@ def compute_cdf(x: ArrayT, non_normalized_p: ArrayT) -> ArrayT:
     return cdf / cdf[-1]  # type: ignore
 
 
-def entropy_fun_gompertz(temp: ArrayT, b: float, logn: float) -> ArrayT:
-    return logn * np.exp(-b / logn / temp) - logn  # type: ignore
+def get_step_fun(step_fun_type: str) -> Callable[[ArrayT], ArrayT]:
+    match step_fun_type:
+        case "sigmoid":
+            return lambda x: x / (1 + x)
+        case "gompertz":
+            return lambda x: np.exp(-x)
+        case _:
+            raise NotImplementedError
 
 
-def fit_entropy_fun(temp: Tensor, entropy: Tensor, log_n: float, log_n_effective: float) -> Callable[[Tensor], Tensor]:
-    (b,), _ = curve_fit(partial(entropy_fun_gompertz, logn=log_n), temp.numpy(), entropy.numpy(), p0=[1])
-    return partial(entropy_fun_gompertz, b=b, logn=log_n_effective)  # type: ignore
+def entropy_fun(temp: ArrayT, b: float, logn: float, step_fun_type: str) -> ArrayT:
+    return logn * get_step_fun(step_fun_type)(b / logn / temp) - logn
+
+
+# def entropy_fun_gompertz(temp: ArrayT, b: float, logn: float) -> ArrayT:
+#     return logn * np.exp(-b / logn / temp) - logn  # type: ignore
+
+
+def fit_entropy_fun(
+        temp: Tensor,
+        entropy: Tensor,
+        logn: float,
+        logn_effective: float,
+        step_fun_type: str,
+    ) -> Callable[[ArrayT], ArrayT]:
+    (b, *_), *_ = curve_fit(
+        lambda temp_, b_: entropy_fun(temp_, b_, logn, step_fun_type),
+        temp.numpy(),
+        entropy.numpy(),
+        p0=[1],
+    )
+    return lambda temp_: entropy_fun(temp_, b, logn_effective, step_fun_type)

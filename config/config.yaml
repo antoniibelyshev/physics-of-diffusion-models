@@ -64,6 +64,7 @@ sample:
   sample_noise_schedule_type: entropy_u_extrapolated
   track_ll: False
   track_states: True
+  step_fun_type: sigmoid
 
 forward_stats:
   n_samples: 5000
@@ -94,31 +95,31 @@ varied_dataset_stats:
 
 fid:
   varied_parameters:
-    # log_n_effective:
-    #   - 1e2
-    #   - 2e2
-    #   - 3e2
-    #   - 4e2
-    #   - 5e2
-    #   - 6e2
-    #   - 7e2
-    #   - 8e2
-    l_temp:
-      - 4e-2
-      - 3e-2
-      - 2e-2
-      - 1e-2
-      - 8e-3
-      - 6e-3
-      - 4e-3
-      - 3e-3
-      - 2e-3
-      - 1e-3
-    min_temp:
-      - 1e-3
-      - 4e-4
-      - 1e-4
-      - 4e-5
+     logn_effective:
+       - 1e2
+       - 2e2
+       - 3e2
+       - 4e2
+       - 5e2
+       - 6e2
+       - 7e2
+       - 8e2
+#    l_temp:
+#      - 4e-2
+#      - 3e-2
+#      - 2e-2
+#      - 1e-2
+#      - 8e-3
+#      - 6e-3
+#      - 4e-3
+#      - 3e-3
+#      - 2e-3
+#      - 1e-3
+#    min_temp:
+#      - 1e-3
+#      - 4e-4
+#      - 1e-4
+#      - 4e-5
     #  n_steps:
     #    - 10
     #    - 20
