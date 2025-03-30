@@ -94,42 +94,51 @@ varied_dataset_stats:
 
 fid:
   varied_parameters:
-    log_n_effective:
-      - 1e2
-      - 2e2
-      - 3e2
-      - 4e2
-      - 5e2
-      - 6e2
-      - 7e2
-      - 8e2
-    min_temp:
-      - 1e-1
+    # log_n_effective:
+    #   - 1e2
+    #   - 2e2
+    #   - 3e2
+    #   - 4e2
+    #   - 5e2
+    #   - 6e2
+    #   - 7e2
+    #   - 8e2
+    l_temp:
       - 4e-2
+      - 3e-2
+      - 2e-2
       - 1e-2
-
-
-
-#    n_steps:
-#      - 10
-#      - 20
-#      - 30
-#      - 50
-#      - 100
-#    ddpm_noise_schedule_type:
-      # - linear_beta
-      # - cosine
-      # - entropy_u
-#      - from_diffusers
-#    sample_noise_schedule_type:
-#      - entropy_u
-#      - entropy_u_extrapolated
-#      - linear_beta
-#      - cosine
-#      - original
-#    step_type:
-      # - ddpm
-#      - ddim
+      - 8e-3
+      - 6e-3
+      - 4e-3
+      - 3e-3
+      - 2e-3
+      - 1e-3
+    min_temp:
+      - 1e-3
+      - 4e-4
+      - 1e-4
+      - 4e-5
+    #  n_steps:
+    #    - 10
+    #    - 20
+    #    - 30
+    #    - 50
+    #    - 100
+    #  ddpm_noise_schedule_type:
+    #     - linear_beta
+    #     - cosine
+    #     - entropy_u
+    #    - from_diffusers
+    # sample_noise_schedule_type:
+    #   - entropy_u
+    #   - entropy_u_extrapolated
+    #   - linear_beta
+    #   - cosine
+    #   - original
+    # step_type:
+    #   - ddpm
+    #   - ddim
   sample: True
   train: True
   save_imgs: True

@@ -1,6 +1,7 @@
 from abc import abstractmethod
 
-from torch import nn, Tensor, load
+from torch import nn, Tensor, load, compile
+from diffusers.models.attention_processor import AttnProcessor2_0
 
 from utils import get_diffusers_pipeline
 from .diffusion_dynamic import DiffusionDynamic
@@ -83,6 +84,8 @@ class DDPMDiffusers(DDPM):
         super().__init__(config)
 
         pipeline = get_diffusers_pipeline(config)
+        # pipeline.unet.set_attn_processor(AttnProcessor2_0())
+        # self.unet = compile(pipeline.unet, mode="reduce-overhead", fullgraph=True) # type: ignore
         self.unet = pipeline.unet # type: ignore
         self.n_steps = len(pipeline.scheduler.timesteps) # type: ignore
 

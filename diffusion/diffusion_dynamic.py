@@ -115,14 +115,14 @@ class EntropyNoiseScheduler(InterpolatedDiscreteTimeNoiseScheduler):
             mid_x = torch.stack([torch.ones_like(mid_log_temp), mid_log_temp], 1)
             beta = (mid_x.T @ mid_x).inverse() @ mid_x.T @ mid_entropy
             l_log_temp = np.log(config.sample.l_temp)
-            l_entropy = torch.tensor([[1., l_log_temp]]) @ beta
+            l_entropy = torch.tensor([[1., l_log_temp]]).float() @ beta
             temp = torch.cat([left_log_temp - left_log_temp.max() + l_log_temp, right_log_temp]).exp()
             entropy = torch.cat([left_entropy - left_entropy.max() + l_entropy, right_entropy])
 
         timestamps = entropy - entropy.min()
         timestamps /= timestamps.max()
 
-        super().__init__(timestamps, temp.clip(min=1e-20).log())
+        super().__init__(timestamps, temp.clip(min=1e-4).log())
 
 
 class FromDiffusersNoiseScheduler(InterpolatedDiscreteTimeNoiseScheduler):

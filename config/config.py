@@ -194,7 +194,7 @@ class Config(BaseModel):
     def get_noise_schedule_stats_path(self, noise_schedule_type: str) -> str:
         assert noise_schedule_type.startswith("entropy")
         prev_unbiased = self.forward_stats.unbiased
-        self.forward_stats.unbiased = noise_schedule_type.endswith("_u")
+        self.forward_stats.unbiased = "_u" in noise_schedule_type
         stats_path = self.forward_stats_path
         self.forward_stats.unbiased = prev_unbiased
         return stats_path
