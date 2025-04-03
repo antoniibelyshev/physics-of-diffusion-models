@@ -104,7 +104,7 @@ class SampleConfig(BaseModel):
     track_ll: bool = Field(..., description="Whether to track log likelihood")
     track_states: bool = Field(..., description="Whether to track states")
     logn_effective: float = Field(0, description="Effective size of dataset for noise schedule extrapolation")
-    step_fun_type: str = Field(..., description="Type of step function for entropy extrapolation")
+    extrapolation_type: str = Field(..., description="Type of step function for entropy extrapolation")
     min_temp: float = Field(1e-4, description="Minimal temperature for sampling")
     l_temp: float = Field(1e-2, description="Left end of the extrapolation interval")
 

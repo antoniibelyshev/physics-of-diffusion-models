@@ -176,7 +176,7 @@ def compute_cdf(x: ArrayT, non_normalized_p: ArrayT) -> ArrayT:
 def get_step_fun(step_fun_type: str) -> Callable[[ArrayT], ArrayT]:
     match step_fun_type:
         case "sigmoid":
-            return lambda x: x / (1 + x)
+            return lambda x: 1 / (1 + x)
         case "gompertz":
             return lambda x: np.exp(-x)
         case _:
