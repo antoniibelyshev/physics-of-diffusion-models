@@ -1,7 +1,7 @@
 import torch
 from torch import Tensor
 from torch.utils.data import DataLoader, TensorDataset
-from torchvision.datasets import MNIST, CIFAR10, CIFAR100, FashionMNIST # type: ignore
+from torchvision.datasets import MNIST, CIFAR10, CIFAR100, FashionMNIST, ImageNet  # type: ignore
 from torchvision.transforms import Compose, Resize, ToTensor, Normalize # type: ignore
 from typing import Generator
 
@@ -14,6 +14,7 @@ class ImageDataset(TensorDataset):
         "cifar10": CIFAR10,
         "cifar100": CIFAR100,
         "fashion_mnist": FashionMNIST,
+        "image_net": ImageNet,
     }
 
     def __init__(self, dataset_name: str, image_size: tuple[int, ...], *, train: bool = True):
@@ -33,7 +34,7 @@ class ImageDataset(TensorDataset):
         super().__init__(torch.stack(images), torch.tensor(labels))
 
 
-def get_dataset(config: Config, *, train: bool = True) -> TensorDataset:
+def get_dataset(config: Config, train: bool = True) -> TensorDataset:
     dataset_name = config.data.dataset_name
     if dataset_name in ImageDataset.DATASET_CLASSES:
         obj_size = config.data.obj_size
@@ -44,14 +45,12 @@ def get_dataset(config: Config, *, train: bool = True) -> TensorDataset:
 def get_data_generator(
     dataset: TensorDataset,
     batch_size: int = 128,
-    num_workers: int = 0,
     shuffle: bool = True,
     drop_last: bool = True,
 ) -> Generator[tuple[Tensor, ...], None, None]:
     loader = DataLoader(
         dataset,
         batch_size = batch_size,
-        num_workers = num_workers,
         shuffle = shuffle,
         drop_last = drop_last
     )

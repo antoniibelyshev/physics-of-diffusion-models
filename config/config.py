@@ -25,6 +25,8 @@ class DataConfig(BaseModel):
                 return 3, 32, 32
             case "fashion_mnist":
                 return 1, 32, 32
+            case "image_net":
+                return 3, 64, 64
             case _:
                 raise ValueError(f"Unknown dataset: {self.dataset_name}")
 
@@ -47,6 +49,7 @@ class DDPMConfig(BaseModel):
     DIFFUSERS_MODEL_IDS: dict[str, str] = {
         # "cifar10": "google/ddpm-cifar10-32",
         "cifar10": "./checkpoints/ddpm_ema_cifar10",
+        "image_net": "google/ddpm-ema-imagenet-64",
     }
 
     model_name: str = Field(..., description="Name of the model architecture")

@@ -95,13 +95,13 @@ varied_dataset_stats:
 
 fid:
   varied_parameters:
-    logn_effective:
-      - 1e1
-      - 4e1
-      - 1e2
-      - 4e2
-      - 1e3
-      - 4e3
+    # logn_effective:
+    #   - 1e1
+    #   - 4e1
+    #   - 1e2
+    #   - 4e2
+    #   - 1e3
+    #   - 4e3
       # - 1e2
       # - 2e2
       # - 3e2
@@ -121,12 +121,12 @@ fid:
       - 3e-3
       - 2e-3
       - 1e-3
-    min_temp:
-      - 1e-2
-      - 4e-3
-      - 1e-3
-      - 4e-4
-      - 1e-4
+    # min_temp:
+    #   - 1e-2
+    #   - 4e-3
+    #   - 1e-3
+    #   - 4e-4
+    #   - 1e-4
     #  n_steps:
     #    - 10
     #    - 20

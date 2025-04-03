@@ -4,12 +4,9 @@ from torch.nn.functional import sigmoid
 import numpy as np
 from typing import Optional
 from abc import ABC, abstractmethod
-import matplotlib.pyplot as plt
 
 from config import Config
 from utils import norm_sqr, interp1d, get_diffusers_pipeline, fit_entropy_fun
-
-import matplotlib.pyplot as plt
 
 
 class NoiseScheduler(nn.Module, ABC):
@@ -112,8 +109,10 @@ class EntropyNoiseScheduler(InterpolatedDiscreteTimeNoiseScheduler):
                 beta = (mid_x.T @ mid_x).inverse() @ mid_x.T @ mid_entropy
                 l_log_temp = np.log(config.sample.l_temp)
                 l_entropy = torch.tensor([[1., l_log_temp]]).float() @ beta
-                temp = torch.cat([left_log_temp - left_log_temp.max() + l_log_temp, right_log_temp]).exp()
-                entropy = torch.cat([left_entropy - left_entropy.max() + l_entropy, right_entropy])
+                # temp = torch.cat([left_log_temp - left_log_temp.max() + l_log_temp, right_log_temp]).exp()
+                # entropy = torch.cat([left_entropy - left_entropy.max() + l_entropy, right_entropy])
+                temp = torch.cat([torch.full((1,), l_log_temp).float(), right_log_temp]).exp()
+                entropy = torch.cat([l_entropy, right_entropy])
             else:
                 logn_effective = config.sample.logn_effective or np.log(config.data.dataset_size)
                 step_fun_type = config.sample.extrapolation_type
