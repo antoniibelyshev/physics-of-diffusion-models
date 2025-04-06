@@ -12,7 +12,7 @@ class DiffusionConfig(BaseModel):
 
 
 class DataConfig(BaseModel):
-    OBJ_SIZES = {
+    OBJ_SIZES: dict[str, tuple[int, int, int]] = {
         "mnist": (1, 32, 32),
         "cifar10": (3, 32, 32),
         "cifar100": (3, 32, 32),
