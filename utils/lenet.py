@@ -2,7 +2,7 @@ import torch
 from torch import Tensor, optim
 from torch.nn import Module, ModuleList, Linear
 from torch.nn.functional import relu, cross_entropy
-from torch.utils.data import TensorDataset, DataLoader
+from torch.utils.data import Dataset, DataLoader
 from typing import Callable
 from tqdm import tqdm
 
@@ -81,8 +81,8 @@ def evaluate(
 
 def train_lenet(
     lenet: LeNet,
-    train_dataset: TensorDataset,
-    eval_dataset: TensorDataset,
+    train_dataset: Dataset[tuple[Tensor, Tensor]],
+    eval_dataset: Dataset[tuple[Tensor, Tensor]],
     batch_size: int = 64,
     learning_rate: float = 1e-3,
     epochs: int = 10,

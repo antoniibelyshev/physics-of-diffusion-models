@@ -1,7 +1,6 @@
 from tqdm import trange
 import torch
 from torch import Tensor
-from torch.amp import autocast
 import numpy as np
 from math import ceil
 from typing import Iterable
@@ -112,7 +111,7 @@ class DDPMSampler:
 
                 ll_lst.append(ll_lst[-1] - torch.logdet(batch_jacobian(next_x, xt.view(sample_shape[0], -1))).cpu())
 
-            with autocast("cuda", dtype=torch.float16):
+            with torch.amp.autocast("cuda", dtype=torch.float16):  # type: ignore
                 with torch.no_grad():
                     xt = self.step(xt, coeffs, self.ddpm.get_predictions(xt, log_temp))
 

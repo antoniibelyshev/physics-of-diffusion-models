@@ -1,7 +1,7 @@
 import torch
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
-from torchvision.datasets import MNIST, CIFAR10, CIFAR100, FashionMNIST, ImageNet, ImageFolder  # type: ignore
+from torchvision.datasets import MNIST, CIFAR10, CIFAR100, FashionMNIST, ImageNet, VisionDataset, ImageFolder  # type: ignore
 from torchvision.transforms import Compose, Resize, ToTensor, Lambda, Normalize # type: ignore
 from tqdm import tqdm
 from typing import Generator, Any
@@ -9,9 +9,17 @@ from typing import Generator, Any
 from config import Config
 
 
-class CelebA(ImageFolder):
+class CelebA:
     def __init__(self, root: str, *, train: bool, download: bool, **kwargs: Any) -> None:
-        super().__init__(root=root + "/celeba", **kwargs)
+        super().__init__()
+
+        self.dataset = ImageFolder(root=root + "/celeba", **kwargs)
+
+    def __len__(self) -> int:
+        return len(self.dataset)
+
+    def __getitem__(self, index: int) -> tuple[Tensor, int]:
+        return self.dataset[index]  # type: ignore
 
 
 class ImageDataset(Dataset[tuple[Tensor, Tensor]]):

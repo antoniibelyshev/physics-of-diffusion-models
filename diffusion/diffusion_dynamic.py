@@ -94,31 +94,24 @@ class EntropyNoiseScheduler(InterpolatedDiscreteTimeNoiseScheduler):
 
 
         if noise_schedule_type.endswith("_extrapolated"):
-            if config.sample.extrapolation_type == "linear_middle":
-                gamma = 0.2
-                left_mask = entropy / entropy.min() > 1 - gamma
-                left_log_temp = temp[left_mask].log()
-                left_entropy = entropy[left_mask]
-                right_mask = entropy / entropy.min() < gamma
-                right_log_temp = temp[right_mask].log()
-                right_entropy = entropy[right_mask]
-                mid_mask = ~(left_mask | right_mask)
-                mid_log_temp = temp[mid_mask].log()
-                mid_entropy = entropy[mid_mask]
-                mid_x = torch.stack([torch.ones_like(mid_log_temp), mid_log_temp], 1)
-                beta = (mid_x.T @ mid_x).inverse() @ mid_x.T @ mid_entropy
-                l_log_temp = np.log(config.sample.l_temp)
-                l_entropy = torch.tensor([[1., l_log_temp]]).float() @ beta
-                # temp = torch.cat([left_log_temp - left_log_temp.max() + l_log_temp, right_log_temp]).exp()
-                # entropy = torch.cat([left_entropy - left_entropy.max() + l_entropy, right_entropy])
-                temp = torch.cat([torch.full((1,), l_log_temp).float(), right_log_temp]).exp()
-                entropy = torch.cat([l_entropy, right_entropy])
-            else:
-                logn_effective = config.sample.logn_effective or np.log(config.data.dataset_size)
-                step_fun_type = config.sample.extrapolation_type
-                entropy_fun = fit_entropy_fun(temp, entropy, np.log(config.data.dataset_size), logn_effective, step_fun_type)
-                entropy = from_numpy(entropy_fun(temp.numpy())).float()
-                temp = temp.clamp(min=config.sample.min_temp)
+            gamma = 0.2
+            left_mask = entropy / entropy.min() > 1 - gamma
+            left_log_temp = temp[left_mask].log()
+            left_entropy = entropy[left_mask]
+            right_mask = entropy / entropy.min() < gamma
+            right_log_temp = temp[right_mask].log()
+            right_entropy = entropy[right_mask]
+            mid_mask = ~(left_mask | right_mask)
+            mid_log_temp = temp[mid_mask].log()
+            mid_entropy = entropy[mid_mask]
+            mid_x = torch.stack([torch.ones_like(mid_log_temp), mid_log_temp], 1)
+            beta = (mid_x.T @ mid_x).inverse() @ mid_x.T @ mid_entropy
+            l_log_temp = np.log(config.sample.min_temp)
+            l_entropy = torch.tensor([[1., l_log_temp]]).float() @ beta
+            # temp = torch.cat([left_log_temp - left_log_temp.max() + l_log_temp, right_log_temp]).exp()
+            # entropy = torch.cat([left_entropy - left_entropy.max() + l_entropy, right_entropy])
+            temp = torch.cat([torch.full((1,), l_log_temp).float(), right_log_temp]).exp()
+            entropy = torch.cat([l_entropy, right_entropy])
 
 
         timestamps = entropy - entropy.min()
@@ -157,8 +150,8 @@ class DiffusionDynamic(nn.Module):
     def get_alpha_bar(self, tau: Tensor) -> Tensor:
         return get_alpha_bar_from_log_temp(self.get_log_temp(tau))
 
-    def forward(self, x0: Tensor) -> tuple[Tensor, Tensor, Tensor]:
-        tau = torch.rand((len(x0),), device=x0.device)
+    def forward(self, x0: Tensor, tau: Optional[Tensor] = None) -> tuple[Tensor, Tensor, Tensor]:
+        tau = tau or torch.rand((len(x0),), device=x0.device)
         alpha_bar = self.get_alpha_bar(tau)
         eps = torch.randn_like(x0)
         xt = alpha_bar.sqrt() * x0 + eps * (1 - alpha_bar).sqrt()

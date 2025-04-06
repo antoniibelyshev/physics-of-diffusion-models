@@ -12,39 +12,20 @@ class DiffusionConfig(BaseModel):
 
 
 class DataConfig(BaseModel):
+    OBJ_SIZES = {
+        "mnist": (1, 32, 32),
+        "cifar10": (3, 32, 32),
+        "cifar100": (3, 32, 32),
+        "fashion_mnist": (1, 32, 32),
+        "image_net": (3, 64, 64),
+        "celeba": (3, 256, 256),
+    }
+
     dataset_name: str = Field(..., description="Name of the dataset")
 
     @property
-    def obj_size(self) -> tuple[int, ...]:
-        match self.dataset_name:
-            case "mnist":
-                return 1, 32, 32
-            case "cifar10":
-                return 3, 32, 32
-            case "cifar100":
-                return 3, 32, 32
-            case "fashion_mnist":
-                return 1, 32, 32
-            case "image_net":
-                return 3, 64, 64
-            case "celeba":
-                return 3, 256, 256
-            case _:
-                raise ValueError(f"Unknown dataset: {self.dataset_name}")
-
-    @property
-    def dataset_size(self) -> int:
-        match self.dataset_name:
-            case "mnist":
-                return 60000
-            case "cifar10":
-                return 50000
-            case "cifar100":
-                return 50000
-            case "fashion_mnist":
-                return 60000
-            case _:
-                raise ValueError(f"Unknown dataset: {self.dataset_name}")
+    def obj_size(self) -> tuple[int, int, int]:
+        return self.OBJ_SIZES[self.dataset_name]
 
 
 class DDPMConfig(BaseModel):
@@ -109,10 +90,7 @@ class SampleConfig(BaseModel):
     batch_size: int = Field(..., description="Batch size for sampling")
     track_ll: bool = Field(..., description="Whether to track log likelihood")
     track_states: bool = Field(..., description="Whether to track states")
-    logn_effective: float = Field(0, description="Effective size of dataset for noise schedule extrapolation")
-    extrapolation_type: str = Field(..., description="Type of step function for entropy extrapolation")
     min_temp: float = Field(1e-4, description="Minimal temperature for sampling")
-    l_temp: float = Field(1e-2, description="Left end of the extrapolation interval")
     precision: str = Field(..., description="Precision of the computations")
 
 
@@ -126,6 +104,11 @@ class ForwardStatsConfig(BaseModel):
 class BackwardStatsConfig(BaseModel):
     n_samples: int = Field(..., description="Number of samples to generate")
     batch_size: int = Field(..., description="Batch size for stats computation")
+
+
+class EmpiricalStatsConfig(BaseModel):
+    n_temps: int = Field(..., description="Number of temperatures")
+    n_steps_per_temp: int = Field(..., description="Number of loss accumulation steps per temperature level")
 
 
 class VariedDatasetStatsConfig(ForwardStatsConfig):
@@ -161,6 +144,7 @@ class Config(BaseModel):
     sample: SampleConfig = Field(..., description="Sample configuration")
     forward_stats: ForwardStatsConfig = Field(..., description="Forward statistics configuration")
     backward_stats: BackwardStatsConfig = Field(..., description="Backward statistics configuration")
+    empirical_stats: EmpiricalStatsConfig = Field(..., description="Empirical statistics configuration")
     varied_dataset_stats: VariedDatasetStatsConfig = Field(
         ..., description="Varied dataset statistics configuration"
     )
@@ -198,6 +182,10 @@ class Config(BaseModel):
     @property
     def backward_stats_path(self) -> str:
         return f"results/{self.experiment_name}_backward_stats.npz"
+
+    @property
+    def empirical_stats_path(self) -> str:
+        return f"results/{self.experiment_name}_empirical_stats.npz"
 
     def get_noise_schedule_stats_path(self, noise_schedule_type: str) -> str:
         assert noise_schedule_type.startswith("entropy")

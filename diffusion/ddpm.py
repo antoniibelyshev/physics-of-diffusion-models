@@ -79,7 +79,7 @@ class DDPMTrue(DDPM):
         return self.dynamic.get_true_score(xt, tau, self.train_data)
 
 
-def set_processor_recursively(module, processor_class):
+def set_processor_recursively(module: nn.Module, processor_class: type) -> None:
     for submodule in module.children():
         if hasattr(submodule, "set_processor"):
             submodule.set_processor(processor_class())
@@ -94,7 +94,7 @@ class DDPMDiffusers(DDPM):
 
         pipeline = get_diffusers_pipeline(config)
         # pipeline.unet.set_attn_processor(AttnProcessor2_0())
-        set_processor_recursively(pipeline.unet, AttnProcessor2_0)
+        set_processor_recursively(pipeline.unet, AttnProcessor2_0) # type: ignore
         torch.set_float32_matmul_precision('high')
         self.unet = compile(pipeline.unet, mode="reduce-overhead", fullgraph=True) # type: ignore
         # self.unet = pipeline.unet # type: ignore
