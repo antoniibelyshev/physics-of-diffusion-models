@@ -27,6 +27,8 @@ class DataConfig(BaseModel):
                 return 1, 32, 32
             case "image_net":
                 return 3, 64, 64
+            case "celeba":
+                return 3, 256, 256
             case _:
                 raise ValueError(f"Unknown dataset: {self.dataset_name}")
 
@@ -50,6 +52,7 @@ class DDPMConfig(BaseModel):
         # "cifar10": "google/ddpm-cifar10-32",
         "cifar10": "./checkpoints/ddpm_ema_cifar10",
         "image_net": "google/ddpm-ema-imagenet-64",
+        "celeba": "google/ddpm-celebahq-256",
     }
 
     model_name: str = Field(..., description="Name of the model architecture")
@@ -110,6 +113,7 @@ class SampleConfig(BaseModel):
     extrapolation_type: str = Field(..., description="Type of step function for entropy extrapolation")
     min_temp: float = Field(1e-4, description="Minimal temperature for sampling")
     l_temp: float = Field(1e-2, description="Left end of the extrapolation interval")
+    precision: str = Field(..., description="Precision of the computations")
 
 
 class ForwardStatsConfig(BaseModel):
@@ -143,7 +147,7 @@ class FIDConfig(BaseModel):
 
     @property
     def n_samples(self) -> int:
-        return 50000
+        return 30000
         return 10000 if self.train else 60000
 
 

@@ -1,26 +1,15 @@
 import torch
 from torch import Tensor, nn
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, TensorDataset, DataLoader
 from torchmetrics.image.fid import FrechetInceptionDistance
 from typing import Callable
 from tqdm import tqdm
 from config import Config
-from .data import get_data_tensor
+from .data import get_dataset
 from .lenet import LeNet
 from .data import to_uint8
 
 EPS = 1e-10
-
-
-class TensorAsDataset(Dataset[Tensor]):
-    def __init__(self, tensor: Tensor):
-        self.tensor = tensor
-
-    def __len__(self) -> int:
-        return len(self.tensor)
-
-    def __getitem__(self, index: int) -> Tensor:
-        return self.tensor[index]
 
 
 def sqrtm_torch(matrix: Tensor) -> Tensor:
@@ -57,15 +46,15 @@ def get_feature_extractor(config: Config) -> nn.Module:
 
 
 def extract_features_statistics(
-        dataset: Tensor,
+        dataset: Dataset[tuple[Tensor, ...]],
         feature_extractor: nn.Module,
         batch_size: int = 100,
         device: str = 'cuda'
 ) -> tuple[Tensor, Tensor]:
-    dataloader = DataLoader(TensorAsDataset(dataset), batch_size=batch_size, shuffle=False)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=8)
     all_features = []
     with torch.no_grad():
-        for data in tqdm(dataloader):
+        for data, *_ in tqdm(dataloader):
             data = data.to(device)
             features = feature_extractor(data)
             all_features.append(features)
@@ -83,12 +72,12 @@ def compute_fid(mu1: Tensor, sigma1: Tensor, mu2: Tensor, sigma2: Tensor) -> flo
 
 
 def get_compute_fid(config: Config) -> Callable[[Tensor], float]:
-    reference = get_data_tensor(config, train=config.fid.train)
+    reference = get_dataset(config, train=config.fid.train)
     model = get_feature_extractor(config).cuda().eval()
     mu_train, sigma_train = extract_features_statistics(reference, model)
 
     def _compute_fid(data: Tensor) -> float:
-        mu_eval, sigma_eval = extract_features_statistics(data, model)
+        mu_eval, sigma_eval = extract_features_statistics(TensorDataset(data), model)
         return compute_fid(mu_train, sigma_train, mu_eval, sigma_eval)
 
     return _compute_fid

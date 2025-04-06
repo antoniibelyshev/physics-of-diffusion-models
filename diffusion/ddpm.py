@@ -1,5 +1,6 @@
 from abc import abstractmethod
 
+import torch
 from torch import nn, Tensor, load, compile
 from diffusers.models.attention_processor import AttnProcessor2_0
 
@@ -78,6 +79,14 @@ class DDPMTrue(DDPM):
         return self.dynamic.get_true_score(xt, tau, self.train_data)
 
 
+def set_processor_recursively(module, processor_class):
+    for submodule in module.children():
+        if hasattr(submodule, "set_processor"):
+            submodule.set_processor(processor_class())
+        else:
+            set_processor_recursively(submodule, processor_class)
+
+
 class DDPMDiffusers(DDPM):
     def __init__(self, config: Config) -> None:
         config.ddpm.parametrization = "eps"
@@ -85,8 +94,10 @@ class DDPMDiffusers(DDPM):
 
         pipeline = get_diffusers_pipeline(config)
         # pipeline.unet.set_attn_processor(AttnProcessor2_0())
-        # self.unet = compile(pipeline.unet, mode="reduce-overhead", fullgraph=True) # type: ignore
-        self.unet = pipeline.unet # type: ignore
+        set_processor_recursively(pipeline.unet, AttnProcessor2_0)
+        torch.set_float32_matmul_precision('high')
+        self.unet = compile(pipeline.unet, mode="reduce-overhead", fullgraph=True) # type: ignore
+        # self.unet = pipeline.unet # type: ignore
         self.n_steps = len(pipeline.scheduler.timesteps) # type: ignore
 
     def forward(self, xt: Tensor, tau: Tensor) -> Tensor:

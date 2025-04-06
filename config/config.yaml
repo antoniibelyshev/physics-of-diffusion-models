@@ -3,7 +3,7 @@ diffusion:
   max_temp: 1e4
 
 data:
-  dataset_name: cifar10
+  dataset_name: celeba
 
 ddpm:
   model_name: diffusers
@@ -58,19 +58,21 @@ gan_training:
 sample:
   n_steps: 10
   n_samples: 100
-  batch_size: 1000
+  batch_size: 100
   step_type: ddim
   ddpm_noise_schedule_type: from_diffusers
   sample_noise_schedule_type: entropy_u_extrapolated
+  precision: half
   track_ll: False
   track_states: True
   extrapolation_type: linear_middle
+  l_temp: 1e-1
 
 forward_stats:
   n_samples: 5000
-  batch_size: 1000
+  batch_size: 100
   n_temps: 40
-  unbiased: False
+  unbiased: True
 
 backward_stats:
   n_samples: 1000
@@ -111,15 +113,16 @@ fid:
       # - 7e2
       # - 8e2
     l_temp:
+      - 1e-1
       - 4e-2
-      - 3e-2
-      - 2e-2
+      # - 3e-2
+      # - 2e-2
       - 1e-2
-      - 8e-3
-      - 6e-3
+      # - 8e-3
+      # - 6e-3
       - 4e-3
-      - 3e-3
-      - 2e-3
+      # - 3e-3
+      # - 2e-3
       - 1e-3
     # min_temp:
     #   - 1e-2
@@ -139,11 +142,12 @@ fid:
     #     - entropy_u
     #    - from_diffusers
     # sample_noise_schedule_type:
-    #   - entropy_u
-    #   - entropy_u_extrapolated
-    #   - linear_beta
-    #   - cosine
-    #   - original
+      # - entropy_u_extrapolated
+      # - entropy_u
+      # - linear_beta      
+      # - cosine
+      # - original
+      
     # step_type:
     #   - ddpm
     #   - ddim

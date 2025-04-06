@@ -1,6 +1,7 @@
 from tqdm import trange
 import torch
 from torch import Tensor
+from torch.amp import autocast
 import numpy as np
 from math import ceil
 from typing import Iterable
@@ -69,7 +70,7 @@ class DDPMSampler:
         noise_scheduler = NoiseScheduler.from_config(
             config, noise_schedule_type=config.sample.sample_noise_schedule_type
         )
-        self.log_temp = noise_scheduler(tau)
+        self.log_temp = noise_scheduler(tau).clip(max=np.log(1e4))
         self.clean_log_temp = torch.full((1,), -torch.inf, device=device)
         self.n_samples = config.sample.n_samples
         self.batch_size = config.sample.batch_size
@@ -111,8 +112,9 @@ class DDPMSampler:
 
                 ll_lst.append(ll_lst[-1] - torch.logdet(batch_jacobian(next_x, xt.view(sample_shape[0], -1))).cpu())
 
-            with torch.no_grad():
-                xt = self.step(xt, coeffs, self.ddpm.get_predictions(xt, log_temp))
+            with autocast("cuda", dtype=torch.float16):
+                with torch.no_grad():
+                    xt = self.step(xt, coeffs, self.ddpm.get_predictions(xt, log_temp))
 
         res = {"x": xt.cpu()}
         if states is not None:
