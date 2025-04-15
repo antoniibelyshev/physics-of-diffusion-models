@@ -76,6 +76,7 @@ def get_data_generator(
         batch_size = batch_size,
         shuffle = shuffle,
         drop_last = drop_last,
+        num_workers=8,
     )
 
     while True:

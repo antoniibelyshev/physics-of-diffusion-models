@@ -3,7 +3,7 @@ diffusion:
   max_temp: 1e4
 
 data:
-  dataset_name: celeba
+  dataset_name: cifar10
 
 ddpm:
   model_name: diffusers
@@ -24,12 +24,12 @@ ddpm_training:
   weight_decay: 1e-2
 
 sample:
-  n_steps: 10
-  n_samples: 100
+  n_steps: 100
+  n_samples: 10000
   batch_size: 100
   step_type: ddim
   ddpm_noise_schedule_type: from_diffusers
-  sample_noise_schedule_type: entropy_u_extrapolated
+  sample_noise_schedule_type: from_diffusers
   precision: half
   track_ll: False
   track_states: True
@@ -46,8 +46,9 @@ backward_stats:
   batch_size: 20
 
 empirical_stats:
-  n_temps: 100
+  n_temps: 10
   n_steps_per_temp: 100
+  batch_size: 100
 
 varied_dataset_stats:
   n_samples: 5000

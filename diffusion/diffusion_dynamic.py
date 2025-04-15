@@ -4,6 +4,7 @@ from torch.nn.functional import sigmoid
 import numpy as np
 from typing import Optional
 from abc import ABC, abstractmethod
+import matplotlib.pyplot as plt
 
 from config import Config
 from utils import norm_sqr, interp1d, get_diffusers_pipeline, fit_entropy_fun
@@ -113,6 +114,8 @@ class EntropyNoiseScheduler(InterpolatedDiscreteTimeNoiseScheduler):
             temp = torch.cat([torch.full((1,), l_log_temp).float(), right_log_temp]).exp()
             entropy = torch.cat([l_entropy, right_entropy])
 
+            plt.plot(temp, entropy)
+
 
         timestamps = entropy - entropy.min()
         timestamps /= timestamps.max()
@@ -151,7 +154,7 @@ class DiffusionDynamic(nn.Module):
         return get_alpha_bar_from_log_temp(self.get_log_temp(tau))
 
     def forward(self, x0: Tensor, tau: Optional[Tensor] = None) -> tuple[Tensor, Tensor, Tensor]:
-        tau = tau or torch.rand((len(x0),), device=x0.device)
+        tau = torch.rand((len(x0),), device=x0.device) if tau is None else tau
         alpha_bar = self.get_alpha_bar(tau)
         eps = torch.randn_like(x0)
         xt = alpha_bar.sqrt() * x0 + eps * (1 - alpha_bar).sqrt()

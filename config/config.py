@@ -83,6 +83,7 @@ class BackwardStatsConfig(BaseModel):
 class EmpiricalStatsConfig(BaseModel):
     n_temps: int = Field(..., description="Number of temperatures")
     n_steps_per_temp: int = Field(..., description="Number of loss accumulation steps per temperature level")
+    batch_size: int = Field(..., description="Batch size")
 
 
 class VariedDatasetStatsConfig(ForwardStatsConfig):

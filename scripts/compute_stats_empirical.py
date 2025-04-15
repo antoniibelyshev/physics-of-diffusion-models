@@ -1,15 +1,20 @@
 import torch
+from torch.utils.data import TensorDataset
 import numpy as np
+from tqdm import tqdm
 
-from utils import with_config, get_dataset, get_data_generator
+from utils import with_config, get_dataset, get_data_tensor, get_data_generator
 from diffusion import DDPM
 from config import Config
 
 
-@with_config()
+@with_config(parse_args=(__name__ == "__main__"))
+@torch.no_grad()
 def main(config: Config) -> None:
-    dataset = get_dataset(config)
-    data_generator = get_data_generator(dataset, batch_size=config.ddpm_training.batch_size)
+    # dataset = get_dataset(config)
+    # dataset = TensorDataset(get_data_tensor(config))
+    dataset = TensorDataset(torch.from_numpy(np.load(config.samples_path)["x"]))
+    data_generator = get_data_generator(dataset, batch_size=config.empirical_stats.batch_size)
     ddpm = DDPM.from_config(config, pretrained=True).cuda()
 
     temp_range = torch.logspace(
@@ -18,14 +23,22 @@ def main(config: Config) -> None:
         config.empirical_stats.n_temps,
     )
     d_entropy_d_log_temp = []
-    for temp in temp_range:
+    for temp in tqdm(temp_range):
         errors = []
-        tau = ddpm.dynamic.noise_scheduler.get_tau(temp.log()).cuda().repeat(config.ddpm_training.batch_size)
+        log_temp = temp.log().cuda()[None]
+        tau = ddpm.dynamic.noise_scheduler.get_tau(log_temp)
         for _ in range(config.empirical_stats.n_steps_per_temp):
-            x0 = next(data_generator)[0].cuda()
-            xt = ddpm.dynamic(x0, tau)
-            errors.append((ddpm.get_predictions(xt, tau).x0 - x0).square().sum(list(range(1, len(x0.shape)))).cpu())
+            x0 = next(data_generator)[0]
+            *_, xt = ddpm.dynamic(x0.cuda(), tau)
+            x0_pred = ddpm.get_predictions(xt, log_temp).x0.cpu()
+            errors.append((x0_pred - x0).square().sum(list(range(1, len(x0.shape)))))
 
         d_entropy_d_log_temp.append(0.5 * torch.cat(errors).mean() / temp)
+        print(d_entropy_d_log_temp[-1])
 
-    np.savez(config.empirical_stats_path, temp=temp_range.numpy(), d_entropy_d_log_temp=d_entropy_d_log_temp)
+    # np.savez(config.empirical_stats_path, temp=temp_range.numpy(), d_entropy_d_log_temp=torch.stack(d_entropy_d_log_temp).numpy())
+    np.savez("results/cifar10_empirical_stats.npz", temp=temp_range.numpy(), d_entropy_d_log_temp=torch.stack(d_entropy_d_log_temp).numpy())
+
+
+if __name__ == "__main__":
+    main()
