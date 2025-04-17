@@ -59,7 +59,7 @@ def compute_stats(
     _x0 = x0
     temp = temp.to(device)
     batch_stats: dict[str, list[Tensor]] = defaultdict(list)
-    for _ in trange(ceil(n_samples / batch_size), desc="Computing statistics..."):
+    for _ in trange(ceil(n_samples / batch_size), desc=f"Computing {'unbiased ' if unbiased else ''}statistics..."):
         if unbiased:
             idx = np.random.choice(range(len(x0)))
             traj_start = x0[torch.full((batch_size, 1), idx).long()]

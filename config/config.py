@@ -111,6 +111,14 @@ class FIDConfig(BaseModel):
 
 
 class Config(BaseModel):
+    FORWARD_STATS_TEMP_RANGE: dict[str, tuple[float, float]] = {
+        "mnist": (1e-2, 1e3),
+        "cifar10": (1e-1, 1e4),
+        "cifar100": (1e-1, 1e4),
+        "fashion_mnist": (1e-1, 1e4),
+        "celeba": (1e1, 1e6),
+    }
+
     diffusion: DiffusionConfig = Field(..., description="Diffusion configuration")
     data: DataConfig = Field(..., description="Data configuration")
     ddpm: DDPMConfig = Field(..., description="DDPM configuration")
@@ -172,3 +180,7 @@ class Config(BaseModel):
     @property
     def fid_results_path(self) -> str:
         return f"results/{self.data.dataset_name}_{'train' if self.fid.train else 'test'}_fid.csv"
+
+    @property
+    def forward_stats_temp_range(self) -> tuple[float, float]:
+        return self.FORWARD_STATS_TEMP_RANGE[self.data.dataset_name]

@@ -27,9 +27,9 @@ class ImageDataset(Dataset[tuple[Tensor, ...]]):
     DATASET_CLASSES = {
         "mnist": MNIST,
         "cifar10": CIFAR10,
-        "cifar100": CIFAR100,
-        "fashion_mnist": FashionMNIST,
-        "image_net": ImageNet,
+        # "cifar100": CIFAR100,
+        # "fashion_mnist": FashionMNIST,
+        # "image_net": ImageNet,
         "celeba": CelebA,
     }
 
@@ -40,7 +40,6 @@ class ImageDataset(Dataset[tuple[Tensor, ...]]):
         transform = Compose([
             Resize(image_size[1:]),
             ToTensor(),
-            # Lambda(lambda x: x.half()),
             *(() if dataset_name == "mnist" else (Normalize(mean=0.5, std=0.5),)),
         ])
         self.dataset = self.DATASET_CLASSES[dataset_name](
@@ -93,7 +92,7 @@ def get_data_generator(
 def get_data_tensor(config: Config, train: bool = True) -> Tensor:
     dataset = get_dataset(config, train=train)
     dataloader = DataLoader(dataset, batch_size=500, shuffle=False, num_workers=8)
-    return torch.cat([x[0] for x in tqdm(dataloader)])
+    return torch.cat([x[0] for x in tqdm(dataloader, desc="Loading data ...")])
 
 
 def to_uint8(images: Tensor, values_range: tuple[float, float] = (-1, 1)) -> Tensor:
