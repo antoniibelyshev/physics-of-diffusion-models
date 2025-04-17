@@ -10,37 +10,40 @@ from .distance import compute_pw_dist_sqr
 from .utils import dict_map, append_dict, get_default_device
 
 
-def get_noise(temp: Tensor, batch_size: int, obj_shape: tuple[int, ...], device: torch.device) -> Tensor:
-    temp_diffs = (temp - pad(temp[:-1], (1, 0))).to(device).view(-1, *[1] * (len(obj_shape)))
-    noise_steps = torch.randn(batch_size, len(temp), *obj_shape, device=device)
+def compute_average(p: Tensor, vals: Tensor):
+    return torch.matmul(p.unsqueeze(-2), vals.unsqueeze(-1)).view(*p.shape[:-1])
+
+
+def get_noise(temp: Tensor, batch_size: int, obj_shape: tuple[int, ...]) -> Tensor:
+    temp_diffs = (temp - pad(temp[:-1], (1, 0))).view(-1, *[1] * (len(obj_shape)))
+    noise_steps = torch.randn(batch_size, len(temp), *obj_shape, device=temp.device)
     return (noise_steps * temp_diffs.sqrt()).cumsum(1)
 
 
 def compute_stats_batch(x0: Tensor, xt: Tensor, temp: Tensor) -> dict[str, Tensor]:
-    energy = 0.5 * compute_pw_dist_sqr(x0, xt)
-    min_energy = energy.min(0)[0]
-    normalized_energy = energy - min_energy
-    normalized_exponent = -normalized_energy / temp
-    normalized_log_part_fun = normalized_exponent.exp().mean(0).log()
-    p = (normalized_exponent - normalized_log_part_fun).exp()
-    avg_normalized_energy = (p * normalized_energy).mean(0)
-    var_energy = (p * (normalized_energy - avg_normalized_energy).square()).mean(0)
+    energy = 0.5 * compute_pw_dist_sqr(xt, x0, final_device=x0.device)
+    energy -= energy.min(1, keepdims=True).values
+    exp = -energy / temp.unsqueeze(-1)
+    log_part_fun = exp.exp().sum(1).log()
+    p = (exp - log_part_fun.unsqueeze(-1)).exp()
 
-    entropy = normalized_log_part_fun + avg_normalized_energy / temp
+    avg_energy = compute_average(p, energy)
+    var_energy = compute_average(p, (energy - avg_energy.unsqueeze(-1)).square())
+
+    entropy = log_part_fun + avg_energy / temp - np.log(len(x0))
     heat_capacity = var_energy / temp.square()
 
-    return {"entropy": entropy, "heat_capacity": heat_capacity}
+    return {"entropy": entropy.cpu(), "heat_capacity": heat_capacity.cpu()}
 
 
 def compute_stats_traj_batch(x0: Tensor, traj_start: Tensor, temp: Tensor) -> dict[str, Tensor]:
-    noise = get_noise(temp, len(traj_start), x0.shape[1:], x0.device)
+    noise = get_noise(temp, len(traj_start), x0.shape[1:])
     xt = traj_start + noise
     xt_flat = xt.flatten(0, 1)
     temp_flat = temp.unsqueeze(0).expand(len(xt), -1).flatten()
 
     batch_stats = compute_stats_batch(x0, xt_flat, temp_flat)
     traj_batch_stats = dict_map(lambda val: val.reshape(xt.shape[:2]).mean(0), batch_stats)
-    traj_batch_stats["temp"] = temp
     return traj_batch_stats
 
 
@@ -54,6 +57,7 @@ def compute_stats(
     device = get_default_device()
     x0 = x0.to(device)
     _x0 = x0
+    temp = temp.to(device)
     batch_stats: dict[str, list[Tensor]] = defaultdict(list)
     for _ in trange(ceil(n_samples / batch_size), desc="Computing statistics..."):
         if unbiased:
@@ -65,4 +69,5 @@ def compute_stats(
         append_dict(batch_stats, compute_stats_traj_batch(_x0, traj_start, temp))
 
     stats = dict_map(lambda val: torch.stack(val).mean(0), batch_stats)
+    stats["temp"] = temp.cpu()
     return stats

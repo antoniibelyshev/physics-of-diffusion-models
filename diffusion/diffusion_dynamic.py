@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 import matplotlib.pyplot as plt
 
 from config import Config
-from utils import norm_sqr, interp1d, get_diffusers_pipeline, fit_entropy_fun
+from utils import norm_sqr, interp1d, get_diffusers_pipeline, fit_entropy_fun, compute_pw_dist_sqr
 
 
 class NoiseScheduler(nn.Module, ABC):
@@ -170,3 +170,15 @@ class DiffusionDynamic(nn.Module):
         exps = pows.exp()
         diffs *= exps
         return diffs.sum(0) / (exps.sum(0) * (1 - alpha_bar))  # type: ignore
+    
+    @torch.cuda.amp.autocast(enabled=False)
+    def get_true_posterior_mean_x0(self, xt, tau, data):
+        xt = xt.float()
+        data = data.float()
+        log_temp = self.get_log_temp(tau)
+        h = compute_pw_dist_sqr(xt, data, final_device="cuda") / 2
+        h -= h.min(1, keepdims=True).values
+        exp = -h / log_temp.view(-1, 1).exp()
+        p = exp.exp()
+        p /= p.sum(1, keepdims=True)
+        return torch.matmul(p, data.view(len(data), -1)).view(-1, *data.shape[1:])

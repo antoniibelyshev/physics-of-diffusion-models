@@ -1,12 +1,13 @@
 import torch
 from torch import Tensor
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, TensorDataset
 from torchvision.datasets import MNIST, CIFAR10, CIFAR100, FashionMNIST, ImageNet, VisionDataset, ImageFolder  # type: ignore
 from torchvision.transforms import Compose, Resize, ToTensor, Lambda, Normalize # type: ignore
 from tqdm import tqdm
 from typing import Generator, Any
 
 from config import Config
+from .synthetic_datasets import generate_dataset
 
 
 class CelebA:
@@ -62,7 +63,9 @@ def get_dataset(config: Config, train: bool = True, labeled: bool = False) -> Da
     if dataset_name in ImageDataset.DATASET_CLASSES:
         obj_size = config.data.obj_size
         return ImageDataset(dataset_name, obj_size, train=train, labeled=labeled)
-    raise ValueError(f"Unknown dataset {dataset_name}")
+    else:
+        return TensorDataset(generate_dataset(dataset_name))
+    # raise ValueError(f"Unknown dataset {dataset_name}")
 
 
 def get_data_generator(

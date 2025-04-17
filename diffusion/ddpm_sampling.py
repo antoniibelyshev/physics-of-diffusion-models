@@ -69,7 +69,8 @@ class DDPMSampler:
         noise_scheduler = NoiseScheduler.from_config(
             config, noise_schedule_type=config.sample.sample_noise_schedule_type
         )
-        self.log_temp = noise_scheduler(tau).clip(max=np.log(1e4))
+        # self.log_temp = noise_scheduler(tau).clip(max=np.log(1e4))
+        self.log_temp = noise_scheduler(tau)
         self.clean_log_temp = torch.full((1,), -torch.inf, device=device)
         self.n_samples = config.sample.n_samples
         self.batch_size = config.sample.batch_size

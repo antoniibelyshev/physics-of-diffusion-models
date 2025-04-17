@@ -19,6 +19,7 @@ class DataConfig(BaseModel):
         "fashion_mnist": (1, 32, 32),
         "image_net": (3, 64, 64),
         "celeba": (3, 256, 256),
+        "gaussian": (100,),
     }
 
     dataset_name: str = Field(..., description="Name of the dataset")

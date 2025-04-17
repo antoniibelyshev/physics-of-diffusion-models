@@ -5,9 +5,25 @@ from torch import nn, Tensor, load, compile
 from diffusers.models.attention_processor import AttnProcessor2_0
 
 from utils import get_diffusers_pipeline
-from .diffusion_dynamic import DiffusionDynamic
+from .diffusion_dynamic import DiffusionDynamic, get_alpha_bar_from_log_temp
 from config import Config
-from utils import get_data_tensor, get_unet
+from utils import get_data_tensor, get_unet, compute_pw_dist_sqr
+
+
+# @torch.cuda.amp.autocast(enabled=False)
+def posterior_mean_eps(xt, data, log_temp):
+    return data.mean(0).view(1, *xt.shape[1:]).repeat((len(xt), *[1] * (len(xt.shape) - 1)))
+    xt = xt.float()
+    data = data.float()
+    log_temp = log_temp.float()
+    h = compute_pw_dist_sqr(xt, data, final_device="cuda") / 2
+    h -= h.min(1, keepdims=True).values
+    exp = -h / log_temp.view(-1, 1).exp()
+    p = exp.exp()
+    p /= p.sum(1, keepdims=True)
+    x0 = torch.matmul(p, data.view(len(data), -1)).view(-1, *data.shape[1:])
+    alpha_bar = get_alpha_bar_from_log_temp(log_temp)
+    return (xt - x0 * alpha_bar.sqrt()) / (1 - alpha_bar).sqrt().half()
 
 
 class DDPMPredictions:
@@ -70,13 +86,15 @@ class DDPMUnet(DDPM):
 
 class DDPMTrue(DDPM):
     def __init__(self, config: Config):
-        assert config.ddpm.parametrization == "score"
+        parametrization, config.ddpm.parametrization = config.ddpm.parametrization, "x0"
         super().__init__(config)
+        config.ddpm.parametrization = parametrization
 
         self.register_buffer("train_data", get_data_tensor(config))
 
     def forward(self, xt: Tensor, tau: Tensor) -> Tensor:
-        return self.dynamic.get_true_score(xt, tau, self.train_data)
+        # return self.dynamic.get_true_score(xt, tau, self.train_data)
+        return self.dynamic.get_true_posterior_mean_x0(xt, tau, self.train_data)
 
 
 def set_processor_recursively(module: nn.Module, processor_class: type) -> None:
@@ -99,6 +117,10 @@ class DDPMDiffusers(DDPM):
         self.unet = compile(pipeline.unet, mode="reduce-overhead", fullgraph=True) # type: ignore
         # self.unet = pipeline.unet # type: ignore
         self.n_steps = len(pipeline.scheduler.timesteps) # type: ignore
+        self.register_buffer("data", get_data_tensor(config))
 
     def forward(self, xt: Tensor, tau: Tensor) -> Tensor:
-        return self.unet(xt, tau * self.n_steps).sample # type: ignore
+        # print(tau)
+        if tau.max() <= 1:
+            return self.unet(xt, tau * self.n_steps).sample # type: ignore
+        return posterior_mean_eps(xt, self.data, self.dynamic.get_log_temp(tau))
