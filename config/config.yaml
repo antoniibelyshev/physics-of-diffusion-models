@@ -1,6 +1,7 @@
 diffusion:
   min_temp: 1e-4
   max_temp: 1e4
+  entropy_key: entropy_extrapolated
 
 data:
   dataset_name: celeba
@@ -29,7 +30,7 @@ sample:
   batch_size: 100
   step_type: ddim
   ddpm_noise_schedule_type: from_diffusers
-  sample_noise_schedule_type: entropy_u_extrapolated
+  sample_noise_schedule_type: entropy
   precision: half
   track_ll: False
   track_states: False

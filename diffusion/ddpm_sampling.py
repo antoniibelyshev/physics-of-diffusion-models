@@ -64,11 +64,20 @@ class DDPMSampler:
         config.ddpm.noise_schedule_type = config.sample.ddpm_noise_schedule_type
         self.ddpm = DDPM.from_config(config, pretrained=True).to(device)
         self.ddpm.eval()
+        prev_model_name = config.ddpm.model_name = "true"
+        self.true_ddpm = DDPM.from_config(config).to(device)
+        self.true_ddpm.eval()
+        config.ddpm.model_name = prev_model_name
         self.device = device
-        tau = torch.linspace(0, 1, config.sample.n_steps, device=device).unsqueeze(1)
         noise_scheduler = NoiseScheduler.from_config(
             config, noise_schedule_type=config.sample.sample_noise_schedule_type
         )
+        tau = torch.linspace(
+            noise_scheduler.get_tau(torch.tensor(config.sample.min_temp).log()).item(),
+            1,
+            config.sample.n_steps,
+            device=device
+        ).unsqueeze(1)
         # self.log_temp = noise_scheduler(tau).clip(max=np.log(1e4))
         self.log_temp = noise_scheduler(tau)
         self.clean_log_temp = torch.full((1,), -torch.inf, device=device)
@@ -114,7 +123,12 @@ class DDPMSampler:
 
             with torch.amp.autocast("cuda", dtype=torch.float16):  # type: ignore
                 with torch.no_grad():
-                    xt = self.step(xt, coeffs, self.ddpm.get_predictions(xt, log_temp))
+                    if idx == len(self.log_temp) - 1:
+                        prev_alpha_bar = get_alpha_bar_from_log_temp(prev_log_temp)
+                        x0 = self.true_ddpm.get_predictions(xt, log_temp).x0
+                        xt = prev_alpha_bar.sqrt() * x0 + (1 - prev_alpha_bar).sqrt() * xt
+                    else:
+                        xt = self.step(xt, coeffs, self.ddpm.get_predictions(xt, log_temp))
 
         res = {"x": xt.cpu()}
         if states is not None:
