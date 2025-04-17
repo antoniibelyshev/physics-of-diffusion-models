@@ -12,7 +12,7 @@ class DiffusionConfig(BaseModel):
 
 
 class DataConfig(BaseModel):
-    OBJ_SIZES: dict[str, tuple[int, int, int]] = {
+    OBJ_SIZES: dict[str, tuple[int, ...]] = {
         "mnist": (1, 32, 32),
         "cifar10": (3, 32, 32),
         "cifar100": (3, 32, 32),
@@ -25,7 +25,7 @@ class DataConfig(BaseModel):
     dataset_name: str = Field(..., description="Name of the dataset")
 
     @property
-    def obj_size(self) -> tuple[int, int, int]:
+    def obj_size(self) -> tuple[int, ...]:
         return self.OBJ_SIZES[self.dataset_name]
 
 

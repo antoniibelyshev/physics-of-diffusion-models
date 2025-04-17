@@ -1,14 +1,21 @@
 import torch
+from torch import Tensor
 from torch.utils.data import TensorDataset
 import numpy as np
 from tqdm import tqdm, trange
+from typing import Generator
 
 from utils import with_config, get_dataset, get_data_tensor, get_data_generator
 from diffusion import DDPM
 from config import Config
 
 
-def compute_entropy_derivative(data_generator, ddpm, temp_range, config):
+def compute_entropy_derivative(
+        data_generator: Generator[tuple[Tensor, ...], None, None],
+        ddpm: DDPM,
+        temp_range: Tensor,
+        config: Config
+) -> Tensor:
     d_entropy_d_log_temp = []
     for temp in tqdm(temp_range):
         errors = []

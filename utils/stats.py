@@ -10,7 +10,7 @@ from .distance import compute_pw_dist_sqr
 from .utils import dict_map, append_dict, get_default_device
 
 
-def compute_average(p: Tensor, vals: Tensor):
+def compute_average(p: Tensor, vals: Tensor) -> Tensor:
     return torch.matmul(p.unsqueeze(-2), vals.unsqueeze(-1)).view(*p.shape[:-1])
 
 
@@ -22,7 +22,7 @@ def get_noise(temp: Tensor, batch_size: int, obj_shape: tuple[int, ...]) -> Tens
 
 def compute_stats_batch(x0: Tensor, xt: Tensor, temp: Tensor) -> dict[str, Tensor]:
     energy = 0.5 * compute_pw_dist_sqr(xt, x0, final_device=x0.device)
-    energy -= energy.min(1, keepdims=True).values
+    energy -= energy.min(1, keepdim=True).values
     exp = -energy / temp.unsqueeze(-1)
     log_part_fun = exp.exp().sum(1).log()
     p = (exp - log_part_fun.unsqueeze(-1)).exp()
@@ -71,3 +71,20 @@ def compute_stats(
     stats = dict_map(lambda val: torch.stack(val).mean(0), batch_stats)
     stats["temp"] = temp.cpu()
     return stats
+
+
+def compute_all_stats(x0: Tensor, temp: Tensor, n_samples: int, batch_size: int) -> dict[str, Tensor]:
+    stats = compute_stats(x0, temp, n_samples, batch_size, False)
+    unbiased_stats = compute_stats(x0, temp, n_samples, batch_size, True)
+    stats = {**stats, **{key + "_unbiased": value for key, value in unbiased_stats.items() if key != "temp"}}
+    for suffix in ["", "_unbiased"]:
+        stats["entropy" + suffix + "_extrapolated"] = extrapolate_entropy(temp, stats["entropy" + suffix])
+    return stats
+
+
+def extrapolate_entropy(temp: Tensor, entropy: Tensor) -> Tensor:
+    log_temp = temp.log()
+    slope = (entropy[1:] - entropy[:-1]) / (log_temp[1:] - log_temp[:-1])
+    idx = torch.argmax(slope)
+    idx -= int(idx == len(temp))
+    return torch.cat(((log_temp[:idx] - log_temp[idx]) * slope[idx] + entropy[idx], entropy[idx:]), dim=0)

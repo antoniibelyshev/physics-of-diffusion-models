@@ -4,7 +4,7 @@ from typing import Optional
 
 
 def generate_simplex(d: int) -> Tensor:
-    return torch.cat((torch.eye(d), torch.ones((1, d)) * (1 - (1 + d) ** 0.5) / d), axis=0)
+    return torch.cat((torch.eye(d), torch.full((1, d), (1 - (1 + d) ** 0.5) / d)), 0)
 
 
 def generate_cross_polytope(d: int) -> Tensor:
@@ -13,7 +13,7 @@ def generate_cross_polytope(d: int) -> Tensor:
 
 def sample_on_hypersphere(d: int, n: Optional[int] = None) -> Tensor:
     samples = torch.randn(n or 10 * d, d)
-    samples /= torch.norm(samples, dim=1, keepdims=True) / d ** 0.5
+    samples /= torch.norm(samples, dim=1, keepdim=True) / d ** 0.5
     return samples
 
 

@@ -10,23 +10,11 @@ from config import Config
 from utils import get_data_tensor, get_unet, compute_pw_dist_sqr
 
 
-# @torch.cuda.amp.autocast(enabled=False)
-def posterior_mean_eps(xt, data, log_temp):
-    return data.mean(0).view(1, *xt.shape[1:]).repeat((len(xt), *[1] * (len(xt.shape) - 1)))
-    xt = xt.float()
-    data = data.float()
-    log_temp = log_temp.float()
-    h = compute_pw_dist_sqr(xt, data, final_device="cuda") / 2
-    h -= h.min(1, keepdims=True).values
-    exp = -h / log_temp.view(-1, 1).exp()
-    p = exp.exp()
-    p /= p.sum(1, keepdims=True)
-    x0 = torch.matmul(p, data.view(len(data), -1)).view(-1, *data.shape[1:])
-    alpha_bar = get_alpha_bar_from_log_temp(log_temp)
-    return (xt - x0 * alpha_bar.sqrt()) / (1 - alpha_bar).sqrt().half()
-
-
 class DDPMPredictions:
+    x0: Tensor
+    eps: Tensor
+    score: Tensor
+
     def __init__(self, pred: Tensor, xt: Tensor, alpha_bar: Tensor, parametrization: str) -> None:
         match parametrization:
             case "x0":
@@ -94,7 +82,7 @@ class DDPMTrue(DDPM):
 
     def forward(self, xt: Tensor, tau: Tensor) -> Tensor:
         # return self.dynamic.get_true_score(xt, tau, self.train_data)
-        return self.dynamic.get_true_posterior_mean_x0(xt, tau, self.train_data)
+        return self.dynamic.get_true_posterior_mean_x0(xt, tau, self.train_data)  # type: ignore
 
 
 def set_processor_recursively(module: nn.Module, processor_class: type) -> None:
@@ -123,4 +111,9 @@ class DDPMDiffusers(DDPM):
         # print(tau)
         if tau.max() <= 1:
             return self.unet(xt, tau * self.n_steps).sample # type: ignore
-        return posterior_mean_eps(xt, self.data, self.dynamic.get_log_temp(tau))
+        return DDPMPredictions(
+            self.dynamic.get_true_posterior_mean_x0(xt, tau, self.data),
+            xt,
+            self.dynamic.get_alpha_bar(tau),
+            "x0"
+        ).eps

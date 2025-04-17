@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader, Dataset, TensorDataset
 from torchvision.datasets import MNIST, CIFAR10, CIFAR100, FashionMNIST, ImageNet, VisionDataset, ImageFolder  # type: ignore
 from torchvision.transforms import Compose, Resize, ToTensor, Lambda, Normalize # type: ignore
 from tqdm import tqdm
-from typing import Generator, Any
+from typing import Generator, Any, Iterable
 
 from config import Config
 from .synthetic_datasets import generate_dataset
@@ -23,7 +23,7 @@ class CelebA:
         return self.dataset[index]  # type: ignore
 
 
-class ImageDataset(Dataset[tuple[Tensor, Tensor]]):
+class ImageDataset(Dataset[tuple[Tensor, ...]]):
     DATASET_CLASSES = {
         "mnist": MNIST,
         "cifar10": CIFAR10,
@@ -58,7 +58,11 @@ class ImageDataset(Dataset[tuple[Tensor, Tensor]]):
         return image, torch.tensor(label)
 
 
-def get_dataset(config: Config, train: bool = True, labeled: bool = False) -> Dataset[tuple[Tensor, Tensor]]:
+def get_names_of_image_datasets() -> Iterable[str]:
+    return ImageDataset.DATASET_CLASSES.keys()
+
+
+def get_dataset(config: Config, train: bool = True, labeled: bool = False) -> Dataset[tuple[Tensor, ...]]:
     dataset_name = config.data.dataset_name
     if dataset_name in ImageDataset.DATASET_CLASSES:
         obj_size = config.data.obj_size
