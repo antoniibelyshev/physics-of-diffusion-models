@@ -46,7 +46,6 @@ class DDPMConfig(BaseModel):
     use_lrelu: bool = Field(..., description="Whether to use LeakyReLU instead of ReLU")
 
     def get_diffusers_model_id(self, dataset_name: str) -> str:
-        assert self.model_name == "diffusers"
         return self.DIFFUSERS_MODEL_IDS[dataset_name]
 
 

@@ -7,7 +7,7 @@ from typing import Iterable
 from collections import defaultdict
 
 from config import Config
-from utils import norm_sqr, get_default_device, batch_jacobian, dict_map, append_dict
+from utils import norm_sqr, get_default_device, batch_jacobian, dict_map, append_dict, get_data_tensor
 from .ddpm import DDPM, DDPMPredictions
 from .diffusion_dynamic import NoiseScheduler, get_alpha_bar_from_log_temp
 
@@ -64,10 +64,11 @@ class DDPMSampler:
         config.ddpm.noise_schedule_type = config.sample.ddpm_noise_schedule_type
         self.ddpm = DDPM.from_config(config, pretrained=True).to(device)
         self.ddpm.eval()
-        prev_model_name = config.ddpm.model_name = "true"
-        self.true_ddpm = DDPM.from_config(config).to(device)
-        self.true_ddpm.eval()
-        config.ddpm.model_name = prev_model_name
+        # prev_model_name = config.ddpm.model_name = "true"
+        # self.true_ddpm = DDPM.from_config(config).to(device)
+        # self.true_ddpm.eval()
+        # config.ddpm.model_name = prev_model_name
+        self.data_average = get_data_tensor(config).cuda().mean(0).to(device)
         self.device = device
         noise_scheduler = NoiseScheduler.from_config(
             config, noise_schedule_type=config.sample.sample_noise_schedule_type
@@ -78,8 +79,8 @@ class DDPMSampler:
             config.sample.n_steps,
             device=device
         ).unsqueeze(1)
-        # self.log_temp = noise_scheduler(tau).clip(max=np.log(1e4))
-        self.log_temp = noise_scheduler(tau)
+        self.log_temp = noise_scheduler(tau).clip(max=np.log(1e4))
+        # self.log_temp = noise_scheduler(tau)
         self.clean_log_temp = torch.full((1,), -torch.inf, device=device)
         self.n_samples = config.sample.n_samples
         self.batch_size = config.sample.batch_size
@@ -123,12 +124,11 @@ class DDPMSampler:
 
             with torch.amp.autocast("cuda", dtype=torch.float16):  # type: ignore
                 with torch.no_grad():
-                    if idx == len(self.log_temp) - 1:
-                        prev_alpha_bar = get_alpha_bar_from_log_temp(prev_log_temp)
-                        x0 = self.true_ddpm.get_predictions(xt, log_temp).x0
-                        xt = prev_alpha_bar.sqrt() * x0 + (1 - prev_alpha_bar).sqrt() * xt
-                    else:
-                        xt = self.step(xt, coeffs, self.ddpm.get_predictions(xt, log_temp))
+                    # if idx == len(self.log_temp) - 1:
+                    #     prev_alpha_bar = get_alpha_bar_from_log_temp(prev_log_temp)
+                    #     xt = prev_alpha_bar.sqrt() * self.data_average + (1 - prev_alpha_bar).sqrt() * xt
+                    # else:
+                    xt = self.step(xt, coeffs, self.ddpm.get_predictions(xt, log_temp))
 
         res = {"x": xt.cpu()}
         if states is not None:
