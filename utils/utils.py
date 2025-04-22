@@ -28,6 +28,11 @@ def append_dict(prev_dict: dict[str, list[T]], new_dict: dict[str, T]) -> None:
         prev_dict[key] = prev_dict[key] + [val]
 
 
+def add_dict(prev_dict: dict[str, Tensor], new_dict: dict[str, Tensor]) -> None:
+    for key, val in new_dict.items():
+        prev_dict[key] += val
+
+
 def extend_dict(prev_dict: dict[str, list[T]], new_dict: dict[str, list[T]]) -> None:
     for key, val in new_dict.items():
         prev_dict[key] = prev_dict[key] + val

@@ -16,6 +16,7 @@ from .synthetic_datasets import (
 from .utils import (
     dict_map as dict_map,
     append_dict as append_dict,
+    add_dict as add_dict,
     extend_dict as extend_dict,
     replace_activations as replace_activations,
     batch_jacobian as batch_jacobian,
@@ -38,6 +39,6 @@ from .lenet import (
 )
 from .stats import (
     compute_stats as compute_stats,
-    compute_stats_traj_batch as compute_stats_traj_batch,
+    # compute_stats_traj_batch as compute_stats_traj_batch,
     compute_all_stats as compute_all_stats,
 )
