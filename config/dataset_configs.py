@@ -55,80 +55,80 @@ class DatasetRegistry:
 
 @DatasetRegistry.register
 class MNISTConfig(BaseDatasetConfig):
-    name = "mnist"
-    channels = 1
-    image_size = (32, 32)
-    min_temp = 1e-2
-    max_temp = 1e3
-    hf_dataset_name = "mnist"
+    name: str = "mnist"
+    channels: int = 1
+    image_size: tuple[int, int] = (32, 32)
+    min_temp: float = 1e-2
+    max_temp: float = 1e3
+    hf_dataset_name: Optional[str] = "mnist"
 
 
 @DatasetRegistry.register
 class CIFAR10Config(BaseDatasetConfig):
-    name = "cifar10"
-    channels = 3
-    image_size = (32, 32)
-    min_temp = 1e-1
-    max_temp = 1e4
-    diffusers_model_id = "./checkpoints/ddpm_ema_cifar10"
-    hf_dataset_name = "cifar10"
+    name: str = "cifar10"
+    channels: int = 3
+    image_size: tuple[int, int] = (32, 32)
+    min_temp: float = 1e-1
+    max_temp: float = 1e4
+    diffusers_model_id: Optional[str] = "./checkpoints/ddpm_ema_cifar10"
+    hf_dataset_name: Optional[str] = "cifar10"
 
 
 @DatasetRegistry.register
 class CIFAR100Config(BaseDatasetConfig):
-    name = "cifar100"
-    channels = 3
-    image_size = (32, 32)
-    min_temp = 1e-1
-    max_temp = 1e4
-    hf_dataset_name = "cifar100"
+    name: str = "cifar100"
+    channels: int = 3
+    image_size: tuple[int, int] = (32, 32)
+    min_temp: float = 1e-1
+    max_temp: float = 1e4
+    hf_dataset_name: Optional[str] = "cifar100"
 
 
 @DatasetRegistry.register
 class FashionMNISTConfig(BaseDatasetConfig):
-    name = "fashion_mnist"
-    channels = 1
-    image_size = (32, 32)
-    min_temp = 1e-1
-    max_temp = 1e4
-    hf_dataset_name = "fashion_mnist"
+    name: str = "fashion_mnist"
+    channels: int = 1
+    image_size: tuple[int, int] = (32, 32)
+    min_temp: float = 1e-1
+    max_temp: float = 1e4
+    hf_dataset_name: Optional[str] = "fashion_mnist"
 
 
 @DatasetRegistry.register
 class ImageNetConfig(BaseDatasetConfig):
-    name = "image_net"
-    channels = 3
-    image_size = (64, 64)
-    min_temp = 1e-1
-    max_temp = 1e4
-    hf_dataset_name = "imagenet-1k"
+    name: str = "image_net"
+    channels: int = 3
+    image_size: tuple[int, int] = (64, 64)
+    min_temp: float = 1e-1
+    max_temp: float = 1e4
+    hf_dataset_name: Optional[str] = "imagenet-1k"
 
 
 @DatasetRegistry.register
 class CelebAConfig(BaseDatasetConfig):
-    name = "celeba-hq"
-    channels = 3
-    image_size = (256, 256)
-    min_temp = 1e1
-    max_temp = 1e6
-    diffusers_model_id = "google/ddpm-celebahq-256"
-    hf_dataset_name = "student/celebA"
+    name: str = "celeba-hq"
+    channels: int = 3
+    image_size: tuple[int, int] = (256, 256)
+    min_temp: float = 1e1
+    max_temp: float = 1e6
+    diffusers_model_id: Optional[str] = "google/ddpm-celebahq-256"
+    hf_dataset_name: Optional[str] = "student/celebA"
 
 
 @DatasetRegistry.register
 class LSUNBedroomsConfig(BaseDatasetConfig):
-    name = "lsun-bedrooms"
-    channels = 3
-    image_size = (256, 256)
-    min_temp = 1e-1
-    max_temp = 1e6
-    hf_dataset_name = "pcuenq/lsun-bedrooms"
+    name: str = "lsun-bedrooms"
+    channels: int = 3
+    image_size: tuple[int, int] = (256, 256)
+    min_temp: float = 1e-1
+    max_temp: float = 1e6
+    hf_dataset_name: Optional[str] = "pcuenq/lsun-bedrooms"
 
 
 @DatasetRegistry.register
 class GaussianConfig(BaseDatasetConfig):
-    name = "gaussian"
-    channels = 100
-    image_size = (1, 1)
-    min_temp = 1e-1
-    max_temp = 1e4
+    name: str = "gaussian"
+    channels: int = 100
+    image_size: tuple[int, int] = (1, 1)
+    min_temp: float = 1e-1
+    max_temp: float = 1e4
