@@ -19,6 +19,7 @@ class DataConfig(BaseModel):
         "cifar100": (3, 32, 32),
         "fashion_mnist": (1, 32, 32),
         "image_net": (3, 64, 64),
+        "lsun": (3, 256, 256),
         "celeba": (3, 256, 256),
         "gaussian": (100,),
     }
@@ -33,7 +34,8 @@ class DataConfig(BaseModel):
 class DDPMConfig(BaseModel):
     DIFFUSERS_MODEL_IDS: dict[str, str] = {
         # "cifar10": "google/ddpm-cifar10-32",
-        "cifar10": "./checkpoints/ddpm_ema_cifar10",
+        # "cifar10": "./checkpoints/ddpm_ema_cifar10",
+        "cifar10": "fusing/ddpm-cifar10",
         "image_net": "google/ddpm-ema-imagenet-64",
         "celeba": "google/ddpm-celebahq-256",
     }
@@ -116,6 +118,7 @@ class Config(BaseModel):
         "cifar10": (1e-1, 1e4),
         "cifar100": (1e-1, 1e4),
         "fashion_mnist": (1e-1, 1e4),
+        "lsun": (1e-1, 1e6),
         "celeba": (1e1, 1e6),
     }
 

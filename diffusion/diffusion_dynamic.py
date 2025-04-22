@@ -173,10 +173,10 @@ class DiffusionDynamic(nn.Module):
     def get_true_posterior_mean_x0(self, xt: Tensor, tau: Tensor, data: Tensor) -> Tensor:
         xt = xt.float()
         data = data.float()
-        log_temp = self.get_log_temp(tau)
-        h = 0.5 * compute_pw_dist_sqr(xt, data, final_device="cuda")
+        alpha_bar = self.get_alpha_bar(tau)
+        h = 0.5 * compute_pw_dist_sqr(xt, alpha_bar.sqrt() * data, final_device="cuda")
         h -= h.min(1, keepdim=True).values
-        exp = -h / log_temp.view(-1, 1).exp()
+        exp = -h / (1 - alpha_bar).view(-1, 1)
         p = exp.exp()
         p /= p.sum(1, keepdim=True)
         return torch.matmul(p, data.view(len(data), -1)).view(-1, *data.shape[1:])

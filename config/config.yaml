@@ -4,7 +4,7 @@ diffusion:
   entropy_key: entropy_extrapolated
 
 data:
-  dataset_name: celeba
+  dataset_name: lsun
 
 ddpm:
   model_name: diffusers
@@ -37,8 +37,8 @@ sample:
   min_temp: 1e-1
 
 forward_stats:
-  n_samples: 10000
-  batch_size: 100
+  n_samples: 1000
+  batch_size: 10
   n_temps: 100
   unbiased: False
 
@@ -48,7 +48,7 @@ backward_stats:
 
 empirical_stats:
   n_temps: 100
-  n_steps_per_temp: 100
+  n_steps_per_temp: 10
   batch_size: 100
 
 varied_dataset_stats:
