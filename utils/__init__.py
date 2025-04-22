@@ -1,5 +1,4 @@
 from .data import (
-    get_names_of_image_datasets as get_names_of_image_datasets,
     get_dataset as get_dataset,
     get_data_tensor as get_data_tensor,
     get_data_generator as get_data_generator,

@@ -13,7 +13,7 @@ def main(config: Config) -> None:
     min_temp, max_temp = config.diffusion.temp_range
     temp = torch.logspace(log10(min_temp), log10(max_temp), config.varied_dataset_stats.n_temps)
     for dataset_name in config.varied_dataset_stats.dataset_names:
-        config.data.dataset_name = dataset_name
+        config.dataset_name = dataset_name
         x0 = get_data_tensor(config)
 
         for data_fraction in config.varied_dataset_stats.sample_fractions:

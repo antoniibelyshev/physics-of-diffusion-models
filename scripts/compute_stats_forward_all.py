@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 
-from utils import compute_all_stats, get_names_of_image_datasets
+from utils import compute_all_stats
 from config import Config
 from utils import get_data_tensor, with_config
 
@@ -9,11 +9,11 @@ from utils import get_data_tensor, with_config
 @with_config(parse_args=(__name__ == "__main__"))
 def main(config: Config) -> None:
     config.forward_stats.unbiased = False
-    for dataset_name in get_names_of_image_datasets():
+    for dataset_name in config.available_datasets:
         print(dataset_name)
-        config.data.dataset_name = dataset_name
+        config.dataset_name = dataset_name
         data = get_data_tensor(config)
-        min_temp, max_temp = config.forward_stats_temp_range
+        min_temp, max_temp = config.dataset_config.temp_range
         temp = torch.logspace(np.log10(min_temp), np.log10(max_temp), config.forward_stats.n_temps)
         if config.diffusion.min_temp < temp[-1]:
             temp = torch.cat((torch.full((1,), config.diffusion.min_temp), temp))

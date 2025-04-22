@@ -22,14 +22,14 @@ def main(config: Config) -> None:
         params_dict = dict(zip(config.fid.varied_parameters, params))
         for name, value in params_dict.items():
             setattr(config.sample, name, config.sample.model_fields[name].annotation(value))  # type: ignore
-        config.sample.n_samples = config.fid.n_samples
+        config.sample.n_samples = config.dataset_config.fid_samples
         if config.fid.sample:
             samples = get_samples(config)
             if config.fid.save_imgs:
                 np.savez(config.samples_path, **samples) # type: ignore
             x = samples["x"]
         else:
-            x = from_numpy(np.load(config.samples_path)["x"][:config.fid.n_samples])
+            x = from_numpy(np.load(config.samples_path)["x"][:config.dataset_config.fid_samples])
         fid = compute_fid(x)
         results_dict = {**{"fid": fid}, **params_dict}
         print(*[f"{key}: {value}" for key, value in results_dict.items()], sep=", ")

@@ -38,7 +38,7 @@ class LeNetFeatureExtractor(nn.Module):
 
 
 def get_feature_extractor(config: Config) -> nn.Module:
-    match config.data.dataset_name:
+    match config.dataset_name:
         case "mnist":
             return LeNetFeatureExtractor()
         case _:

@@ -1,6 +1,8 @@
 from pydantic import BaseModel, Field
 from typing import Any
 
+from .dataset_configs import BaseDatasetConfig, DatasetRegistry
+
 
 class DiffusionConfig(BaseModel):
     min_temp: float = Field(..., description="Minimum temperature")
@@ -12,43 +14,13 @@ class DiffusionConfig(BaseModel):
         return self.min_temp, self.max_temp
 
 
-class DataConfig(BaseModel):
-    OBJ_SIZES: dict[str, tuple[int, ...]] = {
-        "mnist": (1, 32, 32),
-        "cifar10": (3, 32, 32),
-        "cifar100": (3, 32, 32),
-        "fashion_mnist": (1, 32, 32),
-        "image_net": (3, 64, 64),
-        "lsun": (3, 256, 256),
-        "celeba": (3, 256, 256),
-        "gaussian": (100,),
-    }
-
-    dataset_name: str = Field(..., description="Name of the dataset")
-
-    @property
-    def obj_size(self) -> tuple[int, ...]:
-        return self.OBJ_SIZES[self.dataset_name]
-
-
 class DDPMConfig(BaseModel):
-    DIFFUSERS_MODEL_IDS: dict[str, str] = {
-        # "cifar10": "google/ddpm-cifar10-32",
-        # "cifar10": "./checkpoints/ddpm_ema_cifar10",
-        "cifar10": "fusing/ddpm-cifar10",
-        "image_net": "google/ddpm-ema-imagenet-64",
-        "celeba": "google/ddpm-celebahq-256",
-    }
-
     model_name: str = Field(..., description="Name of the model architecture")
     parametrization: str = Field(..., description="Parametrization of the model")
     noise_schedule_type: str = Field(..., description="Type of noise schedule")
     dim: int = Field(..., description="Base number of channels in the Unet")
     dim_mults: list[int] = Field(..., description="Base channel multipliers in the Unet")
     use_lrelu: bool = Field(..., description="Whether to use LeakyReLU instead of ReLU")
-
-    def get_diffusers_model_id(self, dataset_name: str) -> str:
-        return self.DIFFUSERS_MODEL_IDS[dataset_name]
 
 
 class DDPMTrainingConfig(BaseModel):
@@ -106,24 +78,10 @@ class FIDConfig(BaseModel):
     sample: bool = Field(..., description="Whether to sample images or use sampled")
     save_imgs: bool = Field(..., description="Whether to save generated images")
 
-    @property
-    def n_samples(self) -> int:
-        return 30000
-        return 10000 if self.train else 60000
-
 
 class Config(BaseModel):
-    FORWARD_STATS_TEMP_RANGE: dict[str, tuple[float, float]] = {
-        "mnist": (1e-2, 1e3),
-        "cifar10": (1e-1, 1e4),
-        "cifar100": (1e-1, 1e4),
-        "fashion_mnist": (1e-1, 1e4),
-        "lsun": (1e-1, 1e6),
-        "celeba": (1e1, 1e6),
-    }
-
+    dataset_name: str = Field(..., description="Name of the dataset")
     diffusion: DiffusionConfig = Field(..., description="Diffusion configuration")
-    data: DataConfig = Field(..., description="Data configuration")
     ddpm: DDPMConfig = Field(..., description="DDPM configuration")
     ddpm_training: DDPMTrainingConfig = Field(..., description="DDPM training configuration")
     sample: SampleConfig = Field(..., description="Sample configuration")
@@ -135,10 +93,20 @@ class Config(BaseModel):
     )
     fid: FIDConfig = Field(..., description="FID configuration")
 
+    dataset_registry: type[DatasetRegistry] = Field(DatasetRegistry, description="Dataset registry")
+
+    @property
+    def available_datasets(self) -> list[str]:
+        return list(self.dataset_registry.get_dataset_names())
+
+    @property
+    def dataset_config(self) -> BaseDatasetConfig:
+        return self.dataset_registry.get(self.dataset_name)
+
     @property
     def experiment_name(self) -> str:
         return "_".join([
-            self.data.dataset_name,
+            self.dataset_name,
             self.ddpm.model_name,
             self.ddpm.noise_schedule_type,
             "schedule",
@@ -162,7 +130,7 @@ class Config(BaseModel):
 
     @property
     def forward_stats_path(self) -> str:
-        return f"results/{self.data.dataset_name}_forward{'_unbiased' if self.forward_stats.unbiased else ''}_stats.npz"
+        return f"results/{self.dataset_name}_forward{'_unbiased' if self.forward_stats.unbiased else ''}_stats.npz"
 
     @property
     def backward_stats_path(self) -> str:
@@ -182,8 +150,4 @@ class Config(BaseModel):
 
     @property
     def fid_results_path(self) -> str:
-        return f"results/{self.data.dataset_name}_{'train' if self.fid.train else 'test'}_fid.csv"
-
-    @property
-    def forward_stats_temp_range(self) -> tuple[float, float]:
-        return self.FORWARD_STATS_TEMP_RANGE[self.data.dataset_name]
+        return f"results/{self.dataset_name}_{'train' if self.fid.train else 'test'}_fid.csv"

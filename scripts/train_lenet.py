@@ -10,7 +10,7 @@ def main(config: Config) -> None:
     eval_dataset = get_dataset(config, train=False)
     lenet = LeNet(train_dataset[0][0].numel(), 10)
     lenet = train_lenet(lenet, train_dataset, eval_dataset)  # type: ignore
-    torch.save(lenet.state_dict(), f"checkpoints/lenet_{config.data.dataset_name}.pth")
+    torch.save(lenet.state_dict(), f"checkpoints/lenet_{config.dataset_name}.pth")
 
 
 if __name__ == "__main__":

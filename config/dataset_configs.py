@@ -1,0 +1,134 @@
+from pydantic import BaseModel, ConfigDict
+from typing import Optional
+
+
+class BaseDatasetConfig(BaseModel):
+    """Base configuration class for datasets"""
+    model_config = ConfigDict(frozen=True)  # Makes instances immutable
+
+    # Class variables for dataset-specific constants
+    name: str
+    channels: int
+    image_size: tuple[int, int]
+    min_temp: float
+    max_temp: float
+    fid_samples: int = 50000
+    diffusers_model_id: Optional[str] = None
+    hf_dataset_name: Optional[str] = None
+
+    def __init__(self) -> None:
+        super().__init__()
+
+    @property
+    def obj_size(self) -> tuple[int, ...]:
+        """Returns the full object size including channels"""
+        return self.channels, *self.image_size
+
+    @property
+    def temp_range(self) -> tuple[float, float]:
+        """Returns the temperature range for forward stats"""
+        return self.min_temp, self.max_temp
+
+
+class DatasetRegistry:
+    _configs: dict[str, BaseDatasetConfig] = {}
+
+    @classmethod
+    def register(cls, config_class: type[BaseDatasetConfig]) -> type[BaseDatasetConfig]:
+        """Register a dataset config class"""
+        config = config_class()
+        cls._configs[config.name] = config
+        return config_class
+
+    @classmethod
+    def get(cls, name: str) -> BaseDatasetConfig:
+        """Get the dataset config class by name"""
+        if name not in cls._configs:
+            raise KeyError(f"Dataset config '{name}' not found. Available configs: {list(cls._configs.keys())}")
+        return cls._configs[name]
+
+    @classmethod
+    def get_dataset_names(cls) -> list[str]:
+        """Get the names of all registered dataset configs"""
+        return list(cls._configs.keys())
+
+
+@DatasetRegistry.register
+class MNISTConfig(BaseDatasetConfig):
+    name = "mnist"
+    channels = 1
+    image_size = (32, 32)
+    min_temp = 1e-2
+    max_temp = 1e3
+    hf_dataset_name = "mnist"
+
+
+@DatasetRegistry.register
+class CIFAR10Config(BaseDatasetConfig):
+    name = "cifar10"
+    channels = 3
+    image_size = (32, 32)
+    min_temp = 1e-1
+    max_temp = 1e4
+    diffusers_model_id = "./checkpoints/ddpm_ema_cifar10"
+    hf_dataset_name = "cifar10"
+
+
+@DatasetRegistry.register
+class CIFAR100Config(BaseDatasetConfig):
+    name = "cifar100"
+    channels = 3
+    image_size = (32, 32)
+    min_temp = 1e-1
+    max_temp = 1e4
+    hf_dataset_name = "cifar100"
+
+
+@DatasetRegistry.register
+class FashionMNISTConfig(BaseDatasetConfig):
+    name = "fashion_mnist"
+    channels = 1
+    image_size = (32, 32)
+    min_temp = 1e-1
+    max_temp = 1e4
+    hf_dataset_name = "fashion_mnist"
+
+
+@DatasetRegistry.register
+class ImageNetConfig(BaseDatasetConfig):
+    name = "image_net"
+    channels = 3
+    image_size = (64, 64)
+    min_temp = 1e-1
+    max_temp = 1e4
+    hf_dataset_name = "imagenet-1k"
+
+
+@DatasetRegistry.register
+class CelebAConfig(BaseDatasetConfig):
+    name = "celeba-hq"
+    channels = 3
+    image_size = (256, 256)
+    min_temp = 1e1
+    max_temp = 1e6
+    diffusers_model_id = "google/ddpm-celebahq-256"
+    hf_dataset_name = "student/celebA"
+
+
+@DatasetRegistry.register
+class LSUNBedroomsConfig(BaseDatasetConfig):
+    name = "lsun-bedrooms"
+    channels = 3
+    image_size = (256, 256)
+    min_temp = 1e-1
+    max_temp = 1e6
+    hf_dataset_name = "pcuenq/lsun-bedrooms"
+
+
+@DatasetRegistry.register
+class GaussianConfig(BaseDatasetConfig):
+    name = "gaussian"
+    channels = 100
+    image_size = (1, 1)
+    min_temp = 1e-1
+    max_temp = 1e4

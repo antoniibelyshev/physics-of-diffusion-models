@@ -94,7 +94,7 @@ class DDPMSampler:
         self.track_states = config.sample.track_states
         self.track_ll = config.sample.track_ll
         assert not self.track_ll or is_ode_step(config.sample.step_type), "LL tracking is possible only for ode steps"
-        self.obj_size = config.data.obj_size
+        self.obj_size = config.dataset_config.obj_size
 
     def batch_sample(self, batch_size: int) -> dict[str, Tensor]:
         sample_shape = batch_size, *self.obj_size
@@ -117,7 +117,7 @@ class DDPMSampler:
                     return self.step(
                         x.view(sample_shape),
                         coeffs,
-                        self.ddpm.get_predictions(xt, log_temp)
+                        self.ddpm.get_predictions(x, log_temp)
                     ).view(sample_shape[0], -1)
 
                 ll_lst.append(ll_lst[-1] - torch.logdet(batch_jacobian(next_x, xt.view(sample_shape[0], -1))).cpu())

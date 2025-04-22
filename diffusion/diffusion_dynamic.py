@@ -142,7 +142,7 @@ class DiffusionDynamic(nn.Module):
     def __init__(self, config: Config) -> None:
         super().__init__()
 
-        self.obj_size = config.data.obj_size
+        self.obj_size = config.dataset_config.obj_size
         self.noise_scheduler = NoiseScheduler.from_config(config)
 
     def get_log_temp(self, tau: Tensor) -> Tensor:

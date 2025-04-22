@@ -66,7 +66,8 @@ class DDPMUnet(DDPM):
     def __init__(self, config: Config):
         super().__init__(config)
 
-        self.unet = get_unet(config.ddpm.dim, config.ddpm.dim_mults, config.data.obj_size[0], config.ddpm.use_lrelu)
+        ddpm_cfg = config.ddpm
+        self.unet = get_unet(ddpm_cfg.dim, ddpm_cfg.dim_mults, config.dataset_config.channels, ddpm_cfg.use_lrelu)
 
     def forward(self, xt: Tensor, tau: Tensor | int) -> Tensor:
         return self.unet(xt, tau) # type: ignore

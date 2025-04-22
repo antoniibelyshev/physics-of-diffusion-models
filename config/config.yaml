@@ -1,10 +1,9 @@
+dataset_name: lsun-bedroom
+
 diffusion:
   min_temp: 1e-4
   max_temp: 1e4
   entropy_key: entropy_extrapolated
-
-data:
-  dataset_name: lsun
 
 ddpm:
   model_name: diffusers
@@ -120,4 +119,4 @@ fid:
     #   - ddim
   sample: True
   train: True
-  save_imgs: True
+  save_imgs: False
