@@ -1,6 +1,5 @@
 import torch
 from torch import Tensor
-from torch.utils.data import TensorDataset
 import numpy as np
 from tqdm import tqdm, trange
 from typing import Generator
@@ -25,9 +24,9 @@ def compute_entropy_derivative(
             x0 = next(data_generator)[0]
             *_, xt = ddpm.dynamic(x0.cuda(), tau)
             x0_pred = ddpm.get_predictions(xt, log_temp).x0.cpu()
-            errors.append((x0_pred - x0).square().sum(list(range(1, len(x0.shape)))))
+            errors.append(torch.norm(x0_pred - x0).square() / len(x0))
 
-        d_entropy_d_log_temp.append((0.5 * torch.cat(errors).mean() / temp).cpu())
+        d_entropy_d_log_temp.append((0.5 * sum(errors) / len(errors) / temp).cpu())
 
     return torch.stack(d_entropy_d_log_temp)
 
@@ -35,9 +34,7 @@ def compute_entropy_derivative(
 @with_config(parse_args=(__name__ == "__main__"))
 @torch.no_grad()
 def main(config: Config) -> None:
-    # dataset = get_dataset(config)
-    dataset = TensorDataset(get_data_tensor(config))
-    # dataset = TensorDataset(torch.from_numpy(np.load(config.samples_path)["x"]))
+    dataset = get_dataset(config)
     data_generator = get_data_generator(dataset, batch_size=config.empirical_stats.batch_size)
     ddpm = DDPM.from_config(config, pretrained=True).cuda()
 
@@ -48,8 +45,16 @@ def main(config: Config) -> None:
     ).flip(0)
     
     d_entropy_d_log_temp = compute_entropy_derivative(data_generator, ddpm, temp_range, config)
-    np.savez(config.empirical_stats_path, temp=temp_range.numpy(), d_entropy_d_log_temp=d_entropy_d_log_temp.numpy())
-    # np.savez("results/cifar10_empirical_stats.npz", temp=temp_range.numpy(), d_entropy_d_log_temp=torch.stack(d_entropy_d_log_temp).numpy())
+    d_log_temp = temp_range[1].log() - temp_range[0].log()
+    entropy = (d_entropy_d_log_temp[1:] + d_entropy_d_log_temp[:-1]).cumsum(0) * d_log_temp
+    entropy -= entropy[-1]
+    entropy = torch.nn.functional.pad(entropy, (0, 1), value=0)
+    np.savez(
+        config.empirical_stats_path,
+        temp=temp_range.numpy(),
+        entropy=entropy,
+        d_entropy_d_log_temp=d_entropy_d_log_temp.numpy()
+    )
 
 
 if __name__ == "__main__":
