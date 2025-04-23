@@ -44,8 +44,9 @@ class SampleConfig(BaseModel):
 
 
 class ForwardStatsConfig(BaseModel):
-    n_samples: int = Field(..., description="Number of samples to generate")
-    batch_size: int = Field(..., description="Number of repeats")
+    n_samples: int = Field(..., description="Number of trajectory starts for stats estimate")
+    batch_size: int = Field(..., description="Size of the batched trajectories")
+    dataloader_batch_size: int = Field(..., description="SSize of the batches in the dataloader")
     n_temps: int = Field(..., description="Number of temperatures")
     unbiased: bool = Field(..., description="Whether to use unbiased estimation")
 
@@ -97,8 +98,9 @@ class Config(BaseModel):
 
     @property
     def available_datasets(self) -> list[str]:
-        return ["mnist", "cifar10"]
-        return list(self.dataset_registry.get_dataset_names())
+        if self.dataset_name == "all":
+            return list(self.dataset_registry.get_dataset_names())
+        return [self.dataset_name]
 
     @property
     def dataset_config(self) -> BaseDatasetConfig:
@@ -131,7 +133,7 @@ class Config(BaseModel):
 
     @property
     def forward_stats_path(self) -> str:
-        return f"results/_{self.dataset_name}_forward{'_unbiased' if self.forward_stats.unbiased else ''}_stats.npz"
+        return f"results/{self.dataset_name}_forward{'_unbiased' if self.forward_stats.unbiased else ''}_stats.npz"
 
     @property
     def backward_stats_path(self) -> str:

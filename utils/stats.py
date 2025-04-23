@@ -14,12 +14,12 @@ def compute_average(p: Tensor, vals: Tensor) -> Tensor:
     return torch.matmul(p.unsqueeze(-2), vals.unsqueeze(-1)).view(*p.shape[:-1])
 
 
-def compute_stats_batch(dataloader: DataLoader[tuple[Tensor, ...]], xt: Tensor, temp: Tensor) -> dict[str, Tensor]:
+def compute_stats_batch(dataloader: DataLoader[tuple[Tensor, ...]], x0_traj: Tensor, temp: Tensor) -> dict[str, Tensor]:
     """Compute statistics for a batch of noisy samples against clean data.
 
     Args:
         dataloader: DataLoader containing clean images batches of shape (batch_size, *obj_size)
-        xt: Batch of noisy samples with shape (n_temps, batch_size, d), where d = prod(obj_size)
+        x0_traj: Batch of trajectory starts with shape (batch_size, d), where d = prod(obj_size)
         temp: Temperature values with shape (n_temps)
 
     Returns:
@@ -29,6 +29,7 @@ def compute_stats_batch(dataloader: DataLoader[tuple[Tensor, ...]], xt: Tensor, 
 
     Notes:
         Auxiliary tensors' shapes:
+            - xt: (n_temps, batch_size, d)
             - energy: (n_temps, batch_size, num_objects)
             - exp: (n_temps, batch_size, num_objects)
             - log_part_fun: (n_temps, batch_size)
@@ -38,8 +39,8 @@ def compute_stats_batch(dataloader: DataLoader[tuple[Tensor, ...]], xt: Tensor, 
     """
 
     device = get_default_device()
-    xt = xt.to(device)
     temp = temp.to(device)
+    xt = torch.randn(len(temp), *x0_traj.shape, device=device) * temp.view(-1, *[1] * len(x0_traj.shape)).sqrt() + x0_traj.to(device)    
     num_objects = len(dataloader.dataset)  # type: ignore
 
     energy = torch.empty(*xt.shape[:2], num_objects, device=device)
@@ -82,13 +83,10 @@ def compute_stats(
     batch_stats: dict[str, list[Tensor]] = defaultdict(list)
     with tqdm(total=n_samples, desc="Computing stats...") as pbar:
         while n_samples > 0:
-            x0 = next(data_generator)[0]
-            eps = torch.randn(len(temp), *x0.shape) * temp.view(-1, *[1] * len(x0.shape)).sqrt()
-            xt = x0 + eps
-            append_dict(batch_stats, compute_stats_batch(dataloader, xt, temp))
-
-            n_samples -= len(x0)
-            pbar.update(len(x0))
+            x0_traj = next(data_generator)[0]
+            append_dict(batch_stats, compute_stats_batch(dataloader, x0_traj, temp))
+            n_samples -= len(x0_traj)
+            pbar.update(len(x0_traj))
 
     stats = dict_map(lambda val: torch.cat(val, dim=1).mean(1), batch_stats)
     stats["temp"] = temp
@@ -102,7 +100,7 @@ def compute_all_stats(
         n_samples: int,
 ) -> dict[str, Tensor]:
     stats = compute_stats(dataloader, data_generator, temp, n_samples, False)
-    unbiased_stats = compute_stats(dataloader, data_generator, temp, n_samples, True)
+    # unbiased_stats = compute_stats(dataloader, data_generator, temp, n_samples, True)
     # stats = {**stats, **{key + "_unbiased": value for key, value in unbiased_stats.items() if key != "temp"}}
     # for suffix in ["", "_unbiased"]:
     #     stats["entropy" + suffix + "_extrapolated"] = extrapolate_entropy(temp, stats["entropy" + suffix])

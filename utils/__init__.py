@@ -1,4 +1,5 @@
 from .data import (
+    get_default_num_workers as get_default_num_workers,
     get_dataset as get_dataset,
     get_data_tensor as get_data_tensor,
     get_data_generator as get_data_generator,
