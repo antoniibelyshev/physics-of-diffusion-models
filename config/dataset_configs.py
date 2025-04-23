@@ -10,6 +10,7 @@ class BaseDatasetConfig(BaseModel):
     name: str
     channels: int
     image_size: tuple[int, int]
+    image_key: str = "image"
     min_temp: float
     max_temp: float
     fid_samples: int = 50000
@@ -68,6 +69,7 @@ class CIFAR10Config(BaseDatasetConfig):
     name: str = "cifar10"
     channels: int = 3
     image_size: tuple[int, int] = (32, 32)
+    image_key: str = "img"
     min_temp: float = 1e-1
     max_temp: float = 1e4
     diffusers_model_id: Optional[str] = "./checkpoints/ddpm_ema_cifar10"

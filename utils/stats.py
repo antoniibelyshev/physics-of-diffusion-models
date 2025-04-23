@@ -42,21 +42,27 @@ def compute_stats_batch(dataloader: DataLoader[tuple[Tensor, ...]], xt: Tensor, 
     temp = temp.to(device)
     num_objects = len(dataloader.dataset)  # type: ignore
 
-    energy = torch.empty(*xt.shape[:-1], num_objects, device=xt.device)
+    energy = torch.empty(*xt.shape[:2], num_objects, device=device)
     offset = 0
     for x0, *_ in tqdm(dataloader, desc="Iterating through data to compute energy levels"):
         b = x0.shape[0]
-        dist = 0.5 * compute_pw_dist_sqr(xt, x0.flatten(1).to(device, non_blocking=True))
-        energy[:, offset:offset + b] = dist
+        dist = 0.5 * compute_pw_dist_sqr(xt.view(-1, *xt.shape[2:]), x0.to(device, non_blocking=True))
+        energy[..., offset:offset + b] = dist.view(*xt.shape[:2], b)
         offset += b
+    
+    del xt
 
     energy -= energy.min(-1, keepdim=True).values
     exp = -energy / temp.view(-1, 1, 1)
     log_part_fun = exp.exp().sum(-1).log()
-    p = (exp - log_part_fun.unsqueeze(-1)).exp()
+    exp -= log_part_fun.unsqueeze(-1)
+    p = exp.exp()
+
+    del exp
 
     avg_energy = compute_average(p, energy)
-    var_energy = compute_average(p, (energy - avg_energy.unsqueeze(-1)).square())
+    energy -= avg_energy.unsqueeze(-1)
+    var_energy = compute_average(p, energy.square())
 
     entropy = log_part_fun + avg_energy / temp.view(-1, 1) - np.log(num_objects)
     heat_capacity = var_energy / temp.square().view(-1, 1)
@@ -73,14 +79,13 @@ def compute_stats(
 ) -> dict[str, Tensor]:
     batch_stats: dict[str, list[Tensor]] = defaultdict(list)
     while n_samples > 0:
-        x0 = next(data_generator)[0].flatten(1)
-        batch_size = len(x0)
-        eps = torch.randn(len(temp), batch_size) * temp.view(-1, 1).sqrt()
+        x0 = next(data_generator)[0]
+        eps = torch.randn(len(temp), *x0.shape) * temp.view(-1, *[1] * len(x0.shape)).sqrt()
         xt = x0 + eps
         append_dict(batch_stats, compute_stats_batch(dataloader, xt, temp))
-        n_samples -= batch_size
+        n_samples -= len(x0)
 
-    stats = dict_map(lambda val: torch.stack(val, dim=1).mean(1), batch_stats)
+    stats = dict_map(lambda val: torch.cat(val, dim=1).mean(1), batch_stats)
     stats["temp"] = temp
     return stats
 

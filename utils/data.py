@@ -24,7 +24,14 @@ class HFDataset(Dataset[tuple[Tensor, ...]]):
     """
     A generic class to wrap Hugging Face datasets into a PyTorch Dataset.
     """
-    def __init__(self, hf_dataset_name: str, image_size: tuple[int, int], *, split: str = "train") -> None:
+    def __init__(
+            self,
+            hf_dataset_name:
+            str, image_size: tuple[int, int],
+            image_key: str,
+            *,
+            split: str = "train"
+    ) -> None:
         super().__init__()
 
         # Load dataset using Hugging Face's `load_dataset`
@@ -37,12 +44,14 @@ class HFDataset(Dataset[tuple[Tensor, ...]]):
             *(() if hf_dataset_name == "mnist" else (Normalize(mean=0.5, std=0.5),)),
         ])
 
+        self.image_key = image_key
+
     def __len__(self) -> int:
         return len(self.dataset)
 
     def __getitem__(self, idx: int) -> tuple[Tensor, ...]:
         data = self.dataset[idx]
-        image = self.transform(data["image"])
+        image = self.transform(data[self.image_key])
 
         if "label" in data:
             label = data["label"]
@@ -54,7 +63,7 @@ class HFDataset(Dataset[tuple[Tensor, ...]]):
 def get_dataset(config: Config, train: bool = True) -> Dataset[tuple[Tensor, ...]]:
     dataset_config = config.dataset_config
     if (hf_dataset_name := dataset_config.hf_dataset_name) is not None:
-        return HFDataset(hf_dataset_name, config.dataset_config.image_size)
+        return HFDataset(hf_dataset_name, config.dataset_config.image_size, config.dataset_config.image_key)
     else:
         return TensorDataset(generate_dataset(config.dataset_name))
 
