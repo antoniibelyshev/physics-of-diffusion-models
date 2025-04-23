@@ -97,6 +97,7 @@ class Config(BaseModel):
 
     @property
     def available_datasets(self) -> list[str]:
+        return ["mnist", "cifar10"]
         return list(self.dataset_registry.get_dataset_names())
 
     @property
@@ -130,7 +131,7 @@ class Config(BaseModel):
 
     @property
     def forward_stats_path(self) -> str:
-        return f"results/{self.dataset_name}_forward{'_unbiased' if self.forward_stats.unbiased else ''}_stats.npz"
+        return f"results/_{self.dataset_name}_forward{'_unbiased' if self.forward_stats.unbiased else ''}_stats.npz"
 
     @property
     def backward_stats_path(self) -> str:

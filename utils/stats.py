@@ -2,7 +2,7 @@ import torch
 from torch import Tensor
 from torch.utils.data import DataLoader
 import numpy as np
-from tqdm import tqdm
+from tqdm import tqdm, trange
 from collections import defaultdict
 from typing import Generator
 
@@ -15,16 +15,27 @@ def compute_average(p: Tensor, vals: Tensor) -> Tensor:
 
 
 def compute_stats_batch(dataloader: DataLoader[tuple[Tensor, ...]], xt: Tensor, temp: Tensor) -> dict[str, Tensor]:
-    energy = torch.cat([0.5 * compute_pw_dist_sqr(xt, x0, final_device=x0.device) for x0 in dataloader], dim=1)
-    energy -= energy.min(1, keepdim=True).values
+    # energy = torch.cat([0.5 * compute_pw_dist_sqr(xt, x0.flatten(1).to(xt.device), final_device=xt.device) for x0, *_ in dataloader], dim=1)
+    num_objects = len(dataloader.dataset)  # type: ignore
+    energy = torch.empty(*xt.shape[:-1], num_objects, device=xt.device)
+
+    # Fill in by batch
+    offset = 0
+    for x0, *_ in dataloader:
+        b = x0.shape[0]
+        dist = 0.5 * compute_pw_dist_sqr(xt, x0.flatten(1).to(xt.device, non_blocking=True), final_device=xt.device)
+        energy[:, offset:offset + b] = dist
+        offset += b
+
+    energy -= energy.min(-1, keepdim=True).values
     exp = -energy / temp.unsqueeze(-1)
-    log_part_fun = exp.exp().sum(1).log()
+    log_part_fun = exp.exp().sum(-1).log()
     p = (exp - log_part_fun.unsqueeze(-1)).exp()
 
     avg_energy = compute_average(p, energy)
     var_energy = compute_average(p, (energy - avg_energy.unsqueeze(-1)).square())
 
-    entropy = log_part_fun + avg_energy / temp - np.log(len(dataloader.dataset))  # type: ignore
+    entropy = log_part_fun + avg_energy / temp - np.log(num_objects)
     heat_capacity = var_energy / temp.square()
 
     return {"entropy": entropy.cpu(), "heat_capacity": heat_capacity.cpu()}
@@ -39,18 +50,16 @@ def compute_stats(
 ) -> dict[str, Tensor]:
     device = get_default_device()
     temp = temp.to(device)
-    stats: dict[str, Tensor] = defaultdict(lambda: torch.zeros(len(temp)))
+    batch_stats: dict[str, list[Tensor]] = defaultdict(list)
     samples_left = n_samples
-    with tqdm(total=n_samples, desc=f"Computing {'unbiased ' if unbiased else ''}statistics...") as pbar:
-        while samples_left > 0:
-            batch_stats: dict[str, list[Tensor]] = defaultdict(list)
-            xt = next(data_generator)[0].to(device)
-            for idx in range(len(temp)):
-                xt += torch.randn_like(xt) * (temp[idx] - (temp[idx - 1] if idx else 0)).sqrt()
-                append_dict(batch_stats, compute_stats_batch(dataloader, xt, temp[idx]))
-            add_dict(stats, dict_map(torch.stack, batch_stats))
-            samples_left -= len(xt)
-            pbar.update(len(xt))
+    while samples_left > 0:
+        batch_stats: dict[str, list[Tensor]] = defaultdict(list)
+        xt = next(data_generator)[0].flatten(1).to(device)
+        for idx in trange(len(temp), desc=f"Computing {'unbiased ' if unbiased else ''}statistics..."):
+            xt += torch.randn_like(xt) * (temp[idx] - (temp[idx - 1] if idx else 0)).sqrt()
+            append_dict(batch_stats, compute_stats_batch(dataloader, xt, temp[idx]))
+        add_dict(stats, dict_map(torch.stack, batch_stats))
+        samples_left -= len(xt)
 
     stats = dict_map(lambda val: torch.stack(val).mean(0), batch_stats)
     stats["temp"] = temp.cpu()

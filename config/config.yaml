@@ -37,7 +37,7 @@ sample:
 
 forward_stats:
   n_samples: 1000
-  batch_size: 10
+  batch_size: 1000
   n_temps: 100
   unbiased: False
 

@@ -15,8 +15,8 @@ def main(config: Config) -> None:
         print(dataset_name)
         config.dataset_name = dataset_name
         dataset = get_dataset(config)
-        data_generator = get_data_generator(dataset, fwd_stats.batch_size)
-        dataloader = DataLoader(dataset, batch_size=500, shuffle=False, num_workers=8)
+        data_generator = get_data_generator(dataset, fwd_stats_cfg.batch_size)
+        dataloader = DataLoader(dataset, batch_size=200, shuffle=False, num_workers=8)
         min_temp, max_temp = config.dataset_config.temp_range
         temp = torch.logspace(np.log10(min_temp), np.log10(max_temp), config.forward_stats.n_temps)
         if config.diffusion.min_temp < temp[-1]:
