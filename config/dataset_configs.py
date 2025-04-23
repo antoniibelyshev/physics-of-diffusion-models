@@ -54,14 +54,14 @@ class DatasetRegistry:
         return list(cls._configs.keys())
 
 
-@DatasetRegistry.register
-class MNISTConfig(BaseDatasetConfig):
-    name: str = "mnist"
-    channels: int = 1
-    image_size: tuple[int, int] = (32, 32)
-    min_temp: float = 1e-2
-    max_temp: float = 1e4
-    hf_dataset_name: Optional[str] = "mnist"
+# @DatasetRegistry.register
+# class MNISTConfig(BaseDatasetConfig):
+#     name: str = "mnist"
+#     channels: int = 1
+#     image_size: tuple[int, int] = (32, 32)
+#     min_temp: float = 1e-2
+#     max_temp: float = 1e4
+#     hf_dataset_name: Optional[str] = "mnist"
 
 
 @DatasetRegistry.register
@@ -72,7 +72,7 @@ class CIFAR10Config(BaseDatasetConfig):
     image_key: str = "img"
     min_temp: float = 1e0
     max_temp: float = 1e6
-    diffusers_model_id: Optional[str] = "./checkpoints/ddpm_ema_cifar10"
+    diffusers_model_id: Optional[str] = "pcuenq/ddpm-ema-cifar"  # "./checkpoints/ddpm_ema_cifar10"
     hf_dataset_name: Optional[str] = "cifar10"
 
 
@@ -99,12 +99,13 @@ class CIFAR10Config(BaseDatasetConfig):
 
 # @DatasetRegistry.register
 # class ImageNetConfig(BaseDatasetConfig):
-#     name: str = "image_net"
+#     name: str = "image-net"
 #     channels: int = 3
 #     image_size: tuple[int, int] = (64, 64)
 #     min_temp: float = 1e-1
 #     max_temp: float = 1e4
-#     hf_dataset_name: Optional[str] = "imagenet-1k"
+#     # diffusers_model_id: Optional[str] = "pcuenq/ddpm-ema-cifar"  # "./checkpoints/ddpm_ema_cifar10"
+#     # hf_dataset_name: Optional[str] = "mlx-vision/imagenet-1k"
 
 
 # @DatasetRegistry.register
@@ -119,7 +120,7 @@ class CIFAR10Config(BaseDatasetConfig):
 
 
 @DatasetRegistry.register
-class CelebAConfig(BaseDatasetConfig):
+class CelebaHQConfig(BaseDatasetConfig):
     name: str = "celeba-hq-256-30k"
     channels: int = 3
     image_size: tuple[int, int] = (256, 256)
@@ -136,7 +137,7 @@ class LSUNBedroomsConfig(BaseDatasetConfig):
     image_size: tuple[int, int] = (256, 256)
     min_temp: float = 1e2
     max_temp: float = 1e7
-    diffusers_model_id: Optional[str] = "fusing/ddpm-lsun-bedroom-ema"
+    diffusers_model_id: Optional[str] = "google/ddpm-ema-bedroom-256"
     hf_dataset_name: Optional[str] = "pcuenq/lsun-bedrooms"
 
 

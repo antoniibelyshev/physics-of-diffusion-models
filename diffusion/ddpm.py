@@ -106,10 +106,11 @@ class DDPMDiffusers(DDPM):
         self.unet = compile(pipeline.unet, mode="reduce-overhead", fullgraph=True) # type: ignore
         # self.unet = pipeline.unet # type: ignore
         self.n_steps = len(pipeline.scheduler.timesteps) # type: ignore
-        self.register_buffer("data", get_data_tensor(config))
+        # self.register_buffer("data", get_data_tensor(config))
 
     def forward(self, xt: Tensor, tau: Tensor) -> Tensor:
         # print(tau)
+        return self.unet(xt, tau * self.n_steps).sample # type: ignore
         if tau.max() <= 1:
             return self.unet(xt, tau * self.n_steps).sample # type: ignore
         return DDPMPredictions(

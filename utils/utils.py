@@ -74,7 +74,7 @@ def batch_jacobian(func: Callable[[Tensor], Tensor], x: Tensor) -> Tensor:
 
 
 def get_diffusers_pipeline(config: Config) -> DDPMPipeline:
-    return DDPMPipeline.from_pretrained(config.ddpm.get_diffusers_model_id(config.data.dataset_name))  # type: ignore
+    return DDPMPipeline.from_pretrained(config.dataset_config.diffusers_model_id)  # type: ignore
 
 
 # Config
