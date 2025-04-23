@@ -15,28 +15,51 @@ def compute_average(p: Tensor, vals: Tensor) -> Tensor:
 
 
 def compute_stats_batch(dataloader: DataLoader[tuple[Tensor, ...]], xt: Tensor, temp: Tensor) -> dict[str, Tensor]:
-    # energy = torch.cat([0.5 * compute_pw_dist_sqr(xt, x0.flatten(1).to(xt.device), final_device=xt.device) for x0, *_ in dataloader], dim=1)
-    num_objects = len(dataloader.dataset)  # type: ignore
-    energy = torch.empty(*xt.shape[:-1], num_objects, device=xt.device)
+    """Compute statistics for a batch of noisy samples against clean data.
 
-    # Fill in by batch
+    Args:
+        dataloader: DataLoader containing clean images batches of shape (batch_size, *obj_size)
+        xt: Batch of noisy samples with shape (n_temps, batch_size, d), where d = prod(obj_size)
+        temp: Temperature values with shape (n_temps)
+
+    Returns:
+        Dictionary containing:
+            - "entropy": Entropy values of shape (n_temps, batch_size)
+            - "heat_capacity": Heat capacity values of shape (n_temps, batch_size)
+
+    Notes:
+        Auxiliary tensors' shapes:
+            - energy: (n_temps, batch_size, num_objects)
+            - exp: (n_temps, batch_size, num_objects)
+            - log_part_fun: (n_temps, batch_size)
+            - p: (n_temps, batch_size, num_objects)
+            - avg_energy: (n_temps, batch_size)
+            - var_energy: (n_temps, batch_size)
+    """
+
+    device = get_default_device()
+    xt = xt.to(device)
+    temp = temp.to(device)
+    num_objects = len(dataloader.dataset)  # type: ignore
+
+    energy = torch.empty(*xt.shape[:-1], num_objects, device=xt.device)
     offset = 0
     for x0, *_ in dataloader:
         b = x0.shape[0]
-        dist = 0.5 * compute_pw_dist_sqr(xt, x0.flatten(1).to(xt.device, non_blocking=True), final_device=xt.device)
+        dist = 0.5 * compute_pw_dist_sqr(xt, x0.flatten(1).to(device, non_blocking=True), to_cpu=False)
         energy[:, offset:offset + b] = dist
         offset += b
 
     energy -= energy.min(-1, keepdim=True).values
-    exp = -energy / temp.unsqueeze(-1)
+    exp = -energy / temp.view(-1, 1, 1)
     log_part_fun = exp.exp().sum(-1).log()
     p = (exp - log_part_fun.unsqueeze(-1)).exp()
 
     avg_energy = compute_average(p, energy)
     var_energy = compute_average(p, (energy - avg_energy.unsqueeze(-1)).square())
 
-    entropy = log_part_fun + avg_energy / temp - np.log(num_objects)
-    heat_capacity = var_energy / temp.square()
+    entropy = log_part_fun + avg_energy / temp.view(-1, 1) - np.log(num_objects)
+    heat_capacity = var_energy / temp.square().view(-1, 1)
 
     return {"entropy": entropy.cpu(), "heat_capacity": heat_capacity.cpu()}
 
@@ -48,21 +71,17 @@ def compute_stats(
         n_samples: int,
         unbiased: bool,
 ) -> dict[str, Tensor]:
-    device = get_default_device()
-    temp = temp.to(device)
     batch_stats: dict[str, list[Tensor]] = defaultdict(list)
-    samples_left = n_samples
-    while samples_left > 0:
-        batch_stats: dict[str, list[Tensor]] = defaultdict(list)
-        xt = next(data_generator)[0].flatten(1).to(device)
-        for idx in trange(len(temp), desc=f"Computing {'unbiased ' if unbiased else ''}statistics..."):
-            xt += torch.randn_like(xt) * (temp[idx] - (temp[idx - 1] if idx else 0)).sqrt()
-            append_dict(batch_stats, compute_stats_batch(dataloader, xt, temp[idx]))
-        add_dict(stats, dict_map(torch.stack, batch_stats))
-        samples_left -= len(xt)
+    while n_samples > 0:
+        x0 = next(data_generator)[0].flatten(1)
+        batch_size = len(x0)
+        eps = torch.randn(len(temp), batch_size) * temp.view(-1, 1).sqrt()
+        xt = x0 + eps
+        append_dict(batch_stats, compute_stats_batch(dataloader, xt, temp))
+        n_samples -= batch_size
 
-    stats = dict_map(lambda val: torch.stack(val).mean(0), batch_stats)
-    stats["temp"] = temp.cpu()
+    stats = dict_map(lambda val: torch.stack(val, dim=1).mean(1), batch_stats)
+    stats["temp"] = temp
     return stats
 
 
