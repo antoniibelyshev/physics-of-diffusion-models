@@ -44,9 +44,9 @@ def compute_stats_batch(dataloader: DataLoader[tuple[Tensor, ...]], xt: Tensor, 
 
     energy = torch.empty(*xt.shape[:-1], num_objects, device=xt.device)
     offset = 0
-    for x0, *_ in dataloader:
+    for x0, *_ in tqdm(dataloader, desc="Iterating through data to compute energy levels"):
         b = x0.shape[0]
-        dist = 0.5 * compute_pw_dist_sqr(xt, x0.flatten(1).to(device, non_blocking=True), to_cpu=False)
+        dist = 0.5 * compute_pw_dist_sqr(xt, x0.flatten(1).to(device, non_blocking=True))
         energy[:, offset:offset + b] = dist
         offset += b
 

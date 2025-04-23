@@ -174,7 +174,7 @@ class DiffusionDynamic(nn.Module):
         xt = xt.float()
         data = data.float()
         alpha_bar = self.get_alpha_bar(tau)
-        h = 0.5 * compute_pw_dist_sqr(xt, alpha_bar.sqrt() * data, final_device="cuda")
+        h = 0.5 * compute_pw_dist_sqr(xt, alpha_bar.sqrt() * data)
         h -= h.min(1, keepdim=True).values
         exp = -h / (1 - alpha_bar).view(-1, 1)
         p = exp.exp()
