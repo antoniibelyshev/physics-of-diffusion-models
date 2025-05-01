@@ -5,14 +5,17 @@ from torch_ema import ExponentialMovingAverage # type: ignore
 from typing import Generator
 from tqdm import trange
 import wandb
+import copy
 
 from config import Config
 from .ddpm import DDPM
-from utils import get_default_device
+from .ddpm_sampling import DDPMSampler
+from utils import get_default_device, get_compute_fid
 
 
 class DDPMTrainer:
     def __init__(self, config: Config, ddpm: DDPM, device: str = get_default_device()) -> None:
+        self.config = config
         self.ddpm = ddpm
         self.ddpm.to(device)
         ema_decay = getattr(config.ddpm_training, 'ema_decay', 0.999)
@@ -27,6 +30,8 @@ class DDPMTrainer:
 
         self.project_name = config.project_name
         self.experiment_name = config.experiment_name
+
+        self.compute_fid = get_compute_fid(config)
 
     def switch_to_ema(self) -> None:
         self.ema.store(self.ddpm.parameters())
@@ -48,6 +53,62 @@ class DDPMTrainer:
         self.optimizer.step()
         self.ema.update(self.ddpm.parameters())
 
+    def evaluate(self, step: int) -> None:
+        """
+        Evaluate the model:
+        1. Switch to EMA checkpoint
+        2. Sample 25 images for visualization
+        3. Upload the images to wandb
+        4. Sample 50k images for FID computation
+        5. Compute the FID score
+        6. Upload the FID score to wandb
+        7. Switch back from the EMA checkpoint
+        """
+        # Store training state
+        training_mode = self.ddpm.training
+        self.ddpm.eval()
+        self.switch_to_ema()
+
+        # Save checkpoint
+        torch.save(self.ddpm.state_dict(), self.config.ddpm_checkpoint_path)
+        torch.save(self.ddpm.state_dict(), f"{self.config.ddpm_checkpoint_path[:-4]}_step_{step}.pth")
+
+        # Create a temporary config for sampling
+        eval_config = copy.deepcopy(self.config)
+        eval_config.sample.track_states = False
+        eval_config.sample.track_ll = False
+        eval_config.sample.step_type = "ddim"
+        eval_config.sample.n_steps = 10
+
+        # Sample 25 images for visualization
+        eval_config.sample.n_samples = 25
+        sampler = DDPMSampler(eval_config)
+        samples = sampler.sample()
+
+        # Convert samples to uint8 and log to wandb
+        images = samples["x"]  # Shape: [25, channels, height, width]
+        images_wandb = [wandb.Image(img.permute(1, 2, 0).numpy()) for img in images]
+        wandb.log({"samples": images_wandb})
+
+        # Sample 50k images for FID computation
+        eval_config.sample.n_samples = self.config.dataset_config.fid_samples
+        eval_config.sample.batch_size = 1000  # Adjust batch size for efficiency
+        sampler = DDPMSampler(eval_config)
+        samples = sampler.sample()
+
+        # Compute FID
+        fid_score = self.compute_fid(samples["x"])
+
+        # Log FID to wandb
+        wandb.log({"fid": fid_score})
+
+        # Restore training state
+        self.switch_back_from_ema()
+        if training_mode:
+            self.ddpm.train()
+        else:
+            self.ddpm.eval()
+
     def train(self, train_generator: Generator[tuple[Tensor, ...], None, None], total_iters: int) -> None:
         wandb.init(project = self.project_name, name = self.experiment_name)
 
@@ -63,6 +124,10 @@ class DDPMTrainer:
                 self.optimizer_logic(loss)
 
                 pbar.set_postfix(loss=loss.item())
+
+                # Evaluate every 10k steps
+                if iter_idx % 10000 == 0:
+                    self.evaluate(iter_idx)
 
         self.ddpm.eval()
         self.switch_to_ema()
