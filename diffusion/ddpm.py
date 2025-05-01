@@ -39,7 +39,7 @@ class DDPM(nn.Module):
         assert self.parametrization in ["x0", "eps", "score"]
     
     def get_predictions(self, xt: Tensor, log_temp: Tensor) -> DDPMPredictions:
-        tau = self.dynamic.noise_scheduler.get_tau(log_temp)
+        tau = self.dynamic.noise_scheduler.get_tau(log_temp).clip(0, 1)
         return DDPMPredictions(self(xt, tau), xt, self.dynamic.get_alpha_bar(tau), self.parametrization)
 
     @abstractmethod
@@ -105,14 +105,14 @@ class DDPMDiffusers(DDPM):
         torch.set_float32_matmul_precision('high')
         self.unet = compile(pipeline.unet, mode="reduce-overhead", fullgraph=True) # type: ignore
         # self.unet = pipeline.unet # type: ignore
-        self.n_steps = len(pipeline.scheduler.timesteps) # type: ignore
+        self.time_scale = pipeline.scheduler.timesteps.max() # type: ignore
         # self.register_buffer("data", get_data_tensor(config))
 
     def forward(self, xt: Tensor, tau: Tensor) -> Tensor:
         # print(tau)
-        return self.unet(xt, tau * self.n_steps).sample # type: ignore
+        return self.unet(xt, (tau * self.time_scale)).sample # type: ignore
         if tau.max() <= 1:
-            return self.unet(xt, tau * self.n_steps).sample # type: ignore
+            return self.unet(xt, tau * self.time_scale).sample # type: ignore
         return DDPMPredictions(
             self.dynamic.get_true_posterior_mean_x0(xt, tau, self.data),
             xt,

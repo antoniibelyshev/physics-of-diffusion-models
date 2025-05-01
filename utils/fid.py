@@ -7,7 +7,7 @@ from tqdm import tqdm
 from config import Config
 from .data import get_dataset
 from .lenet import LeNet
-from .data import to_uint8
+from .data import to_uint8, get_default_num_workers
 
 EPS = 1e-10
 
@@ -51,11 +51,11 @@ def extract_features_statistics(
         batch_size: int = 100,
         device: str = 'cuda'
 ) -> tuple[Tensor, Tensor]:
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=8)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=get_default_num_workers())
     all_features = []
     with torch.no_grad():
         for data, *_ in tqdm(dataloader):
-            data = data.to(device)
+            data = data.to(device, non_blocking=True)
             features = feature_extractor(data)
             all_features.append(features)
     features = torch.cat(all_features, dim=0)

@@ -68,8 +68,9 @@ class DDPMSampler:
         # self.true_ddpm = DDPM.from_config(config).to(device)
         # self.true_ddpm.eval()
         # config.ddpm.model_name = prev_model_name
-        self.data_average = get_data_tensor(config).cuda().mean(0).to(device)
+        # self.data_average = get_data_tensor(config).cuda().mean(0).to(device)
         self.device = device
+        max_log_temp = self.ddpm.dynamic.get_log_temp(torch.ones(1)).item()
         noise_scheduler = NoiseScheduler.from_config(
             config, noise_schedule_type=config.sample.sample_noise_schedule_type
         )
@@ -79,8 +80,8 @@ class DDPMSampler:
             config.sample.n_steps,
             device=device
         ).unsqueeze(1)
-        self.log_temp = noise_scheduler(tau).clip(max=np.log(1e4))
-        # self.log_temp = noise_scheduler(tau)
+        # self.log_temp = noise_scheduler(tau).clip(max=max_log_temp)
+        self.log_temp = noise_scheduler(tau)
         self.clean_log_temp = torch.full((1,), -torch.inf, device=device)
         self.n_samples = config.sample.n_samples
         self.batch_size = config.sample.batch_size

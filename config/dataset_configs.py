@@ -104,8 +104,8 @@ class CIFAR10Config(BaseDatasetConfig):
 #     image_size: tuple[int, int] = (64, 64)
 #     min_temp: float = 1e-1
 #     max_temp: float = 1e4
-#     # diffusers_model_id: Optional[str] = "pcuenq/ddpm-ema-cifar"  # "./checkpoints/ddpm_ema_cifar10"
-#     # hf_dataset_name: Optional[str] = "mlx-vision/imagenet-1k"
+#     # diffusers_model_id: Optional[str] = "pcuenq/ddpm-ema-cifar"
+#     hf_dataset_name: Optional[str] = "benjamin-paine/imagenet-1k-64x64"
 
 
 # @DatasetRegistry.register
