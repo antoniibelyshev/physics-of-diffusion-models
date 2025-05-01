@@ -1,39 +1,41 @@
-dataset_name: all
+dataset_name: cifar10
 
 diffusion:
   min_temp: 1e-4
-  max_temp: 1e4
+  max_temp: 0.02
   entropy_key: entropy_extrapolated
 
 ddpm:
-  model_name: diffusers
+  model_name: unet
   parametrization: eps
-  noise_schedule_type: from_diffusers
-  dim: 64
+  noise_schedule_type: linear_beta
+  dim: 128
   dim_mults:
     - 1
     - 2
-    - 4
-    - 4
-  use_lrelu: True
+    - 2
+    - 2
+  use_lrelu: False
+  ema_decay: 0.9999
 
 ddpm_training:
   batch_size: 128
-  total_iters: 100000
-  learning_rate: 1e-4
-  weight_decay: 1e-2
+  total_iters: 800000
+  learning_rate: 2e-4
+  weight_decay: 0
+  ema_decay: 0.9999
 
 sample:
-  n_steps: 10
+  n_steps: 1000
   n_samples: 100
   batch_size: 100
-  step_type: ddim
-  ddpm_noise_schedule_type: from_diffusers
-  sample_noise_schedule_type: entropy
+  step_type: ddpm
+  ddpm_noise_schedule_type: linear_beta
+  sample_noise_schedule_type: linear_beta
   precision: half
   track_ll: False
   track_states: False
-  min_temp: 1e-1
+  min_temp: 1e-4
 
 forward_stats:
   n_samples: 1024
@@ -115,7 +117,7 @@ fid:
       # - linear_beta      
       # - cosine
       # - original
-      
+
     # step_type:
     #   - ddpm
     #   - ddim

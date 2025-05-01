@@ -15,10 +15,11 @@ class DDPMTrainer:
     def __init__(self, config: Config, ddpm: DDPM, device: str = get_default_device()) -> None:
         self.ddpm = ddpm
         self.ddpm.to(device)
-        self.ema = ExponentialMovingAverage(ddpm.parameters(), decay=0.999)
+        ema_decay = getattr(config.ddpm_training, 'ema_decay', 0.999)
+        self.ema = ExponentialMovingAverage(ddpm.parameters(), decay=ema_decay)
         self.device = device
 
-        self.optimizer = torch.optim.AdamW(
+        self.optimizer = torch.optim.Adam(
             self.ddpm.parameters(),
             lr = config.ddpm_training.learning_rate,
             weight_decay = config.ddpm_training.weight_decay,
@@ -51,7 +52,7 @@ class DDPMTrainer:
         wandb.init(project = self.project_name, name = self.experiment_name)
 
         self.ddpm.train()
-        
+
         with trange(1, 1 + total_iters) as pbar:
             for iter_idx in pbar:
                 batch = next(train_generator)[0].to(self.device)
