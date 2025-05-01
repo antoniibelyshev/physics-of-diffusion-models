@@ -2,7 +2,7 @@ dataset_name: cifar10
 
 diffusion:
   min_temp: 1e-4
-  max_temp: 0.02
+  max_temp: 1e4
   entropy_key: entropy_extrapolated
 
 ddpm:
@@ -19,7 +19,7 @@ ddpm:
   ema_decay: 0.9999
 
 ddpm_training:
-  batch_size: 128
+  batch_size: 256
   total_iters: 800000
   learning_rate: 2e-4
   weight_decay: 0
