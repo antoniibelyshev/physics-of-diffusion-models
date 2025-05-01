@@ -108,12 +108,16 @@ class Config(BaseModel):
         return self.dataset_registry.get(self.dataset_name)
 
     @property
+    def ddpm_config_name(self) -> str:
+        if self.ddpm.model_name == "unet":
+            return f"unet_{self.ddpm.noise_schedule_type}_schedule"
+        return self.ddpm.model_name
+
+    @property
     def experiment_name(self) -> str:
         return "_".join([
             self.dataset_name,
-            self.ddpm.model_name,
-            self.ddpm.noise_schedule_type,
-            "schedule",
+            self.ddpm_config_name
         ])
 
     @property

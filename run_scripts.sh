@@ -1,7 +1,4 @@
 #!/bin/bash
 
-python scripts/train_diffusion.py --diffusion.noise_schedule_type entropy_u --data.dataset_name cifar10
-python scripts/train_diffusion.py --diffusion.noise_schedule_type cosine --data.dataset_name cifar10
-python scripts/train_diffusion.py --diffusion.noise_schedule_type linear_beta --data.dataset_name cifar10
-
-python scripts/compute_fid.py --data.dataset_name cifar10
+python scripts/compute_fid.py --dataset_name=lsun-bedrooms
+python scripts/compute_fid.py --dataset_name=celeba-hq-256-30k

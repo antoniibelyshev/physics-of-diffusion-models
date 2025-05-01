@@ -32,7 +32,7 @@ class NoiseScheduler(nn.Module, ABC):
             return CosineNoiseScheduler(config)
         elif noise_schedule_type.startswith("entropy"):
             return EntropyNoiseScheduler(config)
-        elif noise_schedule_type == "from_diffusers":
+        elif noise_schedule_type == "diffusers":
             return FromDiffusersNoiseScheduler(config)
         else:
             raise ValueError(f"Unknown schedule type: {noise_schedule_type}")
@@ -91,29 +91,7 @@ class EntropyNoiseScheduler(InterpolatedDiscreteTimeNoiseScheduler):
     def __init__(self, config: Config):
         stats = np.load(config.forward_stats_path)
         temp = from_numpy(stats["temp"])
-        entropy = from_numpy(stats[config.diffusion.entropy_key])
-
-        # if noise_schedule_type.endswith("_extrapolated"):
-        #     gamma = 0.2
-        #     left_mask = entropy / entropy.min() > 1 - gamma
-        #     left_log_temp = temp[left_mask].log()
-        #     left_entropy = entropy[left_mask]
-        #     right_mask = entropy / entropy.min() < gamma
-        #     right_log_temp = temp[right_mask].log()
-        #     right_entropy = entropy[right_mask]
-        #     mid_mask = ~(left_mask | right_mask)
-        #     mid_log_temp = temp[mid_mask].log()
-        #     mid_entropy = entropy[mid_mask]
-        #     mid_x = torch.stack([torch.ones_like(mid_log_temp), mid_log_temp], 1)
-        #     beta = (mid_x.T @ mid_x).inverse() @ mid_x.T @ mid_entropy
-        #     l_log_temp = np.log(config.sample.min_temp)
-        #     l_entropy = torch.tensor([[1., l_log_temp]]).float() @ beta
-        #     # temp = torch.cat([left_log_temp - left_log_temp.max() + l_log_temp, right_log_temp]).exp()
-        #     # entropy = torch.cat([left_entropy - left_entropy.max() + l_entropy, right_entropy])
-        #     temp = torch.cat([torch.full((1,), l_log_temp).float(), right_log_temp]).exp()
-        #     entropy = torch.cat([l_entropy, right_entropy])
-        #
-        #     plt.plot(temp, entropy)
+        entropy = from_numpy(stats[config.diffusion.entropy_key])            
 
         timestamps = entropy - entropy.min()
         timestamps /= timestamps.max()
