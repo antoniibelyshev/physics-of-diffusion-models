@@ -2,7 +2,7 @@ import torch
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset, TensorDataset
 from datasets import load_dataset  # type: ignore
-from torchvision.transforms import Compose, Resize, ToTensor, Normalize  # type: ignore
+from torchvision.transforms import Compose, Resize, ToTensor, Normalize, RandomHorizontalFlip  # type: ignore
 from tqdm import tqdm
 import os
 from typing import Generator, Iterable
@@ -26,11 +26,12 @@ class HFDataset(Dataset[tuple[Tensor, ...]]):
     """
     def __init__(
             self,
-            hf_dataset_name:
-            str, image_size: tuple[int, int],
+            hf_dataset_name: str,
+            image_size: tuple[int, int],
             image_key: str,
             *,
-            split: str = "train"
+            split: str = "train",
+            config: Config = None
     ) -> None:
         super().__init__()
 
@@ -38,12 +39,21 @@ class HFDataset(Dataset[tuple[Tensor, ...]]):
         self.dataset = load_dataset(hf_dataset_name, split=split)
 
         # Define transformations
-        self.transform = Compose([
+        transforms = [
             Resize(image_size),
             ToTensor(),
-            *(() if hf_dataset_name == "mnist" else (Normalize(mean=0.5, std=0.5),)),
-        ])
+        ]
 
+        # Add data augmentation if enabled
+        if config and config.data_augmentation.use_augmentation:
+            if config.data_augmentation.horizontal_flip:
+                transforms.insert(1, RandomHorizontalFlip())
+
+        # Add normalization for non-MNIST datasets
+        if hf_dataset_name != "mnist":
+            transforms.append(Normalize(mean=0.5, std=0.5))
+
+        self.transform = Compose(transforms)
         self.image_key = image_key
 
     def __len__(self) -> int:
@@ -63,7 +73,12 @@ class HFDataset(Dataset[tuple[Tensor, ...]]):
 def get_dataset(config: Config, train: bool = True) -> Dataset[tuple[Tensor, ...]]:
     dataset_config = config.dataset_config
     if (hf_dataset_name := dataset_config.hf_dataset_name) is not None:
-        return HFDataset(hf_dataset_name, config.dataset_config.image_size, config.dataset_config.image_key)
+        return HFDataset(
+            hf_dataset_name, 
+            config.dataset_config.image_size, 
+            config.dataset_config.image_key,
+            config=config
+        )
     else:
         return TensorDataset(generate_dataset(config.dataset_name))
 

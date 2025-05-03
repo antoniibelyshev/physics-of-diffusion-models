@@ -1,8 +1,9 @@
 import torch
 from torch import Tensor
 from torch.nn.functional import mse_loss
+from torch.optim.lr_scheduler import LambdaLR
 from torch_ema import ExponentialMovingAverage # type: ignore
-from typing import Generator
+from typing import Generator, Optional
 from tqdm import trange
 import wandb
 import copy
@@ -18,7 +19,7 @@ class DDPMTrainer:
         self.config = config
         self.ddpm = ddpm
         self.ddpm.to(device)
-        ema_decay = getattr(config.ddpm_training, 'ema_decay', 0.999)
+        ema_decay = config.ddpm_training.ema_decay
         self.ema = ExponentialMovingAverage(ddpm.parameters(), decay=ema_decay)
         self.device = device
 
@@ -26,7 +27,21 @@ class DDPMTrainer:
             self.ddpm.parameters(),
             lr = config.ddpm_training.learning_rate,
             weight_decay = config.ddpm_training.weight_decay,
+            betas = config.ddpm_training.betas,
         )
+
+        warmup_steps = config.ddpm_training.warmup_steps
+        total_steps = config.ddpm_training.total_steps
+        self.scheduler: Optional[LambdaLR] = None
+        if warmup_steps > 0:
+            def lr_lambda(current_step):
+                if current_step < warmup_steps:
+                    return float(current_step) / float(max(1, warmup_steps))
+                return max(
+                    0.0, float(total_steps - current_step) / float(max(1, total_steps - warmup_steps))
+                )
+
+            self.scheduler = LambdaLR(self.optimizer, lr_lambda)
 
         self.project_name = config.project_name
         self.experiment_name = config.experiment_name
@@ -52,6 +67,10 @@ class DDPMTrainer:
         loss.backward() # type: ignore
         self.optimizer.step()
         self.ema.update(self.ddpm.parameters())
+
+        # Update learning rate scheduler if it exists
+        if self.scheduler is not None:
+            self.scheduler.step()
 
     def evaluate(self, step: int) -> None:
         """
@@ -120,11 +139,19 @@ class DDPMTrainer:
                 batch = next(train_generator)[0].to(self.device)
                 loss = self.calc_loss(batch)
 
-                wandb.log({'iteration': iter_idx, 'loss': loss.item()})
+                # Get current learning rate
+                current_lr = self.optimizer.param_groups[0]['lr']
+
+                # Log metrics to wandb
+                wandb.log({
+                    'iteration': iter_idx, 
+                    'loss': loss.item(),
+                    'learning_rate': current_lr
+                })
 
                 self.optimizer_logic(loss)
 
-                pbar.set_postfix(loss=loss.item())
+                pbar.set_postfix(loss=loss.item(), lr=current_lr)
 
                 # Evaluate every 10k steps
                 if iter_idx % self.config.ddpm_training.eval_steps == 0:

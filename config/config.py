@@ -30,6 +30,8 @@ class DDPMTrainingConfig(BaseModel):
     weight_decay: float = Field(..., description="Weight decay for training")
     ema_decay: float = Field(..., description="Decay rate for exponential moving average of model parameters")
     eval_steps: int = Field(..., description="Training steps between the evaluation phases")
+    warmup_steps: int = Field(0, description="Number of warmup steps for learning rate")
+    betas: tuple[float, float] = Field((0.9, 0.999))
 
 
 class SampleConfig(BaseModel):
@@ -71,6 +73,11 @@ class VariedDatasetStatsConfig(ForwardStatsConfig):
     sample_fractions: tuple[float, ...] = Field((1.0, 0.1, 0.01), description="Sample fractions")
 
 
+class DataAugmentationConfig(BaseModel):
+    use_augmentation: bool = Field(False, description="Whether to use data augmentation")
+    horizontal_flip: bool = Field(False, description="Whether to use random horizontal flips")
+
+
 class FIDConfig(BaseModel):
     varied_parameters: dict[str, list[Any]] = Field(..., description="List of parameters to vary")
     # n_steps: list[int] = Field(..., description="Number of steps for sampling")
@@ -87,6 +94,9 @@ class Config(BaseModel):
     diffusion: DiffusionConfig = Field(..., description="Diffusion configuration")
     ddpm: DDPMConfig = Field(..., description="DDPM configuration")
     ddpm_training: DDPMTrainingConfig = Field(..., description="DDPM training configuration")
+    data_augmentation: DataAugmentationConfig = Field(
+        DataAugmentationConfig(), description="Data augmentation configuration"
+    )
     sample: SampleConfig = Field(..., description="Sample configuration")
     forward_stats: ForwardStatsConfig = Field(..., description="Forward statistics configuration")
     backward_stats: BackwardStatsConfig = Field(..., description="Backward statistics configuration")
