@@ -87,7 +87,8 @@ class DDPMTrainer:
 
         # Convert samples to uint8 and log to wandb
         images = samples["x"]  # Shape: [25, channels, height, width]
-        images_wandb = [wandb.Image(img.permute(1, 2, 0).numpy()) for img in images]
+        images_grid = images.view(5, 5, *images.shape[1:]).permute(0, 3, 1, 4, 2).reshape(5 * images.shape[2], 5 * images.shape[3], -1).numpy()
+        images_wandb = wandb.Image(images_grid)
         wandb.log({"samples": images_wandb})
 
         # Sample 50k images for FID computation
@@ -126,7 +127,7 @@ class DDPMTrainer:
                 pbar.set_postfix(loss=loss.item())
 
                 # Evaluate every 10k steps
-                if iter_idx % 10000 == 0:
+                if iter_idx % self.config.ddpm_training.eval_steps == 0:
                     self.evaluate(iter_idx)
 
         self.ddpm.eval()

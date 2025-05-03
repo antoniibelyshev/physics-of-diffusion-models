@@ -28,7 +28,8 @@ class DDPMTrainingConfig(BaseModel):
     total_iters: int = Field(..., description="Total number of iterations for training")
     learning_rate: float = Field(..., description="Learning rate for training")
     weight_decay: float = Field(..., description="Weight decay for training")
-    ema_decay: float = Field(0.999, description="Decay rate for exponential moving average of model parameters")
+    ema_decay: float = Field(..., description="Decay rate for exponential moving average of model parameters")
+    eval_steps: int = Field(..., description="Training steps between the evaluation phases")
 
 
 class SampleConfig(BaseModel):

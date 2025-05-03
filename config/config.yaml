@@ -16,7 +16,6 @@ ddpm:
     - 2
     - 2
   use_lrelu: False
-  ema_decay: 0.9999
 
 ddpm_training:
   batch_size: 256
@@ -24,6 +23,7 @@ ddpm_training:
   learning_rate: 2e-4
   weight_decay: 0
   ema_decay: 0.9999
+  eval_steps: 10000
 
 sample:
   n_steps: 1000
