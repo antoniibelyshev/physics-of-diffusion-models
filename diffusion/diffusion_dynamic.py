@@ -96,7 +96,7 @@ class EntropyNoiseScheduler(InterpolatedDiscreteTimeNoiseScheduler):
         timestamps = entropy - entropy.min()
         timestamps /= timestamps.max()
 
-        super().__init__(timestamps, temp.clip(min=1e-4).log())
+        super().__init__(timestamps, temp.clip(min=1e-4, max=1e4).log())
 
 
 class FromDiffusersNoiseScheduler(InterpolatedDiscreteTimeNoiseScheduler):

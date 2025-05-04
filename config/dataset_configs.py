@@ -16,7 +16,7 @@ class BaseDatasetConfig(BaseModel):
     fid_samples: int = 50000
     diffusers_model_id: Optional[str] = None
     hf_dataset_name: Optional[str] = None
-
+ 
     def __init__(self) -> None:
         super().__init__()
 
@@ -72,7 +72,7 @@ class CIFAR10Config(BaseDatasetConfig):
     image_key: str = "img"
     min_temp: float = 1e0
     max_temp: float = 1e6
-    diffusers_model_id: Optional[str] = "pcuenq/ddpm-ema-cifar"  # "./checkpoints/ddpm_ema_cifar10"
+    diffusers_model_id: Optional[str] = "./checkpoints/ddpm_ema_cifar10"
     hf_dataset_name: Optional[str] = "cifar10"
 
 

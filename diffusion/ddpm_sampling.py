@@ -80,8 +80,8 @@ class DDPMSampler:
             config.sample.n_steps,
             device=device
         ).unsqueeze(1)
-        # self.log_temp = noise_scheduler(tau).clip(max=max_log_temp)
-        self.log_temp = noise_scheduler(tau)
+        self.log_temp = noise_scheduler(tau).clip(max=max_log_temp)
+        # self.log_temp = noise_scheduler(tau)
         self.clean_log_temp = torch.full((1,), -torch.inf, device=device)
         self.n_samples = config.sample.n_samples
         self.batch_size = config.sample.batch_size

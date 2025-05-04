@@ -6,9 +6,9 @@ diffusion:
   entropy_key: entropy_extrapolated
 
 ddpm:
-  model_name: unet
+  model_name: diffusers
   parametrization: eps
-  noise_schedule_type: linear_beta
+  noise_schedule_type: diffusers
   dim: 128
   dim_mults:
     - 1
@@ -34,13 +34,13 @@ sample:
   n_steps: 10
   n_samples: 100
   batch_size: 100
-  step_type: ddpm
-  ddpm_noise_schedule_type: linear_beta
-  sample_noise_schedule_type: linear_beta
+  step_type: ddim
+  ddpm_noise_schedule_type: diffusers
+  sample_noise_schedule_type: entropy
   precision: half
   track_ll: False
   track_states: False
-  min_temp: 1e-4
+  min_temp: 1e-2
 
 forward_stats:
   n_samples: 1024
@@ -78,54 +78,28 @@ varied_dataset_stats:
 
 fid:
   varied_parameters:
-    # logn_effective:
-    #   - 1e1
-    #   - 4e1
-    #   - 1e2
-    #   - 4e2
-    #   - 1e3
-    #   - 4e3
-      # - 1e2
-      # - 2e2
-      # - 3e2
-      # - 4e2
-      # - 5e2
-      # - 6e2
-      # - 7e2
-      # - 8e2
-    min_temp:
-      - 1e-1
-      - 4e-2
-      # - 3e-2
-      # - 2e-2
-      - 1e-2
-      # - 8e-3
-      # - 6e-3
-      - 4e-3
-      # - 3e-3
-      # - 2e-3
-      - 1e-3
+    # min_temp:
+    #   - 1e-1
+    #   - 4e-2
+    #   # - 3e-2
+    #   # - 2e-2
+    #   - 1e-2
+    #   # - 8e-3
+    #   # - 6e-3
+    #   - 4e-3
+    #   # - 3e-3
+    #   # - 2e-3
+    #   - 1e-3
     #  n_steps:
     #    - 10
     #    - 20
     #    - 30
     #    - 50
     #    - 100
-    #  ddpm_noise_schedule_type:
-    #     - linear_beta
-    #     - cosine
-    #     - entropy_u
-    #    - from_diffusers
-    # sample_noise_schedule_type:
-      # - entropy_u_extrapolated
-      # - entropy_u
-      # - linear_beta      
-      # - cosine
-      # - original
-
-    # step_type:
-    #   - ddpm
-    #   - ddim
+    sample_noise_schedule_type:
+      - entropy
+      - linear_beta
+      - cosine
   sample: True
   train: True
   save_imgs: False
