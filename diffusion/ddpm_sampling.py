@@ -96,6 +96,7 @@ class DDPMSampler:
         self.track_ll = config.sample.track_ll
         assert not self.track_ll or is_ode_step(config.sample.step_type), "LL tracking is possible only for ode steps"
         self.obj_size = config.dataset_config.obj_size
+        self.sampling_dtype = torch.float16 if config.sample.precision == "half" else torch.float32
 
     def batch_sample(self, batch_size: int) -> dict[str, Tensor]:
         sample_shape = batch_size, *self.obj_size
@@ -123,12 +124,7 @@ class DDPMSampler:
 
                 ll_lst.append(ll_lst[-1] - torch.logdet(batch_jacobian(next_x, xt.view(sample_shape[0], -1))).cpu())
 
-            with torch.amp.autocast("cuda", dtype=torch.float16):  # type: ignore
-                with torch.no_grad():
-                    # if idx == len(self.log_temp) - 1:
-                    #     prev_alpha_bar = get_alpha_bar_from_log_temp(prev_log_temp)
-                    #     xt = prev_alpha_bar.sqrt() * self.data_average + (1 - prev_alpha_bar).sqrt() * xt
-                    # else:
+            with torch.no_grad(), torch.amp.autocast("cuda", dtype=self.sampling_dtype):
                     xt = self.step(xt, coeffs, self.ddpm.get_predictions(xt, log_temp))
 
         res = {"x": xt.cpu()}
