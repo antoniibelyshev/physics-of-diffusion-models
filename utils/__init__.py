@@ -3,6 +3,7 @@ from .data import (
     get_dataset as get_dataset,
     get_data_tensor as get_data_tensor,
     get_data_generator as get_data_generator,
+    compute_dataset_average as compute_dataset_average,
 )
 from .distance import (
     compute_pw_dist_sqr as compute_pw_dist_sqr,

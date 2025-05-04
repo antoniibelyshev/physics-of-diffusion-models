@@ -156,7 +156,7 @@ class DiffusionDynamic(nn.Module):
         diffs *= exps
         return diffs.sum(0) / (exps.sum(0) * (1 - alpha_bar))  # type: ignore
     
-    @torch.cuda.amp.autocast(enabled=False)  # type: ignore
+    @torch.autocast("cuda", enabled=False)  # type: ignore
     def get_true_posterior_mean_x0(self, xt: Tensor, tau: Tensor, data: Tensor) -> Tensor:
         xt = xt.float()
         data = data.float()

@@ -1,13 +1,12 @@
 from tqdm import trange
 import torch
 from torch import Tensor
-import numpy as np
 from math import ceil
 from typing import Iterable
 from collections import defaultdict
 
 from config import Config
-from utils import norm_sqr, get_default_device, batch_jacobian, dict_map, append_dict, get_data_tensor
+from utils import get_default_device, dict_map, append_dict, get_dataset, compute_dataset_average
 from .ddpm import DDPM, DDPMPredictions
 from .diffusion_dynamic import NoiseScheduler, get_alpha_bar_from_log_temp
 
@@ -76,58 +75,39 @@ class DDPMSampler:
         self.n_samples = config.sample.n_samples
         self.batch_size = config.sample.batch_size
         self.n_repeats = ceil(self.n_samples / self.batch_size)
-        self.outer_verbose = self.n_repeats >= 5
-        self.inner_verbose = not self.outer_verbose
         try:
             self.step = STEPS_DICT[config.sample.step_type]
         except KeyError:
             raise KeyError(f"Unknown step type: {config.sample.step_type}")
-        self.track_states = config.sample.track_states
-        self.track_ll = config.sample.track_ll
-        assert not self.track_ll or is_ode_step(config.sample.step_type), "LL tracking is possible only for ode steps"
+
         self.obj_size = config.dataset_config.obj_size
         self.sampling_dtype = torch.float16 if config.sample.precision == "half" else torch.float32
+
+        self.x0_uniform = compute_dataset_average(config).to(device)
 
     def batch_sample(self, batch_size: int) -> dict[str, Tensor]:
         sample_shape = batch_size, *self.obj_size
         xt = torch.randn(*sample_shape, device=self.device)
-        states: list[Tensor] | None = [] if self.track_states else None
-        ll_lst: list[Tensor] | None = None
-        if self.track_ll:
-            ll_lst = [-0.5 * norm_sqr(xt.flatten(1).cpu() + np.log(2 * np.pi) * np.prod(self.obj_size))]
 
-        for idx in get_range(len(self.log_temp) - 1, -1, -1, verbose=self.inner_verbose):
-            if states is not None:
-                states.append(xt.cpu())
-
+        for idx in range(len(self.log_temp) - 1, -1, -1):
             log_temp = self.log_temp[idx]
             prev_log_temp = self.log_temp[idx - 1] if idx > 0 else self.clean_log_temp
             coeffs = SamplingCoeffs(log_temp, prev_log_temp)
 
-            if ll_lst is not None:
-                def next_x(x: Tensor) -> Tensor:
-                    return self.step(
-                        x.view(sample_shape),
-                        coeffs,
-                        self.ddpm.get_predictions(x, log_temp)
-                    ).view(sample_shape[0], -1)
-
-                ll_lst.append(ll_lst[-1] - torch.logdet(batch_jacobian(next_x, xt.view(sample_shape[0], -1))).cpu())
-
-            with torch.no_grad(), torch.cuda.amp.autocast(dtype=self.sampling_dtype):
+            with torch.no_grad(), torch.autocast("cuda", dtype=self.sampling_dtype):
+                if idx == len(self.log_temp) - 1:
+                    prev_alpha_bar = get_alpha_bar_from_log_temp(prev_log_temp)
+                    xt = self.x0_uniform * prev_alpha_bar.sqrt() + xt * (1 - prev_alpha_bar).sqrt()
+                else:
                     xt = self.step(xt, coeffs, self.ddpm.get_predictions(xt, log_temp))
 
         res = {"x": xt.cpu()}
-        if states is not None:
-            res["states"] = torch.stack(states[::-1], dim=1)
-        if ll_lst is not None:
-            res["ll"] = torch.stack(ll_lst[::-1], dim=1)
         return res
 
     def sample(self) -> dict[str, Tensor]:
         res: dict[str, list[Tensor]] = defaultdict(list)
         total_samples = 0
-        for _ in get_range(self.n_repeats, verbose=self.outer_verbose):
+        for _ in trange(self.n_repeats):
             append_dict(res, self.batch_sample(min(self.batch_size, self.n_samples - total_samples)))
             total_samples += self.batch_size
         samples = dict_map(torch.cat, res)

@@ -110,3 +110,22 @@ def get_data_tensor(config: Config, train: bool = True) -> Tensor:
 def to_uint8(images: Tensor, values_range: tuple[float, float] = (-1, 1)) -> Tensor:
     a, b = values_range
     return ((torch.clip(images, a, b) - a) / (b - a) * 255).to(dtype=torch.uint8)
+
+
+def compute_dataset_average(config: Config) -> Tensor:
+    dataloader = DataLoader(
+        get_dataset(config),
+        batch_size=500,
+        shuffle=False,
+        num_workers=get_default_num_workers(),
+    )
+    total_sum = torch.zeros(config.dataset_config.obj_size)
+    total_count = 0
+
+    for batch in tqdm(dataloader, desc="Computing dataset average"):
+        samples = batch[0]
+        batch_sum = samples.sum(dim=0)
+        total_sum += batch_sum
+        total_count += samples.size(0)
+
+    return total_sum / total_count
