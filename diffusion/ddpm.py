@@ -8,7 +8,7 @@ from diffusers.models.attention_processor import AttnProcessor2_0
 from utils import get_diffusers_pipeline
 from .diffusion_dynamic import DiffusionDynamic
 from config import Config
-from utils import get_data_tensor
+from utils import get_data_tensor, dict_map, parse_value
 
 
 class DDPMPredictions:
@@ -69,7 +69,7 @@ class DDPMUnet(DDPM):
 
         self.unet = UNet2DModel(
             sample_size = config.dataset_config.image_size[0],
-            **config.ddpm.unet_config,
+            **dict_map(parse_value, config.ddpm.unet_config or {}),
         )  # type: ignore
 
     def forward(self, xt: Tensor, tau: Tensor | int) -> Tensor:

@@ -26,6 +26,7 @@ from .utils import (
     with_config as with_config,
     interp1d as interp1d,
     get_default_device as get_default_device,
+    parse_value as parse_value,
 )
 from .fid import (
     extract_features_statistics as extract_features_statistics,

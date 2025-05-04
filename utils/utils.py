@@ -150,3 +150,21 @@ def interp1d(x_vals: Tensor, y_vals: Tensor) -> Callable[[Tensor], Tensor]:
 def compute_cdf(x: ArrayT, non_normalized_p: ArrayT) -> ArrayT:
     cdf = np.cumsum(np.append(0, 0.5 * (non_normalized_p[1:] + non_normalized_p[:-1]) / (x[1:] - x[:-1])))
     return cdf / cdf[-1]  # type: ignore
+
+
+def parse_value(value: Any) -> Any:
+    if value == "None":
+        return None
+    elif value == "true":
+        return True
+    elif value == "false":
+        return False
+    try:
+        return int(value)
+    except ValueError:
+        pass
+    try:
+        return float(value)
+    except ValueError:
+        pass
+    return value
