@@ -4,10 +4,9 @@ from torch.nn.functional import sigmoid
 import numpy as np
 from typing import Optional
 from abc import ABC, abstractmethod
-import matplotlib.pyplot as plt
 
 from config import Config
-from utils import norm_sqr, interp1d, get_diffusers_pipeline, fit_entropy_fun, compute_pw_dist_sqr
+from utils import norm_sqr, interp1d, get_diffusers_pipeline, compute_pw_dist_sqr, extrapolate_entropy
 
 
 class NoiseScheduler(nn.Module, ABC):
@@ -24,13 +23,12 @@ class NoiseScheduler(nn.Module, ABC):
 
     @staticmethod
     def from_config(config: Config, *, noise_schedule_type: Optional[str] = None) -> "NoiseScheduler":
-        if noise_schedule_type is None or noise_schedule_type == "original":
-            noise_schedule_type = config.ddpm.noise_schedule_type
+        noise_schedule_type = noise_schedule_type or config.ddpm.noise_schedule_type
         if noise_schedule_type == "linear_beta":
             return LinearBetaNoiseScheduler(config)
         elif noise_schedule_type == "cosine":
             return CosineNoiseScheduler(config)
-        elif noise_schedule_type.startswith("entropy"):
+        elif noise_schedule_type == "entropy":
             return EntropyNoiseScheduler(config)
         elif noise_schedule_type == "diffusers":
             return FromDiffusersNoiseScheduler(config)
@@ -91,7 +89,13 @@ class EntropyNoiseScheduler(InterpolatedDiscreteTimeNoiseScheduler):
     def __init__(self, config: Config):
         stats = np.load(config.forward_stats_path)
         temp = from_numpy(stats["temp"])
-        entropy = from_numpy(stats[config.diffusion.entropy_key])            
+        entropy = from_numpy(stats["entropy"])
+
+        if config.entropy_schedule.extrapolate:
+            temp = torch.cat([torch.full((1,), config.entropy_schedule.min_temp), temp])
+            entropy = torch.cat([torch.full((1,), entropy[0].item()), entropy])
+
+            entropy = extrapolate_entropy(entropy, temp)
 
         timestamps = entropy - entropy.min()
         timestamps /= timestamps.max()

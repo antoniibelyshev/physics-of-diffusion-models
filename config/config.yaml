@@ -2,8 +2,12 @@ dataset_name: cifar10
 
 diffusion:
   min_temp: 1e-4
-  max_temp: 1e4
+  max_temp: 2.478e4
   entropy_key: entropy_extrapolated
+
+entropy_schedule:
+  extrapolate: true
+  min_temp: 1e-2
 
 ddpm:
   model_name: diffusers
@@ -35,12 +39,10 @@ sample:
   n_samples: 100
   batch_size: 100
   step_type: ddim
-  ddpm_noise_schedule_type: diffusers
-  sample_noise_schedule_type: entropy
+  noise_schedule_type: entropy
   precision: half
   track_ll: False
   track_states: False
-  min_temp: 1e-2
 
 forward_stats:
   n_samples: 1024
@@ -49,57 +51,23 @@ forward_stats:
   n_temps: 100
   unbiased: False
 
-backward_stats:
-  n_samples: 1000
-  batch_size: 20
-
 empirical_stats:
   n_temps: 100
   n_steps_per_temp: 1
   batch_size: 128
 
-varied_dataset_stats:
-  n_samples: 5000
-  batch_size: 1000
-  dataloader_batch_size: 100
-  n_temps: 40
-  unbiased: False
-  dataset_names:
-    # - mnist
-    - cifar10
-    # - cifar100
-    # - fashion_mnist
-  sample_fractions:
-    - 1.0
-    - 0.4
-    - 0.1
-    - 0.04
-    - 0.01
-
 fid:
-  varied_parameters:
-    # min_temp:
-    #   - 1e-1
-    #   - 4e-2
-    #   # - 3e-2
-    #   # - 2e-2
-    #   - 1e-2
-    #   # - 8e-3
-    #   # - 6e-3
-    #   - 4e-3
-    #   # - 3e-3
-    #   # - 2e-3
-    #   - 1e-3
-    #  n_steps:
-    #    - 10
-    #    - 20
-    #    - 30
-    #    - 50
-    #    - 100
-    sample_noise_schedule_type:
-      - entropy
-      - linear_beta
-      - cosine
+  min_temp:
+#    - 1e-1
+#    - 4e-2
+    - 1e-2
+#    - 4e-3
+#    - 1e-3
+  n_steps:
+    - 10
+  noise_schedule_type:
+    - entropy
+    - linear_beta
+    - cosine
   sample: True
   train: True
-  save_imgs: False

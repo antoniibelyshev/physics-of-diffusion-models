@@ -111,11 +111,11 @@ class DDPMDiffusers(DDPM):
     def forward(self, xt: Tensor, tau: Tensor) -> Tensor:
         # print(tau)
         return self.unet(xt, (tau * self.time_scale)).sample # type: ignore
-        if tau.max() <= 1:
-            return self.unet(xt, tau * self.time_scale).sample # type: ignore
-        return DDPMPredictions(
-            self.dynamic.get_true_posterior_mean_x0(xt, tau, self.data),
-            xt,
-            self.dynamic.get_alpha_bar(tau),
-            "x0"
-        ).eps
+        # if tau.max() <= 1:
+        #     return self.unet(xt, tau * self.time_scale).sample
+        # return DDPMPredictions(
+        #     self.dynamic.get_true_posterior_mean_x0(xt, tau, self.data),
+        #     xt,
+        #     self.dynamic.get_alpha_bar(tau),
+        #     "x0"
+        # ).eps

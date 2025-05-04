@@ -61,27 +61,17 @@ def get_range(*rng_args: int, verbose: bool) -> Iterable[int]:
 class DDPMSampler:
     def __init__(self, config: Config) -> None:
         device = get_default_device()
-        config.ddpm.noise_schedule_type = config.sample.ddpm_noise_schedule_type
+
         self.ddpm = DDPM.from_config(config, pretrained=True).to(device)
         self.ddpm.eval()
-        # prev_model_name = config.ddpm.model_name = "true"
-        # self.true_ddpm = DDPM.from_config(config).to(device)
-        # self.true_ddpm.eval()
-        # config.ddpm.model_name = prev_model_name
-        # self.data_average = get_data_tensor(config).cuda().mean(0).to(device)
+
         self.device = device
         max_log_temp = self.ddpm.dynamic.get_log_temp(torch.ones(1)).item()
         noise_scheduler = NoiseScheduler.from_config(
-            config, noise_schedule_type=config.sample.sample_noise_schedule_type
+            config, noise_schedule_type=config.sample.noise_schedule_type
         )
-        tau = torch.linspace(
-            noise_scheduler.get_tau(torch.tensor(config.sample.min_temp).log()).item(),
-            1,
-            config.sample.n_steps,
-            device=device
-        ).unsqueeze(1)
+        tau = torch.linspace(0,1, config.sample.n_steps,device=device).unsqueeze(1)
         self.log_temp = noise_scheduler(tau).clip(max=max_log_temp)
-        # self.log_temp = noise_scheduler(tau)
         self.clean_log_temp = torch.full((1,), -torch.inf, device=device)
         self.n_samples = config.sample.n_samples
         self.batch_size = config.sample.batch_size
@@ -124,7 +114,7 @@ class DDPMSampler:
 
                 ll_lst.append(ll_lst[-1] - torch.logdet(batch_jacobian(next_x, xt.view(sample_shape[0], -1))).cpu())
 
-            with torch.no_grad(), torch.amp.autocast("cuda", dtype=self.sampling_dtype):
+            with torch.no_grad(), torch.cuda.amp.autocast(dtype=self.sampling_dtype):
                     xt = self.step(xt, coeffs, self.ddpm.get_predictions(xt, log_temp))
 
         res = {"x": xt.cpu()}

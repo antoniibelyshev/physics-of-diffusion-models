@@ -16,22 +16,27 @@ def main(config: Config) -> None:
     compute_fid = get_compute_fid(config)
     fids: list[dict[str, Any]] = []
     parameter_combinations = product(
-        *config.fid.varied_parameters.values()
+        config.fid.n_steps,
+        config.fid.noise_schedule_type,
+        config.fid.min_temp,
     )
-    for params in parameter_combinations:
-        params_dict = dict(zip(config.fid.varied_parameters, params))
-        for name, value in params_dict.items():
-            setattr(config.sample, name, config.sample.model_fields[name].annotation(value))  # type: ignore
+    for n_steps, noise_schedule_type, min_temp in parameter_combinations:
+        config.sample.n_steps = n_steps
+        config.sample.noise_schedule_type = noise_schedule_type
+        config.entropy_schedule.min_temp = min_temp
         config.sample.n_samples = config.dataset_config.fid_samples
         if config.fid.sample:
             samples = get_samples(config)
-            if config.fid.save_imgs:
-                np.savez(config.samples_path, **samples) # type: ignore
             x = samples["x"]
         else:
             x = from_numpy(np.load(config.samples_path)["x"][:config.dataset_config.fid_samples])
         fid = compute_fid(x)
-        results_dict = {**{"fid": fid}, **params_dict}
+        results_dict = {
+            "fid": fid,
+            "n_steps": n_steps,
+            "noise_schedule_type": noise_schedule_type,
+            "min_temp": min_temp
+        }
         print(*[f"{key}: {value}" for key, value in results_dict.items()], sep=", ")
         fids.append(results_dict)
 

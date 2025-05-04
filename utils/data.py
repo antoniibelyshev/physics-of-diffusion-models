@@ -31,7 +31,7 @@ class HFDataset(Dataset[tuple[Tensor, ...]]):
             image_key: str,
             *,
             split: str = "train",
-            config: Config = None
+            config: Config,
     ) -> None:
         super().__init__()
 
@@ -45,7 +45,7 @@ class HFDataset(Dataset[tuple[Tensor, ...]]):
         ]
 
         # Add data augmentation if enabled
-        if config and config.data_augmentation.use_augmentation:
+        if config.data_augmentation.use_augmentation:
             if config.data_augmentation.horizontal_flip:
                 transforms.insert(1, RandomHorizontalFlip())
 

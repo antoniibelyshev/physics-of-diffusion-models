@@ -78,7 +78,6 @@ def compute_stats(
         data_generator: Generator[tuple[Tensor, ...], None, None],
         temp: Tensor,
         n_samples: int,
-        unbiased: bool,
 ) -> dict[str, Tensor]:
     batch_stats: dict[str, list[Tensor]] = defaultdict(list)
     with tqdm(total=n_samples, desc="Computing stats...") as pbar:
@@ -90,21 +89,6 @@ def compute_stats(
 
     stats = dict_map(lambda val: torch.cat(val, dim=1).mean(1), batch_stats)
     stats["temp"] = temp
-    return stats
-
-
-def compute_all_stats(
-        dataloader: DataLoader[tuple[Tensor, ...]],
-        data_generator: Generator[tuple[Tensor, ...], None, None],
-        temp: Tensor,
-        n_samples: int,
-) -> dict[str, Tensor]:
-    stats = compute_stats(dataloader, data_generator, temp, n_samples, False)
-    # unbiased_stats = compute_stats(dataloader, data_generator, temp, n_samples, True)
-    # stats = {**stats, **{key + "_unbiased": value for key, value in unbiased_stats.items() if key != "temp"}}
-    # for suffix in ["", "_unbiased"]:
-    #     stats["entropy" + suffix + "_extrapolated"] = extrapolate_entropy(temp, stats["entropy" + suffix])
-    stats["entropy_extrapolated"] = extrapolate_entropy(temp, stats["entropy"])
     return stats
 
 

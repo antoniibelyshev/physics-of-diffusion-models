@@ -2,7 +2,7 @@ import torch
 from torch.utils.data import DataLoader
 import numpy as np
 
-from utils import compute_all_stats
+from utils import compute_stats
 from config import Config
 from utils import get_dataset, get_data_generator, with_config, get_default_num_workers, dict_map
 
@@ -26,7 +26,7 @@ def main(config: Config) -> None:
         temp = torch.logspace(np.log10(min_temp), np.log10(max_temp), config.forward_stats.n_temps)
         if config.diffusion.min_temp < temp[-1]:
             temp = torch.cat((torch.full((1,), config.diffusion.min_temp), temp))
-        stats = compute_all_stats(dataloader, data_generator, temp, fwd_stats_cfg.n_samples)
+        stats = compute_stats(dataloader, data_generator, temp, fwd_stats_cfg.n_samples)
         np.savez(config.forward_stats_path, **stats)  # type: ignore
 
 
