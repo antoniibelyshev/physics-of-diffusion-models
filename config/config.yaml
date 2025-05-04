@@ -8,6 +8,7 @@ diffusion:
 entropy_schedule:
   extrapolate: true
   min_temp: 1e-2
+  max_temp: 2.478e4
 
 ddpm:
   model_name: diffusers

@@ -17,6 +17,7 @@ class DiffusionConfig(BaseModel):
 class EntropyScheduleConfig(BaseModel):
     extrapolate: bool = Field(..., description="Extrapolate entropy schedule")
     min_temp: float = Field(..., description="Minimum temperature")
+    max_temp: float = Field(..., description="Maximum temperature")
 
 
 class DDPMConfig(BaseModel):
