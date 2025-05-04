@@ -41,15 +41,12 @@ sample:
   step_type: ddim
   noise_schedule_type: entropy
   precision: half
-  track_ll: False
-  track_states: False
 
 forward_stats:
   n_samples: 1024
   batch_size: 128
   dataloader_batch_size: 100
   n_temps: 100
-  unbiased: False
 
 empirical_stats:
   n_temps: 100
@@ -58,10 +55,10 @@ empirical_stats:
 
 fid:
   min_temp:
-    - 4e-2
-    - 2e-2
+    - 1e-4
+    - 1e-1
     - 1e-2
-    - 5e-3
+    - 1e-3
   n_steps:
     - 10
   noise_schedule_type:

@@ -45,8 +45,6 @@ class SampleConfig(BaseModel):
     noise_schedule_type: str = Field(..., description="Type of the noise schedule for sampling")
     n_samples: int = Field(..., description="Number of samples to generate")
     batch_size: int = Field(..., description="Batch size for sampling")
-    track_ll: bool = Field(..., description="Whether to track log likelihood")
-    track_states: bool = Field(..., description="Whether to track states")
     precision: str = Field(..., description="Precision of the computations")
 
 

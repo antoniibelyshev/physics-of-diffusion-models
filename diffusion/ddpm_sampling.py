@@ -69,7 +69,7 @@ class DDPMSampler:
         noise_scheduler = NoiseScheduler.from_config(
             config, noise_schedule_type=config.sample.noise_schedule_type
         )
-        tau = torch.linspace(0, 1, config.sample.n_steps,device=device).unsqueeze(1)
+        tau = torch.linspace(0, 1, config.sample.n_steps + 1, device=device)[:-1].unsqueeze(1)
         self.log_temp = noise_scheduler(tau).clip(max=max_log_temp)
         self.clean_log_temp = torch.full((1,), -torch.inf, device=device)
         self.n_samples = config.sample.n_samples
@@ -95,11 +95,11 @@ class DDPMSampler:
             coeffs = SamplingCoeffs(log_temp, prev_log_temp)
 
             with torch.no_grad(), torch.autocast("cuda", dtype=self.sampling_dtype):
-                if idx == len(self.log_temp) - 1:
-                    prev_alpha_bar = get_alpha_bar_from_log_temp(prev_log_temp)
-                    xt = self.x0_uniform * prev_alpha_bar.sqrt() + xt * (1 - prev_alpha_bar).sqrt()
-                else:
-                    xt = self.step(xt, coeffs, self.ddpm.get_predictions(xt, log_temp))
+                # if idx == len(self.log_temp) - 1:
+                #     prev_alpha_bar = get_alpha_bar_from_log_temp(prev_log_temp)
+                #     xt = self.x0_uniform * prev_alpha_bar.sqrt() + xt * (1 - prev_alpha_bar).sqrt()
+                # else:
+                xt = self.step(xt, coeffs, self.ddpm.get_predictions(xt, log_temp))
 
         res = {"x": xt.cpu()}
         return res
