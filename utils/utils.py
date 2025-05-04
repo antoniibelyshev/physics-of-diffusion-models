@@ -1,6 +1,6 @@
 import torch
 from diffusers import DDPMPipeline
-from torch import nn, Tensor, searchsorted
+from torch import Tensor, searchsorted
 from torch.autograd.functional import jacobian
 from denoising_diffusion_pytorch import Unet  # type: ignore
 import numpy as np
@@ -10,6 +10,7 @@ from yaml import safe_load
 from typing import Callable, Optional, ParamSpec, TypeVar, Concatenate, Any
 from functools import wraps
 from scipy.optimize import curve_fit  # type: ignore
+from pydantic import BaseModel
 
 from config import Config
 
@@ -53,20 +54,20 @@ def get_diffusers_pipeline(config: Config) -> DDPMPipeline:
 
 # Config
 
+def flatten_config(config: BaseModel, parent_key: str = "") -> dict[str, Any]:
+    items: list[tuple[str, Any]] = []
+    for k, v in config:
+        new_key = f"{parent_key}.{k}" if parent_key else k
+        if isinstance(v, BaseModel):
+            items.extend(flatten_config(v, new_key).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
+
+
 def parse_args_from_config(config: Config) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-
-    def flatten_config(d: dict[str, Any], parent_key: str = "") -> dict[str, Any]:
-        items: list[Any] = []
-        for k, v in d.items():
-            new_key = f"{parent_key}.{k}" if parent_key else k
-            if isinstance(v, dict):
-                items.extend(flatten_config(v, new_key).items())
-            else:
-                items.append((new_key, v))
-        return dict(items)
-
-    flat_config = flatten_config(config.model_dump())
+    flat_config = flatten_config(config)
     for key, value in flat_config.items():
         if isinstance(value, bool):
             parser.add_argument(f"--{key}", action="store_true", help=f"Enable {key}")
