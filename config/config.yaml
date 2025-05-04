@@ -3,7 +3,6 @@ dataset_name: cifar10
 diffusion:
   min_temp: 1e-4
   max_temp: 2.478e4
-  entropy_key: entropy_extrapolated
 
 entropy_schedule:
   extrapolate: true
@@ -59,16 +58,15 @@ empirical_stats:
 
 fid:
   min_temp:
-#    - 1e-1
-#    - 4e-2
+    - 4e-2
+    - 2e-2
     - 1e-2
-#    - 4e-3
-#    - 1e-3
+    - 5e-3
   n_steps:
     - 10
   noise_schedule_type:
     - entropy
-    - linear_beta
-    - cosine
+    # - linear_beta
+    # - cosine
   sample: True
   train: True

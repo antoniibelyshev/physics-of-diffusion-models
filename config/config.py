@@ -7,7 +7,6 @@ from .dataset_configs import BaseDatasetConfig, DatasetRegistry
 class DiffusionConfig(BaseModel):
     min_temp: float = Field(..., description="Minimum temperature")
     max_temp: float = Field(..., description="Maximum temperature")
-    entropy_key: str = Field(..., description="Entropy key in the stats archive for the entropy schedule")
 
     @property
     def temp_range(self) -> tuple[float, float]:

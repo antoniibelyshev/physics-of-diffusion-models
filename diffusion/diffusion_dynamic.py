@@ -95,22 +95,17 @@ class EntropyNoiseScheduler(InterpolatedDiscreteTimeNoiseScheduler):
             temp = torch.cat([torch.full((1,), config.entropy_schedule.min_temp), temp])
             entropy = torch.cat([torch.full((1,), entropy[0].item()), entropy])
 
-            # import matplotlib.pyplot as plt
-
-            # plt.figure()
-            # plt.plot(temp, entropy)
-            # plt.xscale("log")
-
             entropy = extrapolate_entropy(temp, entropy)
 
-            # plt.plot(temp, entropy)
-            # plt.xscale("log")
-            # plt.show()
+            mask = temp <= config.entropy_schedule.max_temp
+
+            temp = temp[mask]
+            entropy = entropy[mask]
 
         timestamps = entropy - entropy.min()
         timestamps /= timestamps.max()
 
-        super().__init__(timestamps, temp.clip(min=config.diffusion.min_temp, max=config.diffusion.max_temp).log())
+        super().__init__(timestamps, temp.log())
 
 
 class FromDiffusersNoiseScheduler(InterpolatedDiscreteTimeNoiseScheduler):
