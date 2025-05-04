@@ -2,12 +2,13 @@ from abc import abstractmethod
 
 import torch
 from torch import nn, Tensor, load, compile
+from diffusers import UNet2DModel
 from diffusers.models.attention_processor import AttnProcessor2_0
 
 from utils import get_diffusers_pipeline
-from .diffusion_dynamic import DiffusionDynamic, get_alpha_bar_from_log_temp
+from .diffusion_dynamic import DiffusionDynamic
 from config import Config
-from utils import get_data_tensor, get_unet, compute_pw_dist_sqr
+from utils import get_data_tensor
 
 
 class DDPMPredictions:
@@ -66,11 +67,13 @@ class DDPMUnet(DDPM):
     def __init__(self, config: Config):
         super().__init__(config)
 
-        ddpm_cfg = config.ddpm
-        self.unet = get_unet(ddpm_cfg.dim, ddpm_cfg.dim_mults, config.dataset_config.channels, ddpm_cfg.use_lrelu)
+        self.unet = UNet2DModel(
+            sample_size = config.dataset_config.image_size[0],
+            **config.ddpm.unet_config,
+        )  # type: ignore
 
     def forward(self, xt: Tensor, tau: Tensor | int) -> Tensor:
-        return self.unet(xt, tau) # type: ignore
+        return self.unet(xt, tau)  # type: ignore
 
 
 class DDPMTrue(DDPM):

@@ -9,7 +9,6 @@ from utils import get_dataset, get_data_generator, with_config, get_default_num_
 
 @with_config(parse_args=(__name__ == "__main__"))
 def main(config: Config) -> None:
-    config.forward_stats.unbiased = False
     fwd_stats_cfg = config.forward_stats
     for dataset_name in config.available_datasets:
         print(dataset_name)

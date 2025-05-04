@@ -10,9 +10,6 @@ from torch import from_numpy
 
 @with_config(parse_args=(__name__ == "__main__"))
 def main(config: Config) -> None:
-    config.sample.track_ll = False
-    config.sample.track_states = False
-
     compute_fid = get_compute_fid(config)
     fids: list[dict[str, Any]] = []
     parameter_combinations = product(

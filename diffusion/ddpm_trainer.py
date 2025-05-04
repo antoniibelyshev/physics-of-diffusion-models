@@ -57,7 +57,6 @@ class DDPMTrainer:
 
     def calc_loss(self, x0: Tensor) -> Tensor:
         tau, eps, xt = self.ddpm.dynamic(x0)
-
         pred = self.ddpm(xt, tau)
         target = eps if self.ddpm.parametrization == "eps" else x0
         return mse_loss(target, pred)
@@ -65,6 +64,7 @@ class DDPMTrainer:
     def optimizer_logic(self, loss: Tensor) -> None:
         self.optimizer.zero_grad()
         loss.backward() # type: ignore
+        torch.nn.utils.clip_grad_norm_(self.ddpm.parameters(), 1.0)
         self.optimizer.step()
         self.ema.update(self.ddpm.parameters())
 
@@ -94,8 +94,6 @@ class DDPMTrainer:
 
         # Create a temporary config for sampling
         eval_config = copy.deepcopy(self.config)
-        eval_config.sample.track_states = False
-        eval_config.sample.track_ll = False
         eval_config.sample.step_type = "ddim"
         eval_config.sample.n_steps = 10
 
@@ -106,8 +104,9 @@ class DDPMTrainer:
 
         # Convert samples to uint8 and log to wandb
         images = samples["x"]  # Shape: [25, channels, height, width]
-        images_grid = images.view(5, 5, *images.shape[1:]).permute(0, 3, 1, 4, 2).reshape(5 * images.shape[2], 5 * images.shape[3], -1).numpy()
-        images_wandb = wandb.Image(images_grid)
+        # images_grid = images.view(5, 5, *images.shape[1:]).permute(0, 3, 1, 4, 2).reshape(5 * images.shape[2], 5 * images.shape[3], -1).numpy()
+        # images_wandb = wandb.Image(images_grid)
+        images_wandb = [wandb.Image(image.permute(1, 2, 0).numpy()) for image in images.cpu().numpy()]
         wandb.log({"samples": images_wandb})
 
         # Sample 50k images for FID computation

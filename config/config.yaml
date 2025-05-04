@@ -13,22 +13,40 @@ ddpm:
   model_name: diffusers
   parametrization: eps
   noise_schedule_type: diffusers
-  dim: 128
-  dim_mults:
-    - 1
-    - 2
-    - 2
-    - 2
-  use_lrelu: False
+  unet_config:
+    freq_shift: 1
+    flip_sin_to_cos: false
+    down_block_types:
+      - DownBlock2D
+      - AttnDownBlock2D
+      - DownBlock2D
+      - DownBlock2D
+    up_block_types:
+      - UpBlock2D
+      - UpBlock2D
+      - AttnUpBlock2D
+      - UpBlock2D
+    block_out_channels:
+      - 128
+      - 256
+      - 256
+      - 256
+    downsample_padding: 0
+    attention_head_dim: None
+    norm_eps: 1e-06
 
 ddpm_training:
   batch_size: 128
   total_iters: 500000
-  learning_rate: 2e-4
+  learning_rate: 1e-4
   weight_decay: 0
   ema_decay: 0.9999
   eval_steps: 10000
   warmup_steps: 5000
+  grad_clip: 1
+  betas:
+    - 0.9
+    - 0.999
 
 data_augmentation:
   use_augmentation: true

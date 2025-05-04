@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, Any
 
 from .dataset_configs import BaseDatasetConfig, DatasetRegistry
 
@@ -23,9 +23,7 @@ class DDPMConfig(BaseModel):
     model_name: str = Field(..., description="Name of the model architecture")
     parametrization: str = Field(..., description="Parametrization of the model")
     noise_schedule_type: str = Field(..., description="Type of noise schedule")
-    dim: int = Field(..., description="Base number of channels in the Unet")
-    dim_mults: list[int] = Field(..., description="Base channel multipliers in the Unet")
-    use_lrelu: bool = Field(..., description="Whether to use LeakyReLU instead of ReLU")
+    unet_config: Optional[dict[str, Any]] = Field(None, description="Configuration for the UNet model")
 
 
 class DDPMTrainingConfig(BaseModel):
@@ -35,8 +33,9 @@ class DDPMTrainingConfig(BaseModel):
     weight_decay: float = Field(..., description="Weight decay for training")
     ema_decay: float = Field(..., description="Decay rate for exponential moving average of model parameters")
     eval_steps: int = Field(..., description="Training steps between the evaluation phases")
-    warmup_steps: int = Field(0, description="Number of warmup steps for learning rate")
-    betas: tuple[float, float] = Field((0.9, 0.999))
+    warmup_steps: int = Field(..., description="Number of warmup steps for learning rate")
+    betas: tuple[float, float] = Field(..., description="Beta values for Adam optimizer")
+    grad_clip: float = Field(..., description="Gradient clipping value (upper)")
 
 
 class SampleConfig(BaseModel):
@@ -53,7 +52,6 @@ class ForwardStatsConfig(BaseModel):
     batch_size: int = Field(..., description="Size of the batched trajectories")
     dataloader_batch_size: int = Field(..., description="SSize of the batches in the dataloader")
     n_temps: int = Field(..., description="Number of temperatures")
-    unbiased: bool = Field(..., description="Whether to use unbiased estimation")
 
 
 class EmpiricalStatsConfig(BaseModel):
@@ -136,7 +134,7 @@ class Config(BaseModel):
 
     @property
     def forward_stats_path(self) -> str:
-        return f"results/{self.dataset_name}_forward{'_unbiased' if self.forward_stats.unbiased else ''}_stats.npz"
+        return f"results/{self.dataset_name}_forward_stats.npz"
 
     @property
     def empirical_stats_path(self) -> str:

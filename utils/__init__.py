@@ -20,15 +20,12 @@ from .utils import (
     append_dict as append_dict,
     add_dict as add_dict,
     extend_dict as extend_dict,
-    replace_activations as replace_activations,
     batch_jacobian as batch_jacobian,
-    get_unet as get_unet,
     get_diffusers_pipeline as get_diffusers_pipeline,
     load_config as load_config,
     with_config as with_config,
     interp1d as interp1d,
     get_default_device as get_default_device,
-    fit_entropy_fun as fit_entropy_fun,
 )
 from .fid import (
     extract_features_statistics as extract_features_statistics,

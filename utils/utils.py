@@ -40,32 +40,6 @@ def extend_dict(prev_dict: dict[str, list[T]], new_dict: dict[str, list[T]]) -> 
 
 # nn functions
 
-def replace_activations(
-        module: nn.Module,
-        new_activation: Callable[[], nn.Module] = lambda: nn.LeakyReLU(0.2),
-        activations_to_replace: tuple[type, ...] = (nn.ReLU, nn.SiLU, nn.GELU),
-) -> nn.Module:
-    if isinstance(module, activations_to_replace):
-        return new_activation()
-    for name, child in module.named_children():
-        setattr(module, name, replace_activations(child, new_activation, activations_to_replace))
-    return module
-
-
-def get_unet(base_channels: int, dim_mults: list[int], channels: int, use_lrelu: bool = True) -> Unet:
-    unet = Unet(
-        dim=base_channels,
-        dim_mults=dim_mults,
-        channels=channels,
-        flash_attn=True,
-    )
-
-    if use_lrelu:
-        replace_activations(unet)
-
-    return unet
-
-
 def batch_jacobian(func: Callable[[Tensor], Tensor], x: Tensor) -> Tensor:
     def _func_sum(x_: Tensor) -> Tensor:
         return func(x_).sum(dim=0)
@@ -176,37 +150,3 @@ def interp1d(x_vals: Tensor, y_vals: Tensor) -> Callable[[Tensor], Tensor]:
 def compute_cdf(x: ArrayT, non_normalized_p: ArrayT) -> ArrayT:
     cdf = np.cumsum(np.append(0, 0.5 * (non_normalized_p[1:] + non_normalized_p[:-1]) / (x[1:] - x[:-1])))
     return cdf / cdf[-1]  # type: ignore
-
-
-def get_step_fun(step_fun_type: str) -> Callable[[ArrayT], ArrayT]:
-    match step_fun_type:
-        case "sigmoid":
-            return lambda x: 1 / (1 + x)
-        case "gompertz":
-            return lambda x: np.exp(-x)
-        case _:
-            raise NotImplementedError
-
-
-def entropy_fun(temp: ArrayT, b: float, logn: float, step_fun_type: str) -> ArrayT:
-    return logn * get_step_fun(step_fun_type)(b / logn / temp) - logn
-
-
-# def entropy_fun_gompertz(temp: ArrayT, b: float, logn: float) -> ArrayT:
-#     return logn * np.exp(-b / logn / temp) - logn  # type: ignore
-
-
-def fit_entropy_fun(
-        temp: Tensor,
-        entropy: Tensor,
-        logn: float,
-        logn_effective: float,
-        step_fun_type: str,
-    ) -> Callable[[ArrayT], ArrayT]:
-    (b, *_), *_ = curve_fit(
-        lambda temp_, b_: entropy_fun(temp_, b_, logn, step_fun_type),
-        temp.numpy(),
-        entropy.numpy(),
-        p0=[1],
-    )
-    return lambda temp_: entropy_fun(temp_, b, logn_effective, step_fun_type)
