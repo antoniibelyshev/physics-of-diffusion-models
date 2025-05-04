@@ -10,9 +10,9 @@ entropy_schedule:
   max_temp: 2.478e4
 
 ddpm:
-  model_name: diffusers
+  model_name: unet
   parametrization: eps
-  noise_schedule_type: diffusers
+  noise_schedule_type: linear_beta
   unet_config:
     freq_shift: 1
     flip_sin_to_cos: false
@@ -57,7 +57,7 @@ sample:
   n_samples: 100
   batch_size: 100
   step_type: ddim
-  noise_schedule_type: entropy
+  noise_schedule_type: linear_beta
   precision: half
 
 forward_stats:
