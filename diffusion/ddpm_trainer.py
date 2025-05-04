@@ -31,7 +31,7 @@ class DDPMTrainer:
         )
 
         warmup_steps = config.ddpm_training.warmup_steps
-        total_steps = config.ddpm_training.total_steps
+        total_steps = config.ddpm_training.total_iters
         self.scheduler: Optional[LambdaLR] = None
         if warmup_steps > 0:
             def lr_lambda(current_step):
