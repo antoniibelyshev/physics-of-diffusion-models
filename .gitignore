@@ -14,11 +14,11 @@ wandb/*
 .idea/
 
 # Ignore large files
-*checkpoints/
-results/
+checkpoints/
 data/
-real_images/
-fake_images/
+samples/
+stats/
+fid/
 
 # Ignore temporary files
 tmp*

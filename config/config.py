@@ -119,27 +119,22 @@ class Config(BaseModel):
         return f"checkpoints/{self.experiment_name}.pth"
 
     @property
-    def samples_prefix(self) -> str:
-        return f"results/{self.experiment_name}_{self.sample.n_steps}_{self.sample.step_type}_steps"
-
-    @property
     def samples_path(self) -> str:
         return "_".join([
-            f"results/{self.experiment_name}",
+            f"samples/{self.experiment_name}",
             str(self.sample.n_steps),
             self.sample.step_type,
             "steps",
-            "samples",
         ])
 
     @property
     def forward_stats_path(self) -> str:
-        return f"results/{self.dataset_name}_forward_stats.npz"
+        return f"stats/{self.dataset_name}_forward.npz"
 
     @property
     def empirical_stats_path(self) -> str:
-        return f"results/{self.experiment_name}_empirical_stats.npz"
+        return f"stats/{self.experiment_name}_empirical.npz"
 
     @property
     def fid_results_path(self) -> str:
-        return f"results/{self.dataset_name}_{'train' if self.fid.train else 'test'}_fid.csv"
+        return f"fid/{self.experiment_name}.csv"
