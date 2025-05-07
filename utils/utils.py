@@ -162,10 +162,10 @@ def parse_value(value: Any) -> Any:
         return False
     try:
         return int(value)
-    except ValueError:
+    except:
         pass
     try:
         return float(value)
-    except ValueError:
+    except:
         pass
     return value

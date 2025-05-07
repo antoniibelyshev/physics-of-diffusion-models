@@ -67,13 +67,16 @@ class DDPMUnet(DDPM):
     def __init__(self, config: Config):
         super().__init__(config)
 
-        self.unet = UNet2DModel(
+        unet = UNet2DModel(
             sample_size = config.dataset_config.image_size[0],
             **dict_map(parse_value, config.ddpm.unet_config or {}),
         )  # type: ignore
+        set_processor_recursively(unet, AttnProcessor2_0) # type: ignore
+        torch.set_float32_matmul_precision('high')
+        self.unet = compile(unet, mode="reduce-overhead") # type: ignore
 
     def forward(self, xt: Tensor, tau: Tensor | int) -> Tensor:
-        return self.unet(xt, tau)  # type: ignore
+        return self.unet(xt, tau).sample  # type: ignore
 
 
 class DDPMTrue(DDPM):

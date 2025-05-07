@@ -92,10 +92,7 @@ class EntropyNoiseScheduler(InterpolatedDiscreteTimeNoiseScheduler):
         entropy = from_numpy(stats["entropy"])
 
         if config.entropy_schedule.extrapolate:
-            temp = torch.cat([torch.full((1,), config.entropy_schedule.min_temp), temp])
-            entropy = torch.cat([torch.full((1,), entropy[0].item()), entropy])
-
-            entropy = extrapolate_entropy(temp, entropy)
+            temp, entropy = extrapolate_entropy(temp, entropy, config.entropy_schedule.min_temp)
 
             mask = temp <= config.entropy_schedule.max_temp
 

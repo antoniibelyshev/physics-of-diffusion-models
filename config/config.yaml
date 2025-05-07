@@ -8,11 +8,10 @@ entropy_schedule:
   extrapolate: true
   min_temp: 1e-2
   max_temp: 2.478e4
-
 ddpm:
-  model_name: diffusers
+  model_name: unet
   parametrization: eps
-  noise_schedule_type: diffusers
+  noise_schedule_type: entropy
   unet_config:
     freq_shift: 1
     flip_sin_to_cos: false
@@ -37,12 +36,12 @@ ddpm:
 
 ddpm_training:
   batch_size: 128
-  total_iters: 500000
+  total_iters: 200000
   learning_rate: 1e-4
   weight_decay: 0
   ema_decay: 0.9999
   eval_steps: 10000
-  warmup_steps: 5000
+  warmup_steps: 0
   grad_clip: 1
   betas:
     - 0.9
@@ -74,9 +73,9 @@ empirical_stats:
 fid:
   min_temp:
     - 1e-4
-    - 1e-1
-    - 1e-2
-    - 1e-3
+    # - 1e-1
+    # - 1e-2
+    # - 1e-3
   n_steps:
     - 10
   noise_schedule_type:
