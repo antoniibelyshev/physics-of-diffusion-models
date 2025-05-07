@@ -100,7 +100,7 @@ class Config(BaseModel):
     @property
     def ddpm_config_name(self) -> str:
         if self.ddpm.model_name == "unet":
-            return f"unet_{self.ddpm.noise_schedule_type}_schedule"
+            return f"unet_{self.ddpm.parametrization}_{self.ddpm.noise_schedule_type}_schedule"
         return self.ddpm.model_name
 
     @property

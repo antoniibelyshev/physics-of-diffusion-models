@@ -14,17 +14,13 @@ wandb/*
 .idea/
 
 # Ignore large files
-*checkpoints/
+checkpoints/
 results/
 data/
-real_images/
-fake_images/
+graphs/
 
 # Ignore temporary files
 tmp*
 
 # Ignore environment files
 .env
-
-# Ignore sources of packages
-src/

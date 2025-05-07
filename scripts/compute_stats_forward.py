@@ -23,8 +23,8 @@ def main(config: Config) -> None:
         )
         min_temp, max_temp = config.dataset_config.temp_range
         temp = torch.logspace(np.log10(min_temp), np.log10(max_temp), config.forward_stats.n_temps)
-        if config.diffusion.min_temp < temp[-1]:
-            temp = torch.cat((torch.full((1,), config.diffusion.min_temp), temp))
+        # if config.diffusion.min_temp < temp[-1]:
+        #     temp = torch.cat((torch.full((1,), config.diffusion.min_temp), temp))
         stats = compute_stats(dataloader, data_generator, temp, fwd_stats_cfg.n_samples)
         np.savez(config.forward_stats_path, **stats)  # type: ignore
 

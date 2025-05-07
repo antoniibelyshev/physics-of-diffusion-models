@@ -62,15 +62,16 @@ def compute_stats_batch(dataloader: DataLoader[tuple[Tensor, ...]], x0_traj: Ten
     del exp
 
     avg_energy = compute_average(p, energy)
-    energy -= avg_energy.unsqueeze(-1)
-    var_energy = compute_average(p, energy.square())
+    # energy -= avg_energy.unsqueeze(-1)
+    # var_energy = compute_average(p, energy.square())
 
     del energy
 
     entropy = log_part_fun + avg_energy / temp.view(-1, 1) - np.log(num_objects)
-    heat_capacity = var_energy / temp.square().view(-1, 1)
+    # heat_capacity = var_energy / temp.square().view(-1, 1)
 
-    return {"entropy": entropy.cpu(), "heat_capacity": heat_capacity.cpu()}
+    # return {"entropy": entropy.cpu(), "heat_capacity": heat_capacity.cpu()}
+    return {"entropy": entropy.cpu()}
 
 
 def compute_stats(
@@ -92,9 +93,11 @@ def compute_stats(
     return stats
 
 
-def extrapolate_entropy(temp: Tensor, entropy: Tensor) -> Tensor:
+def extrapolate_entropy(temp: Tensor, entropy: Tensor, min_temp: float) -> tuple[Tensor, Tensor]:
+    temp = torch.cat([torch.full((1,), min_temp), temp])
+    entropy = torch.cat([torch.full((1,), entropy[0].item()), entropy])
     log_temp = temp.log()
     slope = (entropy[1:] - entropy[:-1]) / (log_temp[1:] - log_temp[:-1])
     idx = torch.argmax(slope)
     idx -= int(idx == len(temp))
-    return torch.cat(((log_temp[:idx] - log_temp[idx]) * slope[idx] + entropy[idx], entropy[idx:]), dim=0)
+    return temp, torch.cat(((log_temp[:idx] - log_temp[idx]) * slope[idx] + entropy[idx], entropy[idx:]), dim=0)

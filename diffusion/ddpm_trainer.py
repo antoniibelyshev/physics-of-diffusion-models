@@ -90,7 +90,7 @@ class DDPMTrainer:
 
         # Save checkpoint
         torch.save(self.ddpm.state_dict(), self.config.ddpm_checkpoint_path)
-        torch.save(self.ddpm.state_dict(), f"{self.config.ddpm_checkpoint_path[:-4]}_step_{step}.pth")
+        torch.save(self.ddpm.state_dict(), f"{self.config.ddpm_checkpoint_path[:-4]}/step_{step}.pth")
 
         # Create a temporary config for sampling
         eval_config = copy.deepcopy(self.config)
@@ -106,20 +106,23 @@ class DDPMTrainer:
         images = samples["x"]  # Shape: [25, channels, height, width]
         # images_grid = images.view(5, 5, *images.shape[1:]).permute(0, 3, 1, 4, 2).reshape(5 * images.shape[2], 5 * images.shape[3], -1).numpy()
         # images_wandb = wandb.Image(images_grid)
-        images_wandb = [wandb.Image(image.permute(1, 2, 0).numpy()) for image in images.cpu().numpy()]
+        images_wandb = [wandb.Image(image.permute(1, 2, 0).numpy()) for image in images]
         wandb.log({"samples": images_wandb})
 
-        # Sample 50k images for FID computation
         eval_config.sample.n_samples = self.config.dataset_config.fid_samples
         eval_config.sample.batch_size = 1000  # Adjust batch size for efficiency
-        sampler = DDPMSampler(eval_config)
-        samples = sampler.sample()
+        for n_steps in [10, 100]:
+            # Sample 50k images for FID computation
+            eval_config.sample.n_steps = n_steps
 
-        # Compute FID
-        fid_score = self.compute_fid(samples["x"])
+            sampler = DDPMSampler(eval_config)
+            samples = sampler.sample()
 
-        # Log FID to wandb
-        wandb.log({"fid": fid_score})
+            # Compute FID
+            fid_score = self.compute_fid(samples["x"])
+
+            # Log FID to wandb
+            wandb.log({f"fid {n_steps} steps": fid_score})
 
         # Restore training state
         self.switch_back_from_ema()

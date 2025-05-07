@@ -83,7 +83,7 @@ class DDPMSampler:
         self.obj_size = config.dataset_config.obj_size
         self.sampling_dtype = torch.float16 if config.sample.precision == "half" else torch.float32
 
-        self.x0_uniform = compute_dataset_average(config).to(device)
+        # self.x0_uniform = compute_dataset_average(config).to(device)
 
     def batch_sample(self, batch_size: int) -> dict[str, Tensor]:
         sample_shape = batch_size, *self.obj_size
