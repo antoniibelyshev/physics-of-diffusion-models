@@ -75,15 +75,48 @@ class DDPMSampler:
         self.n_samples = config.sample.n_samples
         self.batch_size = config.sample.batch_size
         self.n_repeats = ceil(self.n_samples / self.batch_size)
-        try:
-            self.step = STEPS_DICT[config.sample.step_type]
-        except KeyError:
-            raise KeyError(f"Unknown step type: {config.sample.step_type}")
+        # try:
+        #     self.step = STEPS_DICT[config.sample.step_type]
+        # except KeyError:
+        #     raise KeyError(f"Unknown step type: {config.sample.step_type}")
+        self.step_type = config.sample.step_type
 
         self.obj_size = config.dataset_config.obj_size
         self.sampling_dtype = torch.float16 if config.sample.precision == "half" else torch.float32
 
         # self.x0_uniform = compute_dataset_average(config).to(device)
+
+    def step(self, xt: Tensor, log_temp: Tensor, prev_log_temp: Tensor):
+        ddpm_predictions = self.ddpm.get_predictions(xt, log_temp)
+        alpha_bar = get_alpha_bar_from_log_temp(log_temp)
+        prev_alpha_bar = get_alpha_bar_from_log_temp(prev_log_temp)
+        alpha = alpha_bar / prev_alpha_bar
+        beta = 1 - alpha
+
+        if self.step_type == "ddpm":
+            x0_coef = (prev_alpha_bar.sqrt() * beta) / (1 - alpha_bar)
+            xt_coef = (alpha.sqrt() * (1 - prev_alpha_bar)) / (1 - alpha_bar)
+            noise_coef = ((1 - prev_alpha_bar) / (1 - alpha_bar) * beta).sqrt()
+
+            return ddpm_predictions.x0 * x0_coef + xt * xt_coef + torch.randn_like(xt) * noise_coef
+
+        elif self.step_type == "ddim" and self.ddpm.parametrization == "x0":
+            if prev_alpha_bar.item() < 0.5:
+                s = ((1 - prev_alpha_bar) / (1 - alpha_bar)).sqrt()
+            else:
+                s = ((1 / prev_alpha_bar - 1) / (1 / prev_alpha_bar - alpha)).sqrt()
+
+            x0_coef = prev_alpha_bar.sqrt() * (1 - s)
+            xt_coef = alpha.pow(-0.5) * s
+
+            return ddpm_predictions.x0 * x0_coef + xt * xt_coef
+
+        elif self.step_type == "ddim" and self.ddpm.parametrization == "eps":
+            xt_coef = alpha.pow(-0.5)
+            eps_coef = -xt_coef * beta / ((1 - alpha_bar).sqrt() + (1 - alpha_bar - beta).sqrt())
+            return xt * xt_coef + ddpm_predictions.eps * eps_coef
+
+        raise ValueError
 
     def batch_sample(self, batch_size: int) -> dict[str, Tensor]:
         sample_shape = batch_size, *self.obj_size
