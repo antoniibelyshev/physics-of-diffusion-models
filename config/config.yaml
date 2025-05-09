@@ -6,11 +6,12 @@ diffusion:
 
 entropy_schedule:
   extrapolate: true
-  min_temp: 1e-2
+  min_temp: 1e-4
   max_temp: 2.478e4
+
 ddpm:
   model_name: unet
-  parametrization: eps
+  parametrization: x0
   noise_schedule_type: entropy
   unet_config:
     freq_shift: 1

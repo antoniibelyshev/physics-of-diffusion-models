@@ -19,6 +19,7 @@ data/
 samples/
 stats/
 fid/
+graphs/
 
 # Ignore temporary files
 tmp*
