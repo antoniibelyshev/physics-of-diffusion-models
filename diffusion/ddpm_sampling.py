@@ -88,7 +88,7 @@ class DDPMSampler:
 
         # self.x0_uniform = compute_dataset_average(config).to(device)
 
-    def step(self, xt: Tensor, log_temp: Tensor, prev_log_temp: Tensor):
+    def step(self, xt: Tensor, log_temp: Tensor, prev_log_temp: Tensor) -> Tensor:
         ddpm_predictions = self.ddpm.get_predictions(xt, log_temp)
         alpha_bar = get_alpha_bar_from_log_temp(log_temp)
         prev_alpha_bar = get_alpha_bar_from_log_temp(prev_log_temp)
@@ -102,18 +102,13 @@ class DDPMSampler:
 
             return ddpm_predictions.x0 * x0_coef + xt * xt_coef + torch.randn_like(xt) * noise_coef
 
-        elif self.step_type == "ddim" and self.ddpm.parametrization == "x0":
+        elif self.step_type == "ddim":
             x0_coef = prev_alpha_bar * (1 - (0.5 * (prev_log_temp - log_temp)).exp())
             xt_coef = alpha.pow(-0.5) * (0.5 * (prev_log_temp - log_temp)).exp()
 
             return ddpm_predictions.x0 * x0_coef + xt * xt_coef
 
-        elif self.step_type == "ddim" and self.ddpm.parametrization == "eps":
-            xt_coef = alpha.pow(-0.5)
-            eps_coef = -xt_coef * beta / ((1 - alpha_bar).sqrt() + (1 - alpha_bar - beta).sqrt())
-            return xt * xt_coef + ddpm_predictions.eps * eps_coef
-
-        raise ValueError
+        raise ValueError(f"unknown step type: {self.step_type}")
 
     def batch_sample(self, batch_size: int) -> dict[str, Tensor]:
         sample_shape = batch_size, *self.obj_size
@@ -122,13 +117,8 @@ class DDPMSampler:
         for idx in range(len(self.log_temp) - 1, -1, -1):
             log_temp = self.log_temp[idx]
             prev_log_temp = self.log_temp[idx - 1] if idx > 0 else self.clean_log_temp
-            coeffs = SamplingCoeffs(log_temp, prev_log_temp)
 
             with torch.no_grad(), torch.autocast("cuda", dtype=self.sampling_dtype):
-                # if idx == len(self.log_temp) - 1:
-                #     prev_alpha_bar = get_alpha_bar_from_log_temp(prev_log_temp)
-                #     xt = self.x0_uniform * prev_alpha_bar.sqrt() + xt * (1 - prev_alpha_bar).sqrt()
-                # else:
                 xt = self.step(xt, log_temp, prev_log_temp)
 
         res = {"x": xt.cpu()}

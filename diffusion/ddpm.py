@@ -88,7 +88,6 @@ class DDPMTrue(DDPM):
         self.register_buffer("train_data", get_data_tensor(config))
 
     def forward(self, xt: Tensor, tau: Tensor) -> Tensor:
-        # return self.dynamic.get_true_score(xt, tau, self.train_data)
         return self.dynamic.get_true_posterior_mean_x0(xt, tau, self.train_data)  # type: ignore
 
 
@@ -106,22 +105,10 @@ class DDPMDiffusers(DDPM):
         super().__init__(config)
 
         pipeline = get_diffusers_pipeline(config)
-        # pipeline.unet.set_attn_processor(AttnProcessor2_0())
         set_processor_recursively(pipeline.unet, AttnProcessor2_0) # type: ignore
         torch.set_float32_matmul_precision('high')
         self.unet = compile(pipeline.unet, mode="reduce-overhead", fullgraph=True) # type: ignore
-        # self.unet = pipeline.unet # type: ignore
         self.time_scale = pipeline.scheduler.timesteps.max() # type: ignore
-        # self.register_buffer("data", get_data_tensor(config))
 
     def forward(self, xt: Tensor, tau: Tensor) -> Tensor:
-        # print(tau)
         return self.unet(xt, (tau * self.time_scale)).sample # type: ignore
-        # if tau.max() <= 1:
-        #     return self.unet(xt, tau * self.time_scale).sample
-        # return DDPMPredictions(
-        #     self.dynamic.get_true_posterior_mean_x0(xt, tau, self.data),
-        #     xt,
-        #     self.dynamic.get_alpha_bar(tau),
-        #     "x0"
-        # ).eps

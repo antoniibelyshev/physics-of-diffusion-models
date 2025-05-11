@@ -65,7 +65,7 @@ class DDPMTrainer:
     def optimizer_logic(self, loss: Tensor) -> None:
         self.optimizer.zero_grad()
         loss.backward() # type: ignore
-        torch.nn.utils.clip_grad_norm_(self.ddpm.parameters(), seflf.config.ddpm_training.grad_clip)
+        torch.nn.utils.clip_grad_norm_(self.ddpm.parameters(), self.config.ddpm_training.grad_clip)
         self.optimizer.step()
         self.ema.update(self.ddpm.parameters())
 
