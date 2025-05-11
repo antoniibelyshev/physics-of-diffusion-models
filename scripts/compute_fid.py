@@ -20,10 +20,10 @@ def main(config: Config) -> None:
     for n_steps, noise_schedule_type, min_temp in parameter_combinations:
         config.sample.n_steps = n_steps
         config.sample.noise_schedule_type = noise_schedule_type
-        config.entropy_schedule.min_temp = min_temp
+        # config.entropy_schedule.min_temp = min_temp
         config.sample.n_samples = config.dataset_config.fid_samples
         if config.fid.sample:
-            samples = get_samples(config)
+            samples = get_samples(config, min_temp = min_temp)
             x = samples["x"]
         else:
             x = from_numpy(np.load(config.samples_path)["x"][:config.dataset_config.fid_samples])

@@ -11,8 +11,8 @@ entropy_schedule:
 
 ddpm:
   model_name: unet
-  parametrization: x0
-  noise_schedule_type: entropy
+  parametrization: eps
+  noise_schedule_type: linear_beta
   unet_config:
     freq_shift: 1
     flip_sin_to_cos: false
@@ -37,12 +37,12 @@ ddpm:
 
 ddpm_training:
   batch_size: 128
-  total_iters: 200000
+  total_iters: 100000
   learning_rate: 1e-4
   weight_decay: 0
   ema_decay: 0.9999
   eval_steps: 10000
-  warmup_steps: 0
+  warmup_steps: 5000
   grad_clip: 1
   betas:
     - 0.9
@@ -55,7 +55,7 @@ data_augmentation:
 sample:
   n_steps: 10
   n_samples: 100
-  batch_size: 100
+  batch_size: 1000
   step_type: ddim
   noise_schedule_type: entropy
   precision: half

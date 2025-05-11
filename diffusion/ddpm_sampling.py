@@ -2,7 +2,7 @@ from tqdm import trange
 import torch
 from torch import Tensor
 from math import ceil
-from typing import Iterable
+from typing import Iterable, Optional
 from collections import defaultdict
 
 from config import Config
@@ -58,11 +58,13 @@ def get_range(*rng_args: int, verbose: bool) -> Iterable[int]:
 
 
 class DDPMSampler:
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: Config, ddpm: Optional[DDPM] = None, min_temp: Optional[float] = None) -> None:
         device = get_default_device()
 
-        self.ddpm = DDPM.from_config(config, pretrained=True).to(device)
+        self.ddpm = DDPM.from_config(config, pretrained=True).to(device) if ddpm is None else ddpm
         self.ddpm.eval()
+
+        config.entropy_schedule.min_temp = min_temp or config.entropy_schedule.min_temp
 
         self.device = device
         max_log_temp = self.ddpm.dynamic.get_log_temp(torch.ones(1)).item()
@@ -101,13 +103,8 @@ class DDPMSampler:
             return ddpm_predictions.x0 * x0_coef + xt * xt_coef + torch.randn_like(xt) * noise_coef
 
         elif self.step_type == "ddim" and self.ddpm.parametrization == "x0":
-            if prev_alpha_bar.item() < 0.5:
-                s = ((1 - prev_alpha_bar) / (1 - alpha_bar)).sqrt()
-            else:
-                s = ((1 / prev_alpha_bar - 1) / (1 / prev_alpha_bar - alpha)).sqrt()
-
-            x0_coef = prev_alpha_bar.sqrt() * (1 - s)
-            xt_coef = alpha.pow(-0.5) * s
+            x0_coef = prev_alpha_bar * (1 - (0.5 * (prev_log_temp - log_temp)).exp())
+            xt_coef = alpha.pow(-0.5) * (0.5 * (prev_log_temp - log_temp)).exp()
 
             return ddpm_predictions.x0 * x0_coef + xt * xt_coef
 
@@ -132,7 +129,7 @@ class DDPMSampler:
                 #     prev_alpha_bar = get_alpha_bar_from_log_temp(prev_log_temp)
                 #     xt = self.x0_uniform * prev_alpha_bar.sqrt() + xt * (1 - prev_alpha_bar).sqrt()
                 # else:
-                xt = self.step(xt, coeffs, self.ddpm.get_predictions(xt, log_temp))
+                xt = self.step(xt, log_temp, prev_log_temp)
 
         res = {"x": xt.cpu()}
         return res
@@ -147,6 +144,6 @@ class DDPMSampler:
         return samples
 
 
-def get_samples(config: Config) -> dict[str, Tensor]:
-    sampler = DDPMSampler(config)
+def get_samples(config: Config, min_temp: Optional[float] = None) -> dict[str, Tensor]:
+    sampler = DDPMSampler(config, min_temp = min_temp)
     return sampler.sample()

@@ -7,6 +7,7 @@ from typing import Generator, Optional
 from tqdm import trange
 import wandb
 import copy
+import os
 
 from config import Config
 from .ddpm import DDPM
@@ -64,7 +65,7 @@ class DDPMTrainer:
     def optimizer_logic(self, loss: Tensor) -> None:
         self.optimizer.zero_grad()
         loss.backward() # type: ignore
-        torch.nn.utils.clip_grad_norm_(self.ddpm.parameters(), 1.0)
+        torch.nn.utils.clip_grad_norm_(self.ddpm.parameters(), seflf.config.ddpm_training.grad_clip)
         self.optimizer.step()
         self.ema.update(self.ddpm.parameters())
 
@@ -89,8 +90,9 @@ class DDPMTrainer:
         self.switch_to_ema()
 
         # Save checkpoint
-        torch.save(self.ddpm.state_dict(), self.config.ddpm_checkpoint_path)
-        torch.save(self.ddpm.state_dict(), f"{self.config.ddpm_checkpoint_path[:-4]}/step_{step}.pth")
+        os.makedirs("./checkpoints", exist_ok=True)
+        os.makedirs(f"./checkpoints/{self.config.experiment_name}", exist_ok=True)
+        torch.save(self.ddpm.state_dict(), f"./checkpoints/{self.config.experiment_name}/step_{step}.pth")
 
         # Create a temporary config for sampling
         eval_config = copy.deepcopy(self.config)
@@ -99,7 +101,7 @@ class DDPMTrainer:
 
         # Sample 25 images for visualization
         eval_config.sample.n_samples = 25
-        sampler = DDPMSampler(eval_config)
+        sampler = DDPMSampler(eval_config, ddpm=self.ddpm)
         samples = sampler.sample()
 
         # Convert samples to uint8 and log to wandb
@@ -115,7 +117,7 @@ class DDPMTrainer:
             # Sample 50k images for FID computation
             eval_config.sample.n_steps = n_steps
 
-            sampler = DDPMSampler(eval_config)
+            sampler = DDPMSampler(eval_config, ddpm=self.ddpm)
             samples = sampler.sample()
 
             # Compute FID
