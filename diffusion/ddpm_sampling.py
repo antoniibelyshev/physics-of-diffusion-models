@@ -137,3 +137,4 @@ class DDPMSampler:
 def get_samples(config: Config, min_temp: Optional[float] = None) -> dict[str, Tensor]:
     sampler = DDPMSampler(config, min_temp = min_temp)
     return sampler.sample()
+
