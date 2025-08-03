@@ -71,7 +71,10 @@ class DDPMSampler:
         noise_scheduler = NoiseScheduler.from_config(
             config, noise_schedule_type=config.sample.noise_schedule_type
         )
-        tau = torch.linspace(0, 1, config.sample.n_steps + 1, device=device)[:-1].unsqueeze(1)
+        if config.sample.noise_schedule_type == "entropy":
+            tau = torch.linspace(0, 1, config.sample.n_steps + 1, device=device)[:-1].unsqueeze(1)
+        else:
+            tau = torch.linspace(0, 1, config.sample.n_steps, device=device).unsqueeze(1)
         self.log_temp = noise_scheduler(tau).clip(max=max_log_temp)
         self.clean_log_temp = torch.full((1,), -torch.inf, device=device)
         self.n_samples = config.sample.n_samples
@@ -85,6 +88,7 @@ class DDPMSampler:
 
         self.obj_size = config.dataset_config.obj_size
         self.sampling_dtype = torch.float16 if config.sample.precision == "half" else torch.float32
+        self.track_states = config.sample.track_states
 
         # self.x0_uniform = compute_dataset_average(config).to(device)
 
@@ -101,8 +105,14 @@ class DDPMSampler:
             noise_coef = ((1 - prev_alpha_bar) / (1 - alpha_bar) * beta).sqrt()
 
             return ddpm_predictions.x0 * x0_coef + xt * xt_coef + torch.randn_like(xt) * noise_coef
+        
+        elif self.step_type == "ddim" and self.ddpm.parametrization == "eps":
+            xt_coef = alpha.pow(-0.5)
+            eps_coef = -xt_coef * beta / ((1 - alpha_bar).sqrt() + (1 - alpha_bar - beta).sqrt())
 
-        elif self.step_type == "ddim":
+            return ddpm_predictions.eps * eps_coef + xt * xt_coef
+
+        elif self.step_type == "ddim" and self.ddpm.parametrization == "x0":
             x0_coef = prev_alpha_bar * (1 - (0.5 * (prev_log_temp - log_temp)).exp())
             xt_coef = alpha.pow(-0.5) * (0.5 * (prev_log_temp - log_temp)).exp()
 
@@ -113,6 +123,8 @@ class DDPMSampler:
     def batch_sample(self, batch_size: int) -> dict[str, Tensor]:
         sample_shape = batch_size, *self.obj_size
         xt = torch.randn(*sample_shape, device=self.device)
+        
+        states: Optional[list[Tensor]] = [] if self.track_states else None
 
         for idx in range(len(self.log_temp) - 1, -1, -1):
             log_temp = self.log_temp[idx]
@@ -120,8 +132,12 @@ class DDPMSampler:
 
             with torch.no_grad(), torch.autocast("cuda", dtype=self.sampling_dtype):
                 xt = self.step(xt, log_temp, prev_log_temp)
+                if states is not None:
+                    states.append(xt.cpu())
 
         res = {"x": xt.cpu()}
+        if states is not None:
+            res["states"] = torch.stack(states[::-1])
         return res
 
     def sample(self) -> dict[str, Tensor]:

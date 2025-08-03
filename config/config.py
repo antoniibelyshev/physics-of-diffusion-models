@@ -45,6 +45,7 @@ class SampleConfig(BaseModel):
     n_samples: int = Field(..., description="Number of samples to generate")
     batch_size: int = Field(..., description="Batch size for sampling")
     precision: str = Field(..., description="Precision of the computations")
+    track_states: bool = Field(False, description="Whether to track the intermediate states")
 
 
 class ForwardStatsConfig(BaseModel):
@@ -107,7 +108,8 @@ class Config(BaseModel):
     def experiment_name(self) -> str:
         return "_".join([
             self.dataset_name,
-            self.ddpm_config_name
+            self.ddpm_config_name,
+            *((f"min_temp={self.entropy_schedule.min_temp}",) if self.ddpm.noise_schedule_type == "entropy" and self.entropy_schedule.min_temp != 1e-4 else ())
         ])
 
     @property

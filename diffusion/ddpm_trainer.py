@@ -98,6 +98,7 @@ class DDPMTrainer:
         eval_config = copy.deepcopy(self.config)
         eval_config.sample.step_type = "ddim"
         eval_config.sample.n_steps = 10
+        eval_config.sample.noise_schedule_type = self.config.ddpm.noise_schedule_type
 
         # Sample 25 images for visualization
         eval_config.sample.n_samples = 25
@@ -134,7 +135,11 @@ class DDPMTrainer:
             self.ddpm.eval()
 
     def train(self, train_generator: Generator[tuple[Tensor, ...], None, None], total_iters: int) -> None:
-        wandb.init(project = self.project_name, name = self.experiment_name)
+        wandb.init(
+            project = self.project_name,
+            name = self.experiment_name,
+            config = self.config.ddpm_training.__dict__,
+        )
 
         self.ddpm.train()
 

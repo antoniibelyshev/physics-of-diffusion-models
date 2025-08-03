@@ -12,7 +12,7 @@ entropy_schedule:
 ddpm:
   model_name: unet
   parametrization: eps
-  noise_schedule_type: linear_beta
+  noise_schedule_type: entropy
   unet_config:
     freq_shift: 1
     flip_sin_to_cos: false
@@ -37,12 +37,12 @@ ddpm:
 
 ddpm_training:
   batch_size: 128
-  total_iters: 100000
+  total_iters: 200000
   learning_rate: 1e-4
   weight_decay: 0
   ema_decay: 0.9999
   eval_steps: 10000
-  warmup_steps: 5000
+  warmup_steps: 0
   grad_clip: 1
   betas:
     - 0.9
@@ -62,9 +62,9 @@ sample:
 
 forward_stats:
   n_samples: 1024
-  batch_size: 128
+  batch_size: 1024
   dataloader_batch_size: 100
-  n_temps: 100
+  n_temps: 32
 
 empirical_stats:
   n_temps: 100
@@ -79,9 +79,12 @@ fid:
     # - 1e-3
   n_steps:
     - 10
+    - 20
+    - 30
+    - 40
+    - 50
   noise_schedule_type:
     - entropy
-    # - linear_beta
     # - cosine
   sample: True
   train: True

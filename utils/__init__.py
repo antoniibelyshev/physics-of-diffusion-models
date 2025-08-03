@@ -4,6 +4,7 @@ from .data import (
     get_data_tensor as get_data_tensor,
     get_data_generator as get_data_generator,
     compute_dataset_average as compute_dataset_average,
+    to_uint8 as to_uint8,
 )
 from .distance import (
     compute_pw_dist_sqr as compute_pw_dist_sqr,
