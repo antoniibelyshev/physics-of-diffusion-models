@@ -8,6 +8,7 @@ packages = [
     { include = "utils" },
     { include = "diffusion" },
     { include = "config" },
+    { include = "dual_score_matching" },
 ]
 
 
