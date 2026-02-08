@@ -94,10 +94,39 @@ def update_config_from_args(config: Config, args: argparse.Namespace) -> None:
         setattr(sub_config, keys[-1], arg_value)
 
 
+def _load_yaml_file(path: str) -> dict:
+    with open(path, "r") as f:
+        return safe_load(f)
+
+
+def _materialize_group_paths(config_root: dict, base_dir: str) -> dict:
+    """
+    Replace any top-level string values that point to YAML files with the loaded dicts.
+    This lets config/config.yaml stay high-level and delegate per-group parameters
+    into separate YAML files located in a sub-directory.
+    """
+    materialized: dict[str, Any] = {}
+    for key, val in config_root.items():
+        if isinstance(val, str) and val.endswith((".yml", ".yaml")):
+            import os
+            path = val if os.path.isabs(val) else os.path.join(base_dir, val)
+            group_dict = _load_yaml_file(path)
+            materialized[key] = group_dict
+        else:
+            materialized[key] = val
+    return materialized
+
+
 def load_config(config_path: Optional[str] = None) -> Config:
-    with open(config_path or "config/config.yaml", "r") as f:
-        config_dict = safe_load(f)
-    return Config(**config_dict)
+    cfg_path = config_path or "config/config.yaml"
+    root = _load_yaml_file(cfg_path)
+
+    # Resolve group file references relative to the config file directory
+    import os
+    base_dir = os.path.dirname(os.path.abspath(cfg_path))
+    root = _materialize_group_paths(root, base_dir)
+
+    return Config(**root)
 
 
 P = ParamSpec("P")

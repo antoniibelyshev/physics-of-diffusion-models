@@ -1,0 +1,2 @@
+use_augmentation: true
+horizontal_flip: true

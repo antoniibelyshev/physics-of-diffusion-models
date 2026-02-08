@@ -1,90 +1,28 @@
 dataset_name: cifar10
 
 diffusion:
-  min_temp: 1e-4
-  max_temp: 2.478e4
+  groups/diffusion.yaml
 
 entropy_schedule:
-  extrapolate: true
-  min_temp: 1e-4
-  max_temp: 2.478e4
+  groups/entropy_schedule.yaml
 
 ddpm:
-  model_name: unet
-  parametrization: eps
-  noise_schedule_type: entropy
-  unet_config:
-    freq_shift: 1
-    flip_sin_to_cos: false
-    down_block_types:
-      - DownBlock2D
-      - AttnDownBlock2D
-      - DownBlock2D
-      - DownBlock2D
-    up_block_types:
-      - UpBlock2D
-      - UpBlock2D
-      - AttnUpBlock2D
-      - UpBlock2D
-    block_out_channels:
-      - 128
-      - 256
-      - 256
-      - 256
-    downsample_padding: 0
-    attention_head_dim: None
-    norm_eps: 1e-06
+  groups/ddpm.yaml
 
 ddpm_training:
-  batch_size: 128
-  total_iters: 200000
-  learning_rate: 1e-4
-  weight_decay: 0
-  ema_decay: 0.9999
-  eval_steps: 10000
-  warmup_steps: 0
-  grad_clip: 1
-  betas:
-    - 0.9
-    - 0.999
+  groups/ddpm_training.yaml
 
 data_augmentation:
-  use_augmentation: true
-  horizontal_flip: true
+  groups/data_augmentation.yaml
 
 sample:
-  n_steps: 10
-  n_samples: 100
-  batch_size: 1000
-  step_type: ddim
-  noise_schedule_type: entropy
-  precision: half
+  groups/sample.yaml
 
 forward_stats:
-  n_samples: 1024
-  batch_size: 1024
-  dataloader_batch_size: 100
-  n_temps: 32
+  groups/forward_stats.yaml
 
 empirical_stats:
-  n_temps: 100
-  n_steps_per_temp: 1
-  batch_size: 128
+  groups/empirical_stats.yaml
 
 fid:
-  min_temp:
-    - 1e-4
-    # - 1e-1
-    # - 1e-2
-    # - 1e-3
-  n_steps:
-    - 10
-    - 20
-    - 30
-    - 40
-    - 50
-  noise_schedule_type:
-    - entropy
-    # - cosine
-  sample: True
-  train: True
+  groups/fid.yaml
