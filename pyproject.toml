@@ -23,7 +23,7 @@ denoising-diffusion-pytorch = "^2.1.1"
 matplotlib = "^3.9.3"
 jupyter = "^1.1.1"
 types-pywin32 = "^308.0.0.20241128"
-wandb = "^0.19.1"
+wandb = "0.22.3"
 pydantic = "^2.10.4"
 pytorch-fid = "^0.3.0"
 lpips = "^0.1.4"
@@ -32,6 +32,7 @@ pytorch-diffusion = {git = "https://github.com/pesser/pytorch_diffusion.git"}
 torchmetrics = {extras = ["image"], version = "^1.6.1"}
 diffusers = "^0.32.2"
 datasets = "^3.5.0"
+typing-extensions = "^4.15.0"
 
 
 [tool.mypy]
