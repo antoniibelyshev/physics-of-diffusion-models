@@ -3,4 +3,4 @@ n_samples: 100
 batch_size: 1000
 step_type: ddim
 noise_schedule_type: entropy
-precision: half
+precision: full

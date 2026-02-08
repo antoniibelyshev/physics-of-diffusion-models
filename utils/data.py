@@ -5,7 +5,7 @@ from datasets import load_dataset  # type: ignore
 from torchvision.transforms import Compose, Resize, ToTensor, Normalize, RandomHorizontalFlip  # type: ignore
 from tqdm import tqdm
 import os
-from typing import Generator, Iterable
+from typing import Generator
 
 from config import Config
 from .synthetic_datasets import generate_dataset
@@ -39,7 +39,7 @@ class HFDataset(Dataset[tuple[Tensor, ...]]):
         self.dataset = load_dataset(hf_dataset_name, split=split)
 
         # Define transformations
-        transforms = [
+        transforms: list[torch.nn.Module] = [
             Resize(image_size),
             ToTensor(),
         ]

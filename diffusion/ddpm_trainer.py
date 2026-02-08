@@ -12,7 +12,7 @@ import os
 from config import Config
 from .ddpm import DDPM
 from .ddpm_sampling import DDPMSampler
-from utils import get_default_device, get_compute_fid
+from utils import get_default_device, get_compute_fid, to_uint8
 
 
 class DDPMTrainer:
@@ -107,9 +107,7 @@ class DDPMTrainer:
 
         # Convert samples to uint8 and log to wandb
         images = samples["x"]  # Shape: [25, channels, height, width]
-        # images_grid = images.view(5, 5, *images.shape[1:]).permute(0, 3, 1, 4, 2).reshape(5 * images.shape[2], 5 * images.shape[3], -1).numpy()
-        # images_wandb = wandb.Image(images_grid)
-        images_wandb = [wandb.Image(image.permute(1, 2, 0).numpy()) for image in images]
+        images_wandb = [wandb.Image(to_uint8(image).permute(1, 2, 0).numpy()) for image in images]
         wandb.log({"samples": images_wandb})
 
         eval_config.sample.n_samples = self.config.dataset_config.fid_samples
