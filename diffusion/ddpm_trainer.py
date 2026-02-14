@@ -84,8 +84,6 @@ class DDPMTrainer:
         6. Upload the FID score to wandb
         7. Switch back from the EMA checkpoint
         """
-        # Store training state
-        training_mode = self.ddpm.training
         self.ddpm.eval()
         self.switch_to_ema()
 
@@ -97,7 +95,7 @@ class DDPMTrainer:
         # Create a temporary config for sampling
         eval_config = copy.deepcopy(self.config)
         eval_config.sample.step_type = "ddim"
-        eval_config.sample.n_steps = 10
+        eval_config.sample.n_steps = 100
         eval_config.sample.noise_schedule_type = self.config.ddpm.noise_schedule_type
 
         # Sample 25 images for visualization
@@ -105,32 +103,24 @@ class DDPMTrainer:
         sampler = DDPMSampler(eval_config, ddpm=self.ddpm)
         samples = sampler.sample()
 
-        # Convert samples to uint8 and log to wandb
-        images = samples["x"]  # Shape: [25, channels, height, width]
+        images = samples["x"]
         images_wandb = [wandb.Image(to_uint8(image).permute(1, 2, 0).numpy()) for image in images]
         wandb.log({"samples": images_wandb})
 
         eval_config.sample.n_samples = self.config.dataset_config.fid_samples
-        eval_config.sample.batch_size = 1000  # Adjust batch size for efficiency
-        for n_steps in [10, 100]:
-            # Sample 50k images for FID computation
-            eval_config.sample.n_steps = n_steps
 
-            sampler = DDPMSampler(eval_config, ddpm=self.ddpm)
-            samples = sampler.sample()
+        sampler = DDPMSampler(eval_config, ddpm=self.ddpm)
+        samples = sampler.sample()
 
-            # Compute FID
-            fid_score = self.compute_fid(samples["x"])
+        # Compute FID
+        fid_score = self.compute_fid(samples["x"])
 
-            # Log FID to wandb
-            wandb.log({f"fid {n_steps} steps": fid_score})
+        # Log FID to wandb
+        wandb.log({f"fid 100 steps": fid_score})
 
         # Restore training state
         self.switch_back_from_ema()
-        if training_mode:
-            self.ddpm.train()
-        else:
-            self.ddpm.eval()
+        self.ddpm.train()
 
     def train(self, train_generator: Generator[tuple[Tensor, ...], None, None], total_iters: int) -> None:
         wandb.init(

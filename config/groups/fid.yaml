@@ -1,11 +1,7 @@
 min_temp:
   - 1e-4
 n_steps:
-  - 10
-  - 20
-  - 30
-  - 40
-  - 50
+  - 100
 noise_schedule_type:
   - cosine
 sample: true
