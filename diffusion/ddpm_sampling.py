@@ -11,52 +11,6 @@ from .ddpm import DDPM, DDPMPredictions
 from .diffusion_dynamic import NoiseScheduler, get_alpha_bar_from_log_temp
 
 
-class SamplingCoeffs:
-    def __init__(self, log_temp: Tensor, prev_log_temp: Tensor) -> None:
-        alpha_bar = get_alpha_bar_from_log_temp(log_temp)
-        prev_alpha_bar = get_alpha_bar_from_log_temp(prev_log_temp)
-        alpha = alpha_bar / prev_alpha_bar
-        beta = 1 - alpha
-
-        self.ddpm_x0_coef = (prev_alpha_bar.sqrt() * beta) / (1 - alpha_bar)
-        self.ddpm_xt_coef = (alpha.sqrt() * (1 - prev_alpha_bar)) / (1 - alpha_bar)
-        self.ddpm_noise_coef = ((1 - prev_alpha_bar) / (1 - alpha_bar) * beta).sqrt()
-
-        self.ddim_xt_coef = alpha.pow(-0.5)
-        self.ddim_eps_coef = -self.ddim_xt_coef * beta / ((1 - alpha_bar).sqrt() + (1 - alpha_bar - beta).sqrt())
-
-
-def ddpm_step(xt: Tensor, coeffs: SamplingCoeffs, predictions: DDPMPredictions) -> Tensor:
-    x0 = predictions.x0
-    noise = torch.randn_like(xt)
-    return coeffs.ddpm_x0_coef * x0 + coeffs.ddpm_xt_coef * xt + coeffs.ddpm_noise_coef * noise  # type: ignore
-
-
-def ddim_step(xt: Tensor, coeffs: SamplingCoeffs, predictions: DDPMPredictions) -> Tensor:
-    eps = predictions.eps
-    return coeffs.ddim_xt_coef * xt + coeffs.ddim_eps_coef * eps # type: ignore
-
-
-STEPS_DICT = {
-    "ddpm": ddpm_step,
-    "ddim": ddim_step,
-}
-
-
-def is_ode_step(step_type: str) -> bool:
-    match step_type:
-        case "ddpm":
-            return False
-        case "ddim":
-            return True
-        case _:
-            raise ValueError(f"Unknown step type {step_type}")
-
-
-def get_range(*rng_args: int, verbose: bool) -> Iterable[int]:
-    return (trange if verbose else range)(*rng_args)
-
-
 class DDPMSampler:
     def __init__(self, config: Config, ddpm: Optional[DDPM] = None, min_temp: Optional[float] = None) -> None:
         device = get_default_device()
@@ -93,30 +47,23 @@ class DDPMSampler:
         # self.x0_uniform = compute_dataset_average(config).to(device)
 
     def step(self, xt: Tensor, log_temp: Tensor, prev_log_temp: Tensor) -> Tensor:
-        ddpm_predictions = self.ddpm.get_predictions(xt, log_temp)
+        predictions = self.ddpm.get_predictions(xt, log_temp)
         alpha_bar = get_alpha_bar_from_log_temp(log_temp)
         prev_alpha_bar = get_alpha_bar_from_log_temp(prev_log_temp)
-        alpha = alpha_bar / prev_alpha_bar
-        beta = 1 - alpha
 
         if self.step_type == "ddpm":
+            alpha = alpha_bar / prev_alpha_bar
+            beta = 1 - alpha
+            
             x0_coef = (prev_alpha_bar.sqrt() * beta) / (1 - alpha_bar)
             xt_coef = (alpha.sqrt() * (1 - prev_alpha_bar)) / (1 - alpha_bar)
             noise_coef = ((1 - prev_alpha_bar) / (1 - alpha_bar) * beta).sqrt()
 
-            return ddpm_predictions.x0 * x0_coef + xt * xt_coef + torch.randn_like(xt) * noise_coef
+            return predictions.x0 * x0_coef + xt * xt_coef + torch.randn_like(xt) * noise_coef
         
-        elif self.step_type == "ddim" and self.ddpm.parametrization == "eps":
-            xt_coef = alpha.pow(-0.5)
-            eps_coef = -xt_coef * beta / ((1 - alpha_bar).sqrt() + (1 - alpha_bar - beta).sqrt())
-
-            return ddpm_predictions.eps * eps_coef + xt * xt_coef
-
-        elif self.step_type == "ddim" and self.ddpm.parametrization == "x0":
-            x0_coef = prev_alpha_bar * (1 - (0.5 * (prev_log_temp - log_temp)).exp())
-            xt_coef = alpha.pow(-0.5) * (0.5 * (prev_log_temp - log_temp)).exp()
-
-            return ddpm_predictions.x0 * x0_coef + xt * xt_coef
+        elif self.step_type == "ddim":
+            # x_{t-1} = sqrt(alpha_bar_prev) * x0 + sqrt(1 - alpha_bar_prev) * eps
+            return prev_alpha_bar.sqrt() * predictions.x0 + (1 - prev_alpha_bar).sqrt() * predictions.eps
 
         raise ValueError(f"unknown step type: {self.step_type}")
 
