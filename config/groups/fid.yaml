@@ -3,6 +3,6 @@ min_temp:
 n_steps:
   - 100
 noise_schedule_type:
-  - cosine
+  - linear_beta
 sample: true
 train: false

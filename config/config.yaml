@@ -1,4 +1,4 @@
-dataset_name: mnist
+dataset_name: cifar10
 
 diffusion:
   groups/diffusion.yaml
