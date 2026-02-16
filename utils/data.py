@@ -49,9 +49,7 @@ class HFDataset(Dataset[tuple[Tensor, ...]]):
             if config.data_augmentation.horizontal_flip:
                 transforms.insert(1, RandomHorizontalFlip())
 
-        # Add normalization for non-MNIST datasets
-        if hf_dataset_name != "mnist":
-            transforms.append(Normalize(mean=0.5, std=0.5))
+        transforms.append(Normalize(mean=0.5, std=0.5))
 
         self.transform = Compose(transforms)
         self.image_key = image_key

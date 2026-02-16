@@ -1,5 +1,5 @@
 batch_size: 128
-total_iters: 1000000
+total_iters: 1500000
 learning_rate: 2e-4
 weight_decay: 0
 ema_decay: 0.9999

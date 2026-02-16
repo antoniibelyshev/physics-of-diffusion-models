@@ -1,6 +1,6 @@
 model_name: unet
 parametrization: eps
-noise_schedule_type: cosine
+noise_schedule_type: linear_beta
 unet_config:
   freq_shift: 1
   flip_sin_to_cos: false
@@ -17,8 +17,8 @@ unet_config:
   block_out_channels:
     - 128
     - 256
-    - 512
-    - 512
+    - 256
+    - 256
   downsample_padding: 0
   attention_head_dim: 64
   dropout: 0.2
