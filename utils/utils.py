@@ -156,7 +156,11 @@ def with_config(
 # Other
 
 def get_default_device() -> str:
-    return "cuda" if torch.cuda.is_available() else "cpu"
+    if torch.cuda.is_available():
+        return "cuda"
+    elif torch.backends.mps.is_available():
+        return "mps"
+    return "cpu"
 
 
 ArrayT = NDArray[np.float32]

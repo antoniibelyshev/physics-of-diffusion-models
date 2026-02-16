@@ -42,6 +42,7 @@ class SampleConfig(BaseModel):
     n_steps: int = Field(..., description="Number of steps for sampling")
     step_type: str = Field(..., description="Type of step")
     noise_schedule_type: str = Field(..., description="Type of the noise schedule for sampling")
+    noise_schedule_path: Optional[str] = Field(None, description="Path to custom noise schedule")
     n_samples: int = Field(..., description="Number of samples to generate")
     batch_size: int = Field(..., description="Batch size for sampling")
     precision: str = Field(..., description="Precision of the computations")
@@ -69,6 +70,7 @@ class DataAugmentationConfig(BaseModel):
 class FIDConfig(BaseModel):
     n_steps: list[int] = Field(..., description="Number of steps for sampling")
     noise_schedule_type: list[str] = Field(..., description="Type of noise schedules for sampling")
+    noise_schedule_path: list[Optional[str]] = Field(None, description="Paths to custom noise schedules")
     min_temp: list[float] = Field(..., description="Minimum temperature for sampling")
     train: bool = Field(..., description="Whether to use train sample for reference")
     sample: bool = Field(..., description="Whether to sample images or use sampled")
@@ -117,8 +119,12 @@ class Config(BaseModel):
         return "physics-of-diffusion-models"
 
     @property
+    def checkpoint_dir(self) -> str:
+        return f"checkpoints/{self.experiment_name}"
+
+    @property
     def ddpm_checkpoint_path(self) -> str:
-        return f"checkpoints/{self.experiment_name}.pth"
+        return f"{self.checkpoint_dir}/latest.pth"
 
     @property
     def samples_path(self) -> str:

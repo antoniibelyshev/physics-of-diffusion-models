@@ -13,10 +13,10 @@ def main(config: Config) -> None:
     data_generator = get_data_generator(dataset, config.ddpm_training.batch_size)
     ddpm = DDPM.from_config(config)
 
-    trainer = DDPMTrainer(config, ddpm)
-    trainer.train(data_generator, total_iters=config.ddpm_training.total_iters)
+    trainer = DDPMTrainer.from_config(config, ddpm)
+    trainer.train(data_generator, total_iters=config.ddpm_training.total_iters, config=config)
 
-    torch.save(ddpm.state_dict(), config.ddpm_checkpoint_path)
+    trainer.save_checkpoint(config.ddpm_training.total_iters, config)
 
 
 if __name__ == "__main__":
