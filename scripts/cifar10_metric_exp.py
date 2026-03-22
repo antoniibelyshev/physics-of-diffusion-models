@@ -39,8 +39,8 @@ def main():
     n_steps = 10
 
     # Standard CIFAR-10 temperature range from configs
-    min_temp = 1.0
-    max_temp = 1e6
+    min_temp = 1e-4
+    max_temp = 2.478e4
 
     config_dict = {
         "dataset_name": dataset_name,
