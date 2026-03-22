@@ -7,15 +7,15 @@ from collections import defaultdict
 
 from config import Config
 from utils import get_default_device, dict_map, append_dict, get_dataset, compute_dataset_average
-from .ddpm import DDPM, DDPMPredictions
-from .diffusion_dynamic import NoiseScheduler, get_alpha_bar_from_log_temp, InterpolatedDiscreteTimeNoiseScheduler
+from .ddpm import DDPM, ddpm_from_config
+from .scheduler import Scheduler, alpha_bar_from_log_temp, InterpolatedDiscreteTimeScheduler, cast_log_temp, scheduler_from_config
 
 
 class DDPMSampler:
     def __init__(
         self,
         ddpm: DDPM,
-        noise_scheduler: NoiseScheduler,
+        scheduler: Scheduler,
         n_steps: int,
         batch_size: int,
         n_samples: int,
@@ -30,13 +30,13 @@ class DDPMSampler:
         self.ddpm.eval()
 
         self.device = device
-        max_log_temp = self.ddpm.dynamic.get_log_temp(torch.ones(1)).item()
+        max_log_temp = self.ddpm.scheduler.log_temp_from_tau(torch.ones(1, device=device)).item()
         
         if log_temp is not None:
             self.log_temp = log_temp.to(device).clip(max=max_log_temp)
         else:
             tau = torch.linspace(0, 1, n_steps + 1, device=device)[1:].unsqueeze(1)
-            self.log_temp = noise_scheduler(tau).clip(max=max_log_temp)
+            self.log_temp = scheduler.log_temp_from_tau(tau).clip(max=max_log_temp)
 
         self.clean_log_temp = torch.full((1,), -torch.inf, device=device)
         self.n_samples = n_samples
@@ -51,24 +51,24 @@ class DDPMSampler:
     @classmethod
     def from_config(cls, config: Config, ddpm: Optional[DDPM] = None, min_temp: Optional[float] = None) -> "DDPMSampler":
         device = get_default_device()
-        ddpm = DDPM.from_config(config, pretrained=True).to(device) if ddpm is None else ddpm
+        ddpm = ddpm_from_config(config, pretrained=True).to(device) if ddpm is None else ddpm
         
         if min_temp is not None:
              config.entropy_schedule.min_temp = min_temp
 
-        noise_scheduler = NoiseScheduler.from_config(
+        scheduler = scheduler_from_config(
             config, 
             noise_schedule_type=config.sample.noise_schedule_type,
             noise_schedule_path=config.sample.noise_schedule_path,
         )
 
         log_temp = None
-        if config.sample.noise_schedule_type == "custom" and isinstance(noise_scheduler, InterpolatedDiscreteTimeNoiseScheduler):
-             log_temp = noise_scheduler.log_temp
+        if config.sample.noise_schedule_type == "custom" and isinstance(scheduler, InterpolatedDiscreteTimeScheduler):
+             log_temp = scheduler.log_temp
         
         return cls(
             ddpm=ddpm,
-            noise_scheduler=noise_scheduler,
+            scheduler=scheduler,
             n_steps=config.sample.n_steps,
             batch_size=config.sample.batch_size,
             n_samples=config.sample.n_samples,
@@ -82,8 +82,8 @@ class DDPMSampler:
 
     def step(self, xt: Tensor, log_temp: Tensor, prev_log_temp: Tensor) -> Tensor:
         predictions = self.ddpm.get_predictions(xt, log_temp)
-        alpha_bar = get_alpha_bar_from_log_temp(log_temp)
-        prev_alpha_bar = get_alpha_bar_from_log_temp(prev_log_temp)
+        alpha_bar = cast_log_temp(alpha_bar_from_log_temp(log_temp), xt)
+        prev_alpha_bar = cast_log_temp(alpha_bar_from_log_temp(prev_log_temp), xt)
 
         if self.step_type == "ddpm":
             alpha = alpha_bar / prev_alpha_bar

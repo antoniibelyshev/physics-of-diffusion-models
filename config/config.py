@@ -140,6 +140,10 @@ class Config(BaseModel):
         return f"stats/{self.dataset_name}_forward.npz"
 
     @property
+    def metric_stats_path(self) -> str:
+        return f"stats/{self.dataset_name}_metric.npz"
+
+    @property
     def empirical_stats_path(self) -> str:
         return f"stats/{self.experiment_name}_empirical.npz"
 
