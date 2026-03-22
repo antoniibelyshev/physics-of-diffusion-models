@@ -37,7 +37,7 @@ def main():
     n_samples = 50000
     batch_size = 128
     n_steps = 10
-    
+
     # Standard CIFAR-10 temperature range from configs
     min_temp = 1.0
     max_temp = 1e6
