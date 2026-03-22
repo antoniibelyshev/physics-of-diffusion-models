@@ -10,6 +10,7 @@ import copy
 import os
 
 from config import Config
+from .scheduler import cast_log_temp
 from .ddpm import DDPM
 from .ddpm_sampling import DDPMSampler
 from utils import get_default_device, get_compute_fid, to_uint8
@@ -83,10 +84,11 @@ class DDPMTrainer:
         self.ema.restore(self.ddpm.parameters())
 
     def calc_loss(self, x0: Tensor) -> Tensor:
-        tau, eps, xt = self.ddpm.dynamic(x0)
-        pred = self.ddpm(xt, tau)
-        target = eps if self.ddpm.parametrization == "eps" else x0
-        return mse_loss(target, pred)
+        tau, eps, xt = self.ddpm.scheduler.add_noise(x0)
+        predictions = self.ddpm.get_predictions(xt, self.ddpm.scheduler.log_temp_from_tau(tau))
+        alpha_bar = cast_log_temp(self.ddpm.scheduler.alpha_bar_from_tau(tau), x0)
+        target = {"eps": eps, "x0": x0, "score": -eps / (1 - alpha_bar).sqrt()}[self.ddpm.parametrization]
+        return mse_loss(target, predictions.pred)
 
     def optimizer_logic(self, loss: Tensor) -> None:
         self.optimizer.zero_grad()

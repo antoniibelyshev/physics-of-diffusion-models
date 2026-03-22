@@ -1,0 +1,49 @@
+dataset_name: anisotropic_gmm_repro
+diffusion:
+  min_temp: 1e-4
+  max_temp: 1e4
+entropy_schedule:
+  extrapolate: true
+  min_temp: 1e-4
+  max_temp: 1e4
+ddpm:
+  model_name: "true"
+  parametrization: x0
+  noise_schedule_type: entropy
+ddpm_training:
+  batch_size: 128
+  total_iters: 1
+  learning_rate: 1e-4
+  weight_decay: 0.0
+  ema_decay: 0.999
+  eval_steps: 1000
+  warmup_steps: 0
+  betas: [0.9, 0.999]
+  grad_clip: 1.0
+data_augmentation:
+  use_augmentation: false
+  horizontal_flip: false
+sample:
+  n_steps: 20
+  step_type: ddim
+  noise_schedule_type: entropy
+  n_samples: 10000
+  batch_size: 1000
+  precision: full
+  track_states: false
+forward_stats:
+  n_samples: 100
+  batch_size: 100
+  dataloader_batch_size: 100
+  n_temps: 50
+empirical_stats:
+  n_temps: 100
+  n_steps_per_temp: 10
+  batch_size: 100
+fid:
+  n_steps: [10]
+  noise_schedule_type: [entropy]
+  min_temp: [1e-4]
+  max_temp: [1e4]
+  train: true
+  sample: true

@@ -1,0 +1,155 @@
+%! suppress = MissingLabel
+\documentclass{article}
+\usepackage{amsmath, amssymb, amsfonts, bm}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+
+\title{Derivation of the Metric Tensor in the Space of $\Sigma$}
+\author{Junie}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{General Form of the Metric Tensor}
+This section defines the global metric tensor as an expectation of local posterior metrics over the marginal distribution of observations.
+
+For a prior $p(x)$ and likelihood $p(y|x, \Sigma) = \mathcal{N}(y|x, \Sigma)$, define the posterior as $\pi_{\Sigma, y}(x) = p(x | y, \Sigma)$. Consider an arbitrary metric tensor for posteriors at a given $y$:
+\begin{equation} \label{eq:metric_at_y}
+    G_{ij}(\Sigma; y) = \text{metric on the manifold of } \{\pi_{\Sigma, y}(x)\}_{\Sigma}
+\end{equation}
+The global metric $\mathcal{G}_{ij}(\Sigma)$ is defined by averaging over $y$:
+\begin{equation} \label{eq:global_metric}
+    \mathcal{G}_{ij}(\Sigma) = \mathbb{E}_{y \sim p(y, \Sigma)} [G_{ij}(\Sigma; y)]
+\end{equation}
+where the marginal distribution of $y$ is:
+\begin{equation} \label{eq:marginal_y}
+    p(y, \Sigma) = \int p(x) p(y | x, \Sigma) dx
+\end{equation}
+
+\section{Rao-Fisher Metric for Posteriors}
+This section specializes the general form to the Rao-Fisher metric, expressing the global metric as the difference between the noise Fisher Information and the variance of the marginal score.
+
+In the specific case of the Rao-Fisher metric, the local metric at $y$ is:
+\begin{equation} \label{eq:fisher_y}
+    G_{ij}(\Sigma; y) = \mathrm{Cov}_{x | y, \Sigma} \left[ \frac{\partial \ln \pi_{\Sigma, y}(x)}{\partial \theta_i}, \frac{\partial \ln \pi_{\Sigma, y}(x)}{\partial \theta_j} \right]
+\end{equation}
+Using \eqref{eq:global_metric}, the global metric is:
+\begin{equation} \label{eq:fisher_global}
+    \mathcal{G}_{ij}(\Sigma) = \mathbb{E}_{y} \left[ \mathbb{E}_{x|y, \Sigma} \left[ \frac{\partial \ln p(x|y, \Sigma)}{\partial \theta_i} \frac{\partial \ln p(x|y, \Sigma)}{\partial \theta_j} \right] \right]
+\end{equation}
+where $\mathbb{E}_{x|y, \Sigma} [ \frac{\partial \ln p(x|y, \Sigma)}{\partial \theta_i} ] = 0$. Using the identity $\ln p(x|y, \Sigma) = \ln p(y|x, \Sigma) + \ln p(x) - \ln p(y, \Sigma)$, derive:
+\begin{equation} \label{eq:score_decomp}
+    \frac{\partial \ln p(x|y, \Sigma)}{\partial \theta_i} = \frac{\partial \ln p(y|x, \Sigma)}{\partial \theta_i} - \frac{\partial \ln p(y, \Sigma)}{\partial \theta_i}
+\end{equation}
+Using \eqref{eq:score_decomp} and the property $\mathbb{E}_{x|y, \Sigma} [ \frac{\partial \ln p(y|x, \Sigma)}{\partial \theta_i} ] = \frac{\partial \ln p(y, \Sigma)}{\partial \theta_i}$ in \eqref{eq:fisher_y}:
+\begin{equation} \label{eq:fisher_y_final}
+    G_{ij}(\Sigma; y) = \mathrm{Cov}_{x|y, \Sigma} \left[ \frac{\partial \ln p(y|x, \Sigma)}{\partial \theta_i}, \frac{\partial \ln p(y|x, \Sigma)}{\partial \theta_j} \right]
+\end{equation}
+Using \eqref{eq:fisher_y_final}, \eqref{eq:global_metric}, and the Law of Total Variance $\mathrm{Cov}_{x, y}[V] = \mathbb{E}_y[\mathrm{Cov}_{x|y}[V]] + \mathrm{Cov}_y[\mathbb{E}_{x|y}[V]]$ for $V_i = \frac{\partial \ln p(y|x, \Sigma)}{\partial \theta_i}$:
+\begin{equation} \label{eq:global_metric_decomp}
+    \mathcal{G}_{ij}(\Sigma) = \mathrm{Cov}_{x, y} \left[ \frac{\partial \ln p(y|x, \Sigma)}{\partial \theta_i}, \frac{\partial \ln p(y|x, \Sigma)}{\partial \theta_j} \right] - \mathrm{Cov}_y \left[ \frac{\partial \ln p(y, \Sigma)}{\partial \theta_i}, \frac{\partial \ln p(y, \Sigma)}{\partial \theta_j} \right]
+\end{equation}
+Given $p(y|x, \Sigma) = \mathcal{N}(y|x, \Sigma)$, the first term in \eqref{eq:global_metric_decomp} is the Gaussian Fisher Information $I_{ij}(\Sigma)$:
+\begin{equation} \label{eq:metric_final_form}
+    \mathcal{G}_{ij}(\Sigma) = I_{ij}(\Sigma) - \text{Cov}_y \left[ \frac{\partial \ln p(y, \Sigma)}{\partial \theta_i}, \frac{\partial \ln p(y, \Sigma)}{\partial \theta_j} \right]
+\end{equation}
+
+\section{Metric for 1D Gaussian Prior}
+This section provides a concrete closed-form derivation for the metric tensor in the case of a 1D Gaussian prior and isotropic Gaussian noise.
+
+Consider the scalar case $\theta = \sigma$ and a 1D Gaussian prior $p(x) = \mathcal{N}(x|0, \sigma_0^2)$.
+The marginal distribution $p(y, \sigma)$ is:
+\begin{equation} \label{eq:1d_marginal}
+    p(y, \sigma) = \mathcal{N}(y|0, \sigma_0^2 + \sigma^2)
+\end{equation}
+Using \eqref{eq:1d_marginal}, calculate the score with respect to $\sigma$:
+\begin{equation} \label{eq:1d_score}
+    \frac{\partial \ln p(y, \sigma)}{\partial \sigma} = -\frac{\sigma}{\sigma_0^2 + \sigma^2} + \frac{\sigma y^2}{(\sigma_0^2 + \sigma^2)^2}
+\end{equation}
+Using \eqref{eq:1d_score}, the variance of the marginal score is:
+\begin{equation} \label{eq:1d_var_score}
+    \mathrm{Var}_y \left[ \frac{\partial \ln p(y, \sigma)}{\partial \sigma} \right] = \frac{\sigma^2}{(\sigma_0^2 + \sigma^2)^4} \mathrm{Var}_y[y^2] = \frac{2\sigma^2}{(\sigma_0^2 + \sigma^2)^2}
+\end{equation}
+The Fisher Information of the Gaussian noise $p(y|x, \sigma) = \mathcal{N}(y|x, \sigma^2)$ is:
+\begin{equation} \label{eq:1d_fisher_noise}
+    I(\sigma) = \frac{2}{\sigma^2}
+\end{equation}
+Using \eqref{eq:metric_final_form}, \eqref{eq:1d_var_score}, and \eqref{eq:1d_fisher_noise}, derive the metric tensor $\mathcal{G}(\sigma)$:
+\begin{equation} \label{eq:1d_metric_final}
+    \mathcal{G}(\sigma) = \frac{2}{\sigma^2} - \frac{2\sigma^2}{(\sigma_0^2 + \sigma^2)^2} = \frac{2((\sigma_0^2 + \sigma^2)^2 - \sigma^4)}{\sigma^2 (\sigma_0^2 + \sigma^2)^2}
+\end{equation}
+This can be simplified:
+\begin{equation} \label{eq:1d_metric_simplified}
+    \mathcal{G}(\sigma) = \frac{2\sigma_0^2 ( \sigma_0^2 + 2\sigma^2 )}{\sigma^2 (\sigma_0^2 + \sigma^2)^2}
+\end{equation}
+
+\section{Metric Tensor for log-SNR Parameterization}
+This section derives the metric tensor when the noise parameter is the log-SNR $\Lambda = \ln \Sigma$.
+First, consider the isotropic scalar case $\lambda = \ln \sigma^2$, so $\sigma^2 = e^\lambda$.
+The Gaussian Fisher Information of the noise $p(y|x, \lambda) = \mathcal{N}(y|x, e^\lambda)$ with respect to $\lambda$:
+\begin{equation} \label{eq:1d_fisher_noise_log}
+    I(\lambda) = \frac{1}{2} \left( \frac{\partial \ln \sigma^2}{\partial \lambda} \right)^2 \frac{2}{(\sigma^2)^2} = \frac{1}{2} (e^\lambda)^2 \frac{2}{e^{2\lambda}} = \frac{1}{2}
+\end{equation}
+The global metric in terms of $\lambda$ is:
+\begin{equation} \label{eq:1d_metric_log}
+    \mathcal{G}(\lambda) = \frac{1}{2} - \mathrm{Var}_y \left[ \frac{\partial \ln p(y, \lambda)}{\partial \lambda} \right]
+\end{equation}
+The marginal score with respect to $\lambda$:
+\begin{equation} \label{eq:1d_score_log}
+    \frac{\partial \ln p(y, \lambda)}{\partial \lambda} = \frac{\partial \ln p(y, \sigma)}{\partial \sigma} \frac{\partial \sigma}{\partial \lambda} = \left( -\frac{\sigma}{\sigma_0^2 + \sigma^2} + \frac{\sigma y^2}{(\sigma_0^2 + \sigma^2)^2} \right) \frac{\sigma}{2} = -\frac{1}{2} \frac{\sigma^2}{\sigma_0^2 + \sigma^2} + \frac{1}{2} \frac{\sigma^2 y^2}{(\sigma_0^2 + \sigma^2)^2}
+\end{equation}
+
+For the matrix case $\Sigma = \exp(\Lambda)$ where $\Lambda$ is a symmetric matrix, let $\theta = \Lambda_{ij}$. The Fisher Information of the noise $p(y|x, \Sigma) = \mathcal{N}(y|x, \Sigma)$ is:
+\begin{equation} \label{eq:matrix_fisher_noise}
+    I_{ijkl}(\Sigma) = \frac{1}{2} \mathrm{Tr} \left( \Sigma^{-1} \frac{\partial \Sigma}{\partial \Lambda_{ij}} \Sigma^{-1} \frac{\partial \Sigma}{\partial \Lambda_{kl}} \right)
+\end{equation}
+If $\Lambda$ and $\Sigma$ commute (e.g., if $\Lambda$ is diagonal), then $\frac{\partial \Sigma}{\partial \Lambda_{ii}} = \Sigma_{ii}$, and $I_{iiii}(\Sigma) = \frac{1}{2}$.
+
+\section{Monte Carlo Estimation with Samples from $p(x)$}
+This section outlines a practical procedure for estimating the global metric tensor using importance sampling when only samples from the prior $p(x)$ are available.
+
+For an arbitrary $p(x)$ accessible only via samples $\{x_k\}_{k=1}^K$, the marginal distribution is $p(y, \Sigma) = \mathbb{E}_{x \sim p(x)} [p(y|x, \Sigma)]$.
+The marginal score $\nabla_{\theta_i} \ln p(y, \Sigma)$ can be expressed as:
+\begin{equation} \label{eq:mc_score_ratio}
+    \frac{\partial \ln p(y, \Sigma)}{\partial \theta_i} = \frac{\int p(x) \frac{\partial p(y|x, \Sigma)}{\partial \theta_i} dx}{\int p(x) p(y|x, \Sigma) dx} = \mathbb{E}_{x|y, \Sigma} \left[ \frac{\partial \ln p(y|x, \Sigma)}{\partial \theta_i} \right]
+\end{equation}
+Using Importance Sampling with samples $x_k \sim p(x)$, the estimator for the marginal score at a given $y$ is:
+\begin{equation} \label{eq:mc_score_estimator}
+    \frac{\partial \ln p(y, \Sigma)}{\partial \theta_i} \approx \sum_{k=1}^K w_k(y, \Sigma) \frac{\partial \ln p(y|x_k, \Sigma)}{\partial \theta_i}, \quad w_k(y, \Sigma) = \frac{p(y|x_k, \Sigma)}{\sum_{m=1}^K p(y|x_m, \Sigma)}
+\end{equation}
+Using \eqref{eq:metric_final_form} and \eqref{eq:mc_score_estimator}, the global metric $\mathcal{G}_{ij}(\Sigma)$ is estimated by:
+\begin{enumerate}
+    \item Sample $x \sim p(x)$ and $\epsilon \sim \mathcal{N}(0, I)$ to generate $y = x + \sqrt{\Sigma}\epsilon$ (for $\Sigma = \sigma^2 I$).
+    \item For each $y$, compute the estimated marginal score $s_i(y, \Sigma)$ using \eqref{eq:mc_score_estimator}.
+    \item The metric is: $\mathcal{G}_{ij}(\Sigma) = I_{ij}(\Sigma) - \widehat{\mathrm{Cov}}_y [ s_i(y, \Sigma), s_j(y, \Sigma) ]$.
+\end{enumerate}
+
+\section{Rescaled Metric Tensor}
+This section introduces the rescaled metric tensor $\widetilde{\mathcal{G}}$, which in the 1D case is defined by multiplying $\mathcal{G}(\sigma)$ by $\frac{\sigma^2}{\sigma_0^2 + 2\sigma^2}$.
+
+Using the result \eqref{eq:1d_metric_simplified} for $\mathcal{G}(\sigma)$:
+\begin{equation} \label{eq:rescaled_1d}
+    \widetilde{\mathcal{G}}(\sigma) = \mathcal{G}(\sigma) \cdot \frac{\sigma^2}{\sigma_0^2 + 2\sigma^2} = \frac{2\sigma_0^2 (\sigma_0^2 + 2\sigma^2)}{\sigma^2 (\sigma_0^2 + \sigma^2)^2} \cdot \frac{\sigma^2}{\sigma_0^2 + 2\sigma^2} = \frac{2\sigma_0^2}{(\sigma_0^2 + \sigma^2)^2}
+\end{equation}
+In the general matrix case with noise $\Sigma$ and a Gaussian prior $p(x) = \mathcal{N}(0, \Sigma_0)$, the global metric for $\theta = \Sigma$ (assuming diagonal $\Sigma$) is:
+\begin{equation} \label{eq:matrix_metric_diagonal}
+    \mathcal{G}_{ii}(\Sigma) = 2 \Sigma_{0,ii} (\Sigma_{0,ii} + 2\Sigma_{ii}) \Sigma_{ii}^{-2} (\Sigma_{0,ii} + \Sigma_{ii})^{-2}
+\end{equation}
+Multiplying by the matrix factor $F = \Sigma^2 (\Sigma_0 + 2\Sigma)^{-1}$ (diagonal case):
+\begin{equation} \label{eq:rescaled_matrix_diagonal}
+    \widetilde{\mathcal{G}}_{ii}(\Sigma) = \mathcal{G}_{ii}(\Sigma) \cdot \frac{\Sigma_{ii}^2}{\Sigma_{0,ii} + 2\Sigma_{ii}} = \frac{2\Sigma_{0,ii}}{(\Sigma_{0,ii} + \Sigma_{ii})^2}
+\end{equation}
+For a general symmetric $\Sigma_0$ and $\Sigma$, the rescaled metric $\widetilde{\mathcal{G}}(\Sigma)$ is defined by the factor:
+\begin{equation} \label{eq:matrix_factor}
+    F = \Sigma (\Sigma_0 + 2\Sigma)^{-1} \Sigma
+\end{equation}
+The resulting rescaled metric for $\theta = \Sigma$ is:
+\begin{equation} \label{eq:rescaled_matrix_general}
+    \widetilde{\mathcal{G}}(\Sigma) = 2 \Sigma_0 (\Sigma_0 + \Sigma)^{-2}
+\end{equation}
+This rescaled metric represents twice the Fisher information of the marginal distribution $p(y, \Sigma)$ with respect to the location parameter, scaled by the prior variance.
+
+\end{document}

@@ -19,11 +19,12 @@ def compute_entropy_derivative(
     for temp in tqdm(temp_range):
         errors = []
         log_temp = temp.log().cuda()[None]
-        tau = ddpm.dynamic.noise_scheduler.get_tau(log_temp)
+        tau = ddpm.scheduler.tau_from_log_temp(log_temp)
         for _ in range(config.empirical_stats.n_steps_per_temp):
             x0 = next(data_generator)[0]
-            *_, xt = ddpm.dynamic(x0.cuda(), tau)
-            x0_pred = ddpm.get_predictions(xt, log_temp).x0.cpu()
+            tau_val, eps, xt = ddpm.scheduler.add_noise(x0.cuda(), tau)
+            predictions = ddpm.get_predictions(xt, log_temp)
+            x0_pred = predictions.x0.cpu()
             errors.append(torch.norm(x0_pred - x0).square() / len(x0))
 
         d_entropy_d_log_temp.append((0.5 * sum(errors) / len(errors) / temp).cpu())
@@ -39,7 +40,8 @@ def main(config: Config) -> None:
         config.dataset_name = dataset_name
         dataset = get_dataset(config)
         data_generator = get_data_generator(dataset, batch_size=config.empirical_stats.batch_size)
-        ddpm = DDPM.from_config(config, pretrained=True).cuda()
+        from diffusion import ddpm_from_config
+        ddpm = ddpm_from_config(config, pretrained=True).cuda()
 
         temp_range = torch.logspace(
             np.log10(config.diffusion.min_temp),
