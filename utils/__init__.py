@@ -42,4 +42,5 @@ from .stats import (
     compute_stats as compute_stats,
     extrapolate_entropy as extrapolate_entropy,
     compute_metric_stats as compute_metric_stats,
+    compute_model_metric_stats as compute_model_metric_stats,
 )

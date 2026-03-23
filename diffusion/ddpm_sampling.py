@@ -45,7 +45,13 @@ class DDPMSampler:
         self.step_type = step_type
 
         self.obj_size = obj_size
-        self.sampling_dtype = torch.float16 if precision == "half" else torch.float32
+        if precision == "half":
+            if device == "mps":
+                self.sampling_dtype = torch.bfloat16
+            else:
+                self.sampling_dtype = torch.float16
+        else:
+            self.sampling_dtype = torch.float32
         self.track_states = track_states
 
     @classmethod
@@ -115,7 +121,7 @@ class DDPMSampler:
             log_temp = self.log_temp[idx]
             prev_log_temp = self.log_temp[idx - 1] if idx > 0 else self.clean_log_temp
 
-            with torch.no_grad(), torch.autocast(self.device, dtype=self.sampling_dtype) if self.device != "cpu" else torch.no_grad():
+            with torch.no_grad(), torch.autocast(device_type=self.device, dtype=self.sampling_dtype) if self.device != "cpu" else torch.no_grad():
                 xt = self.step(xt, log_temp, prev_log_temp)
                 if states is not None:
                     states.append(xt.cpu())

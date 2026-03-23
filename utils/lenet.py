@@ -5,6 +5,7 @@ from torch.nn.functional import relu, cross_entropy
 from torch.utils.data import Dataset, DataLoader
 from typing import Callable
 from tqdm import tqdm
+from .utils import get_default_device
 
 
 class LeNet(Module):
@@ -86,7 +87,7 @@ def train_lenet(
     batch_size: int = 64,
     learning_rate: float = 1e-3,
     epochs: int = 10,
-    device: str = "cuda" if torch.cuda.is_available() else "cpu",
+    device: str = get_default_device(),
     criterion: Callable[[Tensor, Tensor], Tensor] = cross_entropy,
 ) -> LeNet:
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)

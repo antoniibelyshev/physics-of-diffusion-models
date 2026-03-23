@@ -16,12 +16,13 @@ from utils import (
     get_dataset, 
     get_data_generator, 
     get_compute_fid,
-    compute_metric_stats
+    compute_metric_stats,
+    get_default_device
 )
 
 def main():
     # 1. Configuration for CIFAR-10 experiment
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = get_default_device()
     print(f"Using device: {device}")
     
     dataset_name = "cifar10"

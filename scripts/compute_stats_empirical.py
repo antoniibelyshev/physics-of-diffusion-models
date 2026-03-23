@@ -4,7 +4,7 @@ import numpy as np
 from tqdm import tqdm, trange
 from typing import Generator
 
-from utils import with_config, get_dataset, get_data_tensor, get_data_generator
+from utils import with_config, get_dataset, get_data_tensor, get_data_generator, get_default_device
 from diffusion import DDPM
 from config import Config
 
@@ -13,16 +13,17 @@ def compute_entropy_derivative(
         data_generator: Generator[tuple[Tensor, ...], None, None],
         ddpm: DDPM,
         temp_range: Tensor,
-        config: Config
+        config: Config,
+        device: str = get_default_device(),
 ) -> Tensor:
     d_entropy_d_log_temp = []
     for temp in tqdm(temp_range):
         errors = []
-        log_temp = temp.log().cuda()[None]
+        log_temp = temp.log().to(device)[None]
         tau = ddpm.scheduler.tau_from_log_temp(log_temp)
         for _ in range(config.empirical_stats.n_steps_per_temp):
             x0 = next(data_generator)[0]
-            tau_val, eps, xt = ddpm.scheduler.add_noise(x0.cuda(), tau)
+            tau_val, eps, xt = ddpm.scheduler.add_noise(x0.to(device), tau)
             predictions = ddpm.get_predictions(xt, log_temp)
             x0_pred = predictions.x0.cpu()
             errors.append(torch.norm(x0_pred - x0).square() / len(x0))
@@ -35,13 +36,14 @@ def compute_entropy_derivative(
 @with_config(parse_args=(__name__ == "__main__"))
 @torch.no_grad()
 def main(config: Config) -> None:
+    device = get_default_device()
     for dataset_name in config.available_datasets:
         print(dataset_name)
         config.dataset_name = dataset_name
         dataset = get_dataset(config)
         data_generator = get_data_generator(dataset, batch_size=config.empirical_stats.batch_size)
         from diffusion import ddpm_from_config
-        ddpm = ddpm_from_config(config, pretrained=True).cuda()
+        ddpm = ddpm_from_config(config, pretrained=True).to(device)
 
         temp_range = torch.logspace(
             np.log10(config.diffusion.min_temp),
@@ -49,7 +51,7 @@ def main(config: Config) -> None:
             config.empirical_stats.n_temps,
         )
         
-        d_entropy_d_log_temp = compute_entropy_derivative(data_generator, ddpm, temp_range, config)
+        d_entropy_d_log_temp = compute_entropy_derivative(data_generator, ddpm, temp_range, config, device=device)
         
         d_log_temp = temp_range[1].log() - temp_range[0].log()
         

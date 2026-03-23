@@ -127,6 +127,33 @@ Using \eqref{eq:metric_final_form} and \eqref{eq:mc_score_estimator}, the global
     \item The metric is: $\mathcal{G}_{ij}(\Sigma) = I_{ij}(\Sigma) - \widehat{\mathrm{Cov}}_y [ s_i(y, \Sigma), s_j(y, \Sigma) ]$.
 \end{enumerate}
 
+\section{Relation to Mutual Information}
+This section analyzes the relationship between the derived metric $\mathcal{G}_{ij}(\Sigma)$ and the Mutual Information $I(X; Y)$.
+
+Consider the channel $Y = X + \sqrt{\Sigma} \epsilon$, where $\epsilon \sim \mathcal{N}(0, I)$. The Mutual Information is:
+\begin{equation} \label{eq:mi_def}
+    I(X; Y) = H(Y) - H(Y|X) = H(Y, \Sigma) - \frac{1}{2} \ln |2\pi e \Sigma|
+\end{equation}
+The first derivative of $I(X; Y)$ with respect to the noise parameters $\theta$ is related to the Minimum Mean Square Error (MMSE) by the I-MMSE relationship. For $\theta = \sigma^2$ (isotropic case):
+\begin{equation} \label{eq:i_mmse}
+    \frac{\partial I(X; Y)}{\partial \sigma^2} = \frac{1}{2\sigma^4} \text{mmse}(\sigma^2)
+\end{equation}
+The global metric $\mathcal{G}_{ij}(\Sigma)$ from \eqref{eq:metric_final_form} is:
+\begin{equation} \label{eq:metric_vs_marginal_fisher}
+    \mathcal{G}_{ij}(\Sigma) = I_{ij}(\Sigma) - J_{ij}^{\text{marginal}}(\Sigma)
+\end{equation}
+where $J_{ij}^{\text{marginal}}(\Sigma) = \mathbb{E}_y [ \frac{\partial \ln p(y, \Sigma)}{\partial \theta_i} \frac{\partial \ln p(y, \Sigma)}{\partial \theta_j} ]$ is the Fisher Information of the marginal distribution $p(y, \Sigma)$ with respect to $\theta$.
+
+Since the Fisher Information of any distribution $p(y, \theta)$ satisfies $J_{ij}(\theta) = -\mathbb{E}_y [ \frac{\partial^2 \ln p(y, \theta)}{\partial \theta_i \partial \theta_j} ]$, the marginal Fisher Information is related to the Hessian of the marginal entropy $H(Y, \Sigma) = \mathbb{E}_y [ -\ln p(y, \Sigma) ]$:
+\begin{equation} \label{eq:hessian_entropy}
+    \frac{\partial^2 H(Y, \Sigma)}{\partial \theta_i \partial \theta_j} = -\mathbb{E}_y \left[ \frac{\partial^2 \ln p(y, \Sigma)}{\partial \theta_i \partial \theta_j} \right] - \int \frac{\partial^2 p(y, \Sigma)}{\partial \theta_i \partial \theta_j} \ln p(y, \Sigma) dy = J_{ij}^{\text{marginal}}(\Sigma) - \int \frac{\partial^2 p(y, \Sigma)}{\partial \theta_i \partial \theta_j} \ln p(y, \Sigma) dy
+\end{equation}
+Using \eqref{eq:mi_def}, the second derivative of Mutual Information is:
+\begin{equation} \label{eq:mi_second_deriv}
+    \frac{\partial^2 I(X; Y)}{\partial \theta_i \partial \theta_j} = \frac{\partial^2 H(Y, \Sigma)}{\partial \theta_i \partial \theta_j} - \frac{\partial^2 H(Y|X)}{\partial \theta_i \partial \theta_j} = \frac{\partial^2 H(Y, \Sigma)}{\partial \theta_i \partial \theta_j} + I_{ij}(\Sigma)
+\end{equation}
+Thus, the metric $\mathcal{G}_{ij}(\Sigma)$ represents the reduction in Fisher Information from the noise to the marginal, which is the curvature of the information gain $I(X; Y)$ modulo the integral term in \eqref{eq:hessian_entropy}. In the log-SNR parameterization $\lambda = \ln \sigma^2$, the metric $\mathcal{G}(\lambda) = \frac{1}{2} - J^{\text{marginal}}(\lambda)$ directly quantifies the "information loss" curvature.
+
 \section{Rescaled Metric Tensor}
 This section introduces the rescaled metric tensor $\widetilde{\mathcal{G}}$, which in the 1D case is defined by multiplying $\mathcal{G}(\sigma)$ by $\frac{\sigma^2}{\sigma_0^2 + 2\sigma^2}$.
 

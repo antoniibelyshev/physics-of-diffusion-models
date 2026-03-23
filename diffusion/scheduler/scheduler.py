@@ -55,7 +55,8 @@ class Scheduler(ABC):
         diffs *= exps
         return diffs.sum(0) / (exps.sum(0) * (1 - alpha_bar))  # type: ignore
 
-    @torch.autocast("cuda", enabled=False)  # type: ignore
+    @torch.autocast(device_type="cuda", enabled=False)  # type: ignore
+    @torch.autocast(device_type="mps", enabled=False)  # type: ignore
     def true_posterior_mean_x0(self, xt: Tensor, tau: Tensor, data: Tensor) -> Tensor:
         xt = xt.float()
         data = data.float()
