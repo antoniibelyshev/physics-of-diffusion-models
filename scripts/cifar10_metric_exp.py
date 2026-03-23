@@ -2,28 +2,19 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-from tqdm import tqdm
 from torch.utils.data import DataLoader
-from diffusers.models.attention_processor import AttnProcessor2_0
 
-from diffusion.ddpm import DDPMDiffusers
+from diffusion.ddpm import ddpm_from_config
 from diffusion.ddpm_sampling import DDPMSampler
 from diffusion.scheduler import (
     LinearBetaScheduler,
     CosineScheduler,
     MetricScheduler,
-    LogSNRScheduler
 )
 from config import Config
-from config.config import (
-    DiffusionConfig, EntropyScheduleConfig, DDPMConfig, 
-    DDPMTrainingConfig, DataAugmentationConfig, SampleConfig, 
-    ForwardStatsConfig, EmpiricalStatsConfig, FIDConfig
-)
 from utils import (
     get_dataset, 
     get_data_generator, 
-    get_diffusers_pipeline, 
     get_compute_fid,
     compute_metric_stats
 )
@@ -106,13 +97,9 @@ def main():
     # 2. Dataset and Metric Stats Computation
     print("Loading CIFAR-10 dataset...")
     dataset = get_dataset(config)
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=True)
     
-    def data_gen():
-        while True:
-            for b in dataloader:
-                yield b
-
+    data_gen_iterator = get_data_generator(dataset, batch_size=batch_size)
+    
     # CIFAR-10 metric stats path
     os.makedirs("stats", exist_ok=True)
     metric_stats_path = config.metric_stats_path
@@ -122,25 +109,16 @@ def main():
         # Use a log-spaced temperature range for metric computation
         temp_range = torch.logspace(np.log10(min_temp), np.log10(max_temp), 100)
         # Use more samples for better estimation if resources allow
-        metric_stats = compute_metric_stats(dataloader, data_gen(), temp_range, n_samples=2000)
+        metric_stats = compute_metric_stats(DataLoader(dataset, batch_size=batch_size), data_gen_iterator, temp_range, n_samples=2000)
         np.savez(metric_stats_path, **metric_stats)
         print(f"Saved metric stats to {metric_stats_path}")
     else:
         print(f"Loading existing metric stats from {metric_stats_path}")
 
-    # 3. Initialize pre-trained CIFAR-10 model from diffusers
-    print("Loading pre-trained CIFAR-10 model from diffusers...")
-    pipeline = get_diffusers_pipeline(config)
-    pipeline.unet.set_processor(AttnProcessor2_0()) # type: ignore
-    
-    # We'll wrap it in DDPMDiffusers, but we need to swap the scheduler for each run
-    def get_model(sch):
-        return DDPMDiffusers(
-            scheduler=sch,
-            parametrization="eps",
-            unet=pipeline.unet,
-            time_scale=pipeline.scheduler.timesteps.max().item() # type: ignore
-        ).to(device).eval()
+    # 3. Initialize pre-trained CIFAR-10 model
+    print("Loading pre-trained CIFAR-10 model...")
+    # Using ddpm_from_config which handles model loading, processor settings and compilation
+    model = ddpm_from_config(config, pretrained=True).to(device).eval()
 
     # 4. Define schedules
     print("Defining schedules...")
@@ -179,7 +157,7 @@ def main():
     
     for name, sch in schedules.items():
         print(f"\n--- Sampling with {name} schedule ({n_steps} steps, {n_samples} samples) ---")
-        model = get_model(sch)
+        model.scheduler = sch
         sampler = DDPMSampler(
             ddpm=model,
             scheduler=sch,
