@@ -15,7 +15,15 @@ from utils import (
 from diffusion import ddpm_from_config
 
 
+from config.dataset_configs import DatasetRegistry
+
+
 def build_config(dataset_name: str, min_temp: float, max_temp: float, batch_size: int) -> Config:
+    # Use default temps from DatasetRegistry if not explicitly provided
+    ds_config = DatasetRegistry.get(dataset_name)
+    min_temp = min_temp if min_temp is not None else ds_config.min_temp
+    max_temp = max_temp if max_temp is not None else ds_config.max_temp
+
     # Minimal config sufficient for dataset/model loading
     cfg = {
         "dataset_name": dataset_name,
@@ -155,8 +163,8 @@ def compute_and_save_model_metric(
 def main():
     parser = argparse.ArgumentParser(description="Compute model-based metric tensor and schedule using a trained DDPM")
     parser.add_argument("--dataset", type=str, default="cifar10", help="Dataset name (registered in DatasetRegistry)")
-    parser.add_argument("--min_temp", type=float, default=1e-4, help="Minimum temperature (T)")
-    parser.add_argument("--max_temp", type=float, default=1e8, help="Maximum temperature (T)")
+    parser.add_argument("--min_temp", type=float, default=None, help="Minimum temperature (T). Defaults to dataset config.")
+    parser.add_argument("--max_temp", type=float, default=None, help="Maximum temperature (T). Defaults to dataset config.")
     parser.add_argument("--n_temps", type=int, default=100, help="Number of temperature points")
     parser.add_argument("--n_samples", type=int, default=2048, help="Number of x0 samples for metric estimate")
     parser.add_argument("--batch_size", type=int, default=128, help="Batch size for data loader")

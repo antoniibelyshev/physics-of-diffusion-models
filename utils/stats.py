@@ -195,7 +195,7 @@ def compute_model_metric_stats_batch(
     x0_traj = x0_traj.to(device)
     
     all_metric = []
-    
+
     for i in range(n_temps):
         t = temp[i]
         # Generate xt = x0 + sqrt(t) * epsilon
@@ -207,14 +207,11 @@ def compute_model_metric_stats_batch(
         predictions = ddpm.get_predictions(xt_i, log_t)
         x0_pred = predictions.x0
         
-        # G(lambda) = E [ 0.5 * ||x0 - x0_pred||^2 / T ]
-        # This relationship holds because Var[dist/T] for a Gaussian-like posterior
-        # is related to the expected error of the mean.
-        # For small T, ||x0 - x0_pred||^2 / T is the dominant term.
+        # G(lambda) ≈ 0.5 * E[||x0 - x0_pred||^2] / T
+        # This relationship is stable as long as the model error vanishes correctly as T -> 0.
         mse = torch.mean(torch.sum((x0_traj - x0_pred).view(len(x0_traj), -1)**2, dim=1))
-        
         metric_val = 0.5 * mse / t
-        all_metric.append(metric_val.cpu())
+        all_metric.append(metric_val.detach().cpu())
         
     return {"metric_values": torch.stack(all_metric)}
 
